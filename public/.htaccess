@@ -1,1 +1,0 @@
-SetEnvIf Authorization .+ HTTP_AUTHORIZATION=$0
