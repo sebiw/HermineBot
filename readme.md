@@ -15,3 +15,5 @@ Nebst dem üblichen `composer install`
 ## Disclaimer
 Ich arbeite nicht für StashCat und habe auch ansonsten keinen Bezug zur `stashcat GmbH`. Es war ein Hobby-Projekt um die Funktionen für den im THW eingesetzten Stashcat-Brand "Hermine" zu erweitern.
 Hintergrund: Ich wollte automatisiert z.B. auf anstehende reguläre Dienste hinweisen und unter anderem die HU/AU/SP-Termine der OV-Fahrzeugflotte einpflegen damit wir rechtzeitig dran denken.
+
+Liebe `stashcat GmbH` - bitte nicht hauen, wenn das so nicht geplant ist von euch. Will mir nur das Leben im THW nur ein wenig einfacher machen 😘
