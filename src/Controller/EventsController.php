@@ -2,10 +2,13 @@
 
 namespace App\Controller;
 
+use App\Core\DatabaseLogger;
 use App\Entity\Event;
+use App\Entity\LogEntry;
 use App\Entity\User;
 use App\Service\AppService;
 use Doctrine\Persistence\ManagerRegistry;
+use Psr\Log\LogLevel;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -44,8 +47,25 @@ class EventsController extends AbstractController
         ]);
     }
 
+    #[Route('/events/log', name: 'events_log', methods: [ 'GET' ])]
+    public function eventsLog( AppService $app , ManagerRegistry $doctrine , Request $request, #[CurrentUser] ?User $user ): Response
+    {
+        $manager = $doctrine->getManagerForClass( LogEntry::class );
+
+        $logs = $manager->getRepository(LogEntry::class )
+            ->createQueryBuilder('log')
+            ->select('log')
+            ->orderBy('log.createdDateTime' , 'DESC')
+            ->getQuery()->getResult();
+
+        return $this->render('default/logs.html.twig' , [
+            'logs' => $logs,
+            'date_time_format' => $app->getAppConfig()->getDateFormat() . " - " . $app->getAppConfig()->getTimeFormat()
+        ]);
+    }
+
     #[Route('/events', name: 'save_event', methods: [ 'POST' ] )]
-    public function saveEvent( Request $request , ManagerRegistry $doctrine , AppService $app ): RedirectResponse
+    public function saveEvent( Request $request , ManagerRegistry $doctrine , AppService $app, DatabaseLogger $logger ): RedirectResponse
     {
         $manager = $doctrine->getManagerForClass( Event::class );
 
@@ -88,6 +108,13 @@ class EventsController extends AbstractController
                         }
                     }
 
+                    $logger->log( LogLevel::NOTICE , sprintf('%s Event' , strtoupper( $request->get('action') )) , [
+                        'text' => $entity->getText() ,
+                        'interval' => $entity->getDateInterval() ,
+                        'startDate' => $entity->getStartDateTime() ,
+                        'untilDate' => $entity->getUntilDateTime()
+                    ]);
+
                     $manager->persist( $entity );
                     $manager->flush();
                 break;
@@ -109,7 +136,7 @@ class EventsController extends AbstractController
 
     #[Route('/events/execute', name: 'execute_events', methods: [ 'GET' ] )]
     public function executeEvent(){
-        $response = $this->forward('App\Controller\JobController::main', [ ]);
+        $response = $this->forward('App\Controller\JobController::main', [ 'context' => 'Manual' ]);
         return $this->render('default/events.execute.html.twig' , [
             'response' => $response,
         ]);

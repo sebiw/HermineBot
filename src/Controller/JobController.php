@@ -2,14 +2,16 @@
 
 namespace App\Controller;
 
+use App\Core\DatabaseLogger;
 use App\Entity\Event;
 use App\Service\AppService;
 use DateInterval;
 use DateTime;
 use Doctrine\Persistence\ManagerRegistry;
+use Psr\Log\LogLevel;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
@@ -17,8 +19,11 @@ class JobController extends AbstractController
 {
 
     #[Route('/', name: 'handler', methods: [ 'GET' ])]
-    public function main( AppService $app , ManagerRegistry $doctrine , Request $request ): Response
+    public function main( AppService $app , ManagerRegistry $doctrine , #[Autowire(service: 'logger.events')] DatabaseLogger $logger , string $context = 'Console'): Response
     {
+
+        $logger->log(LogLevel::INFO , sprintf('%s: Started event handler' , $context ) );
+
         $jsonResult = [];
         $now = new DateTime();
         $entityManager = $doctrine->getManagerForClass( Event::class );
@@ -66,6 +71,7 @@ class JobController extends AbstractController
                 $event->increaseTransmissionsCount();
 
                 if( $result->_getStatusValue() == 'OK' ){
+                    $logger->log(LogLevel::INFO , sprintf('Message sent to channel %s' , $event->getChannelTarget() ) , [ 'text' => $event->getText() ]);
                     $event->setDoneDateTime( $now );
                     $entityManager->persist( $event );
                     $entityManager->flush();

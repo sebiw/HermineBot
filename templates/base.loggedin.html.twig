@@ -11,6 +11,7 @@
 {% block nav %}
     <a href="{{ path('events') }}" class="{{ app.request.get('_route') == 'events' ? 'active' }}">Events Admin</a>
     <a href="{{ path('execute_events') }}" class="{{ app.request.get('_route') == 'execute_events' ? 'active' }}">Run Event-Executor once</a>
+    <a href="{{ path('events_log') }}" class="{{ app.request.get('_route') == 'events_log' ? 'active' }}">Logs</a>
     {{ parent() }}
 {% endblock %}
 
