@@ -7,6 +7,7 @@ use App\Entity\Event;
 use App\Entity\LogEntry;
 use App\Entity\User;
 use App\Service\AppService;
+use Doctrine\ORM\Tools\Pagination\Paginator;
 use Doctrine\Persistence\ManagerRegistry;
 use Psr\Log\LogLevel;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
@@ -52,14 +53,23 @@ class EventsController extends AbstractController
     {
         $manager = $doctrine->getManagerForClass( LogEntry::class );
 
-        $logs = $manager->getRepository(LogEntry::class )
+        $itemsPerPage = 100;
+        $currentPage = intval( $request->get('page' , 1 ) ) ;
+        $offset = ( $currentPage - 1 ) * $itemsPerPage;
+
+        $logsQueryBuilder = $manager->getRepository(LogEntry::class )
             ->createQueryBuilder('log')
             ->select('log')
             ->orderBy('log.createdDateTime' , 'DESC')
-            ->getQuery()->getResult();
+            ->setFirstResult($offset)
+            ->setMaxResults($itemsPerPage);
 
+        $paginator = new Paginator( $logsQueryBuilder );
+        $maxPages = ceil($paginator->count() / $itemsPerPage );
         return $this->render('default/logs.html.twig' , [
-            'logs' => $logs,
+            'logs' => $paginator,
+            'currentPage' => $currentPage,
+            'maxPages' => $maxPages,
             'date_time_format' => $app->getAppConfig()->getDateFormat() . " - " . $app->getAppConfig()->getTimeFormat()
         ]);
     }

@@ -2,28 +2,47 @@
 
 {% block body %}
 
-            <table>
-                <thead>
-                <tr>
-                    <th>DateTime</th>
-                    <th>Channel</th>
-                    <th>Level</th>
-                    <th>Message</th>
-                    <th>Context</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for log in logs %}
-                    <tr>
-                        <td>{{ log.getCreatedDateTime()|date(date_time_format) }}</td>
-                        <td>{{ log.getChannel()|upper }}</td>
-                        <td>{{ log.getLevel()|upper }}</td>
-                        <td>{{ log.getMessage() }}</td>
-                        <td><pre>{{ log.getContext()|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre></td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-        </form>
+    <table>
+        <thead>
+        <tr>
+            <th>DateTime</th>
+            <th>Channel</th>
+            <th>Level</th>
+            <th>Message</th>
+            <th>Context</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for log in logs %}
+            <tr>
+                <td>{{ log.getCreatedDateTime()|date(date_time_format) }}</td>
+                <td>{{ log.getChannel()|upper }}</td>
+                <td>{{ log.getLevel()|upper }}</td>
+                <td>{{ log.getMessage() }}</td>
+                <td><pre>{{ log.getContext()|json_encode(constant('JSON_PRETTY_PRINT')  b-or constant('JSON_UNESCAPED_UNICODE')) }}</pre></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% if maxPages > 1 %}
+        <ul class="pagination">
+            {# `«` arrow  #}
+            <li>
+                <a {{ currentPage == 1 ? 'class="disabled"' }} href="{{ path('events_log', {page: currentPage-1 < 1 ? 1 : currentPage-1}) }}">«</a>
+            </li>
+
+            {# Render each page number #}
+            {% for i in 1..maxPages %}
+                <li>
+                    <a {{ currentPage == i ? 'class="active"' }} href="{{ path('events_log', {page: i}) }}">{{ i }}</a>
+                </li>
+            {% endfor %}
+
+            {# `»` arrow #}
+            <li>
+                <a {{ currentPage == maxPages ? 'class="disabled"' }} href="{{ path('events_log', {page: currentPage+1 <= maxPages ? currentPage+1 : currentPage}) }}">»</a>
+            </li>
+        </ul>
+    {% endif %}
 
 {% endblock %}

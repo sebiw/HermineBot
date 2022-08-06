@@ -79,6 +79,33 @@ td, th {
     height: 5rem;
 }
 
+.pagination {
+    text-align: center;
+}
+
+.pagination a {
+    padding: 0.1rem;
+    border: 1px solid black;
+    border-radius: 0.2rem;
+    color: #5E5D5B;
+    background-color: #DBD6D0;
+    text-decoration: none;
+}
+
+.pagination a:hover, .pagination a.active {
+    color: #fff;
+    background-color: #202020;
+}
+
+.pagination a.disabled {
+    color: #888888;
+}
+
+.pagination li {
+    display: inline-block;
+    list-style: none;
+}
+
 .text-center {
     text-align: center;
 }
