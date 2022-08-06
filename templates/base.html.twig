@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Willkommen!{% endblock %}</title>
+    {% block stylesheets %}
+        <link rel="stylesheet" type="text/css" href="/assets/main.css" media="screen">
+        {{ encore_entry_link_tags('app') }}
+    {% endblock %}
+
+    {% block javascripts %}
+        {{ encore_entry_script_tags('app') }}
+    {% endblock %}
+</head>
+<body>
+    <header class="primary">
+        {{ title }} - {{ ov }}
+    </header>
+    <div class="wrapper">
+
+        <nav class="primary">
+            {% block nav %}{% endblock %}
+        </nav>
+
+        <main class="primary">
+            {% block body %}{% endblock %}
+        </main>
+
+        <footer class="primary">
+            {% block footer %}{% endblock %}
+        </footer>
+
+    </div>
+</body>
+</html>

@@ -1,0 +1,4 @@
+controllers:
+    resource: ../src/Controller/*
+    exclude: '../src/Controller/JobController.php'
+    type: attribute

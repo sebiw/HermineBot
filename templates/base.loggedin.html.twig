@@ -1,0 +1,29 @@
+{% extends 'base.html.twig' %}
+
+{% block stylesheets %}
+    {{ parent() }}
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+{% endblock %}
+
+{% block nav %}
+    <a href="{{ path('events') }}" class="{{ app.request.get('_route') == 'events' ? 'active' }}">Events Admin</a>
+    <a href="{{ path('execute_events') }}" class="{{ app.request.get('_route') == 'execute_events' ? 'active' }}">Run Event-Executor once</a>
+    {{ parent() }}
+{% endblock %}
+
+{% block body %}
+    {{ parent() }}
+{% endblock %}
+
+{% block footer %}
+
+    {% if app.user %}
+        <div class="login-hint no-print">Eingeloggt als {{ app.user.username }}, <a href="{{ path('app_logout') }}">Ausloggen</a></div>
+    {% endif %}
+
+    {{ parent() }}
+
+{% endblock %}

@@ -1,0 +1,120 @@
+{# templates/default/index.html.twig #}
+{% extends 'base.loggedin.html.twig' %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link rel="stylesheet" href="/assets/npm-asset/jquery-ui/dist/themes/base/jquery-ui.min.css">
+    <link rel="stylesheet" href="/assets/npm-asset/timepicker/jquery.timepicker.min.css">
+{% endblock %}
+
+{%  block javascripts %}
+    {{ parent() }}
+    <script type="application/javascript" src="/assets/npm-asset/jquery/dist/jquery.min.js"></script>
+    <script type="application/javascript" src="/assets/npm-asset/jquery-ui/dist/jquery-ui.min.js"></script>
+    <script type="application/javascript" src="/assets/npm-asset/jquery-ui/ui/i18n/datepicker-de.js"></script>
+    <script type="application/javascript" src="/assets/npm-asset/timepicker/jquery.timepicker.min.js"></script>
+    <script type="text/javascript">
+        $( function() {
+            $( ".thw-datepicker" ).datepicker(
+                $.datepicker.regional[ "de" ]
+            );
+            $('.thw-timepicker').timepicker({
+                timeFormat: '{{ time_format }}',
+                step: 30,
+                minTime: '00:00',
+                maxTime: '23:30',
+                // forceRoundTime: true,
+                startTime: '10:00',
+                orientation: 'l',
+                className: 'thw-timepicker-list'
+            });
+
+            $('#action .action-button').click(function( event ){
+                $('#actionButtonId').val( $(this).data('id') );
+            });
+
+            $('#interval').change(function(){
+                let self = $(this);
+                if( self.val() == "" ){
+                    $('#untilDate').val("").prop( "disabled", true );
+                    $('#untilTime').val("").prop( "disabled", true );
+                } else {
+                    $('#untilDate').prop( "disabled", false );
+                    $('#untilTime').prop( "disabled", false );
+                }
+            }).change();
+        } );
+    </script>
+{% endblock %}
+
+{% block body %}
+        <form method="post" id="action" action="{{ path('save_event') }}">
+            <input type="hidden" name="id" id="actionButtonId" value="{{ current_entry.getId() ?? '' }}">
+            <table>
+                <thead>
+                <tr>
+                    <th>Aktionen</th>
+                    <th colspan="2">Startdatum</th>
+                    <th colspan="2">Enddatum</th>
+                    <th>Interval</th>
+                    <th>Channel-Ziel</th>
+                    <th>Text</th>
+                    <th>zuletzt Versendet</th>
+                    <th>nächste Übermittlung</th>
+                    <th>Anzahl Übermittlungen</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>
+                        {% if current_entry.getId() is null %}
+                            <button type="submit" name="action" value="add">Hinzufügen</button>
+                        {% else %}
+                            <button type="submit" name="action" value="save">Speichern</button>
+                            <button type="submit" name="action" value="">Abbrechen</button>
+                        {% endif %}
+                    </td>
+                    <td><input type="text" name="date" class="thw-datepicker" value="{{ current_entry.getStartDateTime()|date(date_format) }}"></td>
+                    <td><input type="text" name="time" class="thw-timepicker" value="{{ current_entry.getStartDateTime()|date(time_format) }}"></td>
+                    <td><input type="text" name="untilDate" id="untilDate" class="thw-datepicker" value="{{ current_entry.getUntilDateTime()|date(date_format) }}"></td>
+                    <td><input type="text" name="untilTime" id="untilTime" class="thw-timepicker" value="{{ current_entry.getUntilDateTime()|date(time_format) }}"></td>
+                    <td>
+                        <select name="interval" id="interval">
+                            <option value="">-/-</option>
+                            {% for interval, label in allowed_intervals  %}
+                                <option value="{{ interval }}" {{ interval == current_entry.getDateInterval() ? 'selected' : '' }}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td>
+                        <select name="channel">
+                            {% for channelName in allowed_channels  %}
+                                <option value="{{ channelName }}" {{ channelName == current_entry.getChannelTarget() ? 'selected' : '' }}>{{ channelName }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td>
+                        <textarea name="text" class="thw-textarea">{{ current_entry.text ?? '' }}</textarea>
+                    </td>
+                    <td colspan="3"></td>
+                </tr>
+                {% for event in events  %}
+                    <tr class="{{ event.eventDone() ? 'event-done' : 'event' }}">
+                        <td>
+                            <button type="submit" class="action-button" name="action" value="edit" data-id="{{ event.getId() ?? '' }}">Editieren</button>
+                            <button type="submit" class="action-button" name="action" value="delete" data-id="{{ event.getId() ?? '' }}">Löschen</button>
+                        <td colspan="2" class="text-center">{{ event.getStartDateTime()|date(date_time_format) }}</td>
+                        <td colspan="2" class="text-center">{{ event.getUntilDateTime()|date(date_time_format) }}</td>
+                        <td>{{ allowed_intervals[ event.getDateInterval() ] ?? "" }}</td>
+                        <td>{{ event.getChannelTarget() }}</td>
+                        <td><pre>{{ event.getText() }}</pre></td>
+                        <td>{{ event.getDoneDateTime()|date(date_time_format) }}</td>
+                        <td>{{ event.getDueDateTime()|date(date_time_format) }}</td>
+                        <td>{{ event.getTransmissionsCount() }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </form>
+
+{% endblock %}
