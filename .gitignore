@@ -4,7 +4,7 @@
 /.env.local.php
 /.env.*.local
 /config/secrets/prod/prod.decrypt.private.php
-/config/legacy/
+/config/legacy/*
 /public/bundles/
 /public/assets/npm-asset/*
 /data/*
