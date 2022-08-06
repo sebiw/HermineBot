@@ -18,7 +18,7 @@ class DefaultResponse extends ArrayDataCollection implements \JsonSerializable {
         return $this->getResults('status' , 'message');
     }
 
-    public function jsonSerialize()
+    public function jsonSerialize() : mixed
     {
         return $this->getResults();
     }
