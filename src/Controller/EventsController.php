@@ -16,6 +16,7 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 #[IsGranted('IS_AUTHENTICATED_FULLY')]
 class EventsController extends AbstractController
@@ -28,7 +29,7 @@ class EventsController extends AbstractController
         $events = $manager->getRepository(Event::class )
             ->createQueryBuilder('entries')
             ->select('entries')
-            ->orderBy('entries.dueDateTime' , 'DESC')
+            ->orderBy('entries.dueDateTime' , 'ASC')
             ->getQuery()->getResult();
 
         if( ( $id = $request->get('id') ) === null ){
@@ -90,7 +91,7 @@ class EventsController extends AbstractController
     }
 
     #[Route('/events', name: 'save_event', methods: [ 'POST' ] )]
-    public function saveEvent( Request $request , ManagerRegistry $doctrine , AppService $app, DatabaseLogger $logger ): RedirectResponse
+    public function saveEvent( Request $request , ManagerRegistry $doctrine , AppService $app, DatabaseLogger $logger, #[CurrentUser] ?User $user ): RedirectResponse
     {
         $manager = $doctrine->getManagerForClass( Event::class );
 
@@ -160,7 +161,7 @@ class EventsController extends AbstractController
     }
 
     #[Route('/events/execute', name: 'execute_events', methods: [ 'GET' ] )]
-    public function executeEvent(){
+    public function executeEvent( #[CurrentUser] ?User $user ){
         $response = $this->forward('App\Controller\JobController::main', [ 'context' => 'Manual' ]);
         return $this->render('default/events.execute.html.twig' , [
             'response' => $response,
