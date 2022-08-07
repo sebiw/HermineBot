@@ -34,6 +34,26 @@ nav.primary a:hover, nav.primary a.active {
     background-color: #202020;
 }
 
+nav.secondary {
+    padding: 0.5rem 0;
+    text-align: center;
+}
+
+nav.secondary a {
+    display: inline-block;
+    padding: 0.2rem;
+    border: 1px solid black;
+    border-radius: 0.2rem;
+    color: #5E5D5B;
+    background-color: #DBD6D0;
+    text-decoration: none;
+}
+
+nav.secondary a:hover, nav.secondary a.active {
+    color: #fff;
+    background-color: #202020;
+}
+
 .wrapper {
     margin: 1rem 1rem;
 }

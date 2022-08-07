@@ -74,6 +74,21 @@ class EventsController extends AbstractController
         ]);
     }
 
+    #[Route('/events/log/truncate', name: 'events_log_truncate', methods: [ 'GET' ])]
+    public function truncateLogs( AppService $app, ManagerRegistry $doctrine ,DatabaseLogger $logger, #[CurrentUser] ?User $user ){
+        $manager = $doctrine->getManagerForClass( LogEntry::class );
+        $deleteFromDateTime = (new \DateTime())->modify('-1 weeks');
+        $manager->getRepository(LogEntry::class )
+            ->createQueryBuilder('log')
+            ->delete(LogEntry::class , 'log')
+            ->where('log.createdDateTime < :deleteFrom')
+            ->setParameter('deleteFrom' , $deleteFromDateTime )
+            ->getQuery()->getResult();
+
+        $logger->info(sprintf('Delete log entries starting from %s' , $deleteFromDateTime->format($app->getAppConfig()->getDateFormat() . " - " . $app->getAppConfig()->getTimeFormat())));
+        return $this->redirectToRoute('events_log');
+    }
+
     #[Route('/events', name: 'save_event', methods: [ 'POST' ] )]
     public function saveEvent( Request $request , ManagerRegistry $doctrine , AppService $app, DatabaseLogger $logger ): RedirectResponse
     {
