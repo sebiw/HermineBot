@@ -5,6 +5,7 @@ namespace App\Stashcat;
 use App\Core\RestClient;
 use App\Stashcat\Responses\AuthCheckResponse;
 use App\Stashcat\Responses\ChannelsSubscriptedResponse;
+use App\Stashcat\Responses\CompanyGroupsResponse;
 use App\Stashcat\Responses\CompanyMemberResponse;
 use App\Stashcat\Responses\LoginResponse;
 use App\Stashcat\Responses\PrivateKeyResponse;
@@ -104,6 +105,22 @@ class ApiClient {
     /**
      * @param string $client_key
      * @param string $company_id
+     * @return CompanyGroupsResponse
+     * @throws Exception
+     */
+    public function companyGroups( string $client_key  , string $company_id ) : CompanyGroupsResponse {
+        $companyGroupsResult = $this->getRestClient()->post( $this->getConfig()->getCompanyGroupsURL() , [
+            "client_key" => $client_key,
+            "device_id" => $this->getConfig()->getDeviceId(),
+            "company" => $company_id,
+            "sorting" => 'name_asc'
+        ]);
+        return new CompanyGroupsResponse($companyGroupsResult);
+    }
+
+    /**
+     * @param string $client_key
+     * @param string $company_id
      * @return ChannelsSubscriptedResponse
      * @throws Exception
      */
@@ -126,7 +143,7 @@ class ApiClient {
      * @return Responses\SendMessageResponse
      * @throws Exception
      */
-    public function sendMessageToChannel( string $client_key , string $company_id , string $channel_id , string $text , string $iv , string $verification = "" ) : Responses\SendMessageResponse
+    public function sendMessageToChannel( string $client_key , string $company_id , string $channel_id , string $text , string $iv , string $verification = "" , ?string $metainfo = null ) : Responses\SendMessageResponse
     {
         $sendResult = $this->getRestClient()->post( $this->getConfig()->getMessageSendURL() , [
             "client_key" => $client_key,
@@ -140,7 +157,8 @@ class ApiClient {
             "url" => "[]",
             "type" => "text",
             "verification" => $verification,
-            "encrypted" => True
+            "encrypted" => true,
+            "metainfo" => $metainfo
         ]);
         return new Responses\SendMessageResponse( $sendResult );
     }

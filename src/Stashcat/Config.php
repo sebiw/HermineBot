@@ -31,6 +31,7 @@ class Config {
     protected string $urlPath_message_like = "message/like";
     protected string $urlPath_auth_check = "auth/check";
     protected string $urlPath_company_member = "company/member";
+    protected string $urlPath_company_groups = 'groups/get_company_groups';
 
 
     /**
@@ -127,6 +128,14 @@ class Config {
     public function getCompanyMemberURL(): string
     {
         return $this->addToBaseURL( $this->urlPath_company_member );
+    }
+
+    /**
+     * @return string
+     */
+    public function getCompanyGroupsURL(): string
+    {
+        return $this->addToBaseURL( $this->urlPath_company_groups );
     }
 
     /**

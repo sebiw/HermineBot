@@ -31,6 +31,17 @@ class Message extends DefaultEntity {
         return $this->getResults('time');
     }
 
+    /**
+     * @return mixed|null
+     * @throws \Exception
+     */
+    public function getMetaInfo(){
+        if( $this->resultKeyExist('metainfo') ){
+            return $this->getResults('metainfo');
+        }
+        return null;
+    }
+
     public function getTimeAsDateTime(){
         return (new \DateTime())->setTimestamp( $this->getTime() );
     }

@@ -54,11 +54,38 @@ class JobController extends AbstractController
 
                 $THWChannel = $stashcatMediator->getChannelOfCompany( $event->getChannelTarget() , $THWCompany );
                 $stashcatMediator->decryptChannelPrivateKey( $THWChannel );
-                $result = $stashcatMediator->sendMessageToChannel( $event->getText() . $app->getAppConfig()->getAutoAppendToMessages() , $THWChannel );
+
+                $eventText = $event->getText();
+                $allowedIntervals = $app->getAppConfig()->getAllowedIntervals();
+
+                // Replacements...
+                $replacements = [
+                    '{{CompanyActiveUser}}' => $THWCompany->getActiveUser(),
+                    '{{CompanyCreatedUser}}' => $THWCompany->getCreatedUser(),
+                    '{{CompanyName}}' => $THWCompany->getName(),
+                    '{{ChannelUserCount}}' => $THWChannel->getUserCount(),
+                    '{{EventInterval}}' => !empty( $event->getDateInterval() ) ? ( $allowedIntervals[ $event->getDateInterval() ] ?? '#N/A' ) : ''
+                ];
+                $eventText = str_replace( array_keys( $replacements ) , array_values( $replacements ) , $eventText );
+
+                // Prepare Group Stats if required...
+                $groupStatsKey = '{{CompanyGroupsStats}}';
+                if( str_contains( $eventText , $groupStatsKey ) ){
+                    $stashcatMediator->loadGroups( $THWCompany );
+                    $THWGroups = $stashcatMediator->getGroupsOfCompany( $THWCompany );
+                    $groupStatistics = [];
+                    foreach( $THWGroups AS $group ){
+                        $groupStatistics[ $group->getPossibleUser() ] = sprintf('%s: %s mögliche Nutzer' , $group->getName() , $group->getPossibleUser() );
+                    }
+                    ksort( $groupStatistics );
+                    $eventText = str_replace( $groupStatsKey , implode( "\r\n" , $groupStatistics ) , $eventText );
+                }
+
+                // Send message!
+                $result = $stashcatMediator->sendMessageToChannel( $eventText . $app->getAppConfig()->getAutoAppendToMessages() , $THWChannel );
 
                 // Update next due date time...
                 if( !empty( $event->getDateInterval() ) ){
-
                     $interval = new DateInterval( $event->getDateInterval() );
                     // If the process wasn't able to work on multiple intervals in the past - try to catch up.
                     $dueDate = clone $event->getDueDateTime();
@@ -71,7 +98,7 @@ class JobController extends AbstractController
                 $event->increaseTransmissionsCount();
 
                 if( $result->_getStatusValue() == 'OK' ){
-                    $logger->log(LogLevel::INFO , sprintf('Message sent to channel %s' , $event->getChannelTarget() ) , [ 'text' => $event->getText() ]);
+                    $logger->log(LogLevel::INFO , sprintf('Message sent to channel %s' , $event->getChannelTarget() ) , [ 'text' => $eventText ]);
                     $event->setDoneDateTime( $now );
                     $entityManager->persist( $event );
                     $entityManager->flush();

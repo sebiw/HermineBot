@@ -7,7 +7,9 @@ use App\Stashcat\ApiClient;
 use App\Stashcat\CryptoBox;
 use App\Stashcat\Entities\Channel;
 use App\Stashcat\Entities\Company;
+use App\Stashcat\Entities\Group;
 use App\Stashcat\Entities\Message;
+use App\Stashcat\Responses\CompanyGroupsResponse;
 use App\Stashcat\Responses\CompanyMemberResponse;
 use App\Stashcat\Responses\LoginResponse;
 
@@ -21,7 +23,7 @@ class StashcatMediator
     private ?LoginResponse $loginResponse = null;
 
     private ?CompanyMemberResponse $companyMembersResponse = null;
-
+    private array $companyGroups = [];
     private array $channelsSubscripted = [];
 
     /**
@@ -53,6 +55,37 @@ class StashcatMediator
     public function getChannelOfCompany( string $channelName , Company $company ) : ?Channel {
         if( isset( $this->channelsSubscripted[ $company->getId() ] ) ){
             return $this->channelsSubscripted[ $company->getId() ]->getChannelByName( $channelName );
+        }
+        throw new \Exception('Company not found!');
+    }
+
+    /**
+     * @param string $groupName
+     * @param Company $company
+     * @return Group|null
+     * @throws \Exception
+     */
+    public function getGroupOfCompany( string $groupName , Company $company ): ?Group
+    {
+        if( isset( $this->companyGroups[ $company->getId() ] ) ){
+            /* @var $companyGroups CompanyGroupsResponse */
+            $companyGroups = $this->companyGroups[ $company->getId() ];
+            return $companyGroups->getGroupByName( $groupName);
+        }
+        throw new \Exception('Company not found!');
+    }
+
+    /**
+     * @param Company $company
+     * @return Group[]
+     * @throws \Exception
+     */
+    public function getGroupsOfCompany( Company $company ): array
+    {
+        if( isset( $this->companyGroups[ $company->getId() ] ) ){
+            /* @var $companyGroups CompanyGroupsResponse */
+            $companyGroups = $this->companyGroups[ $company->getId() ];
+            return $companyGroups->getGroups();
         }
         throw new \Exception('Company not found!');
     }
@@ -147,6 +180,15 @@ class StashcatMediator
      * @return void
      * @throws \Exception
      */
+    public function loadGroups( Company $company ){
+        $this->companyGroups[ $company->getId() ] = $this->getStashcatApiClient()->companyGroups( $this->getLoginResponse()->getClientKey() , $company->getId() );
+    }
+
+    /**
+     * @param Company $company
+     * @return void
+     * @throws \Exception
+     */
     public function loadChannelSubscripted( Company $company ){
         $this->channelsSubscripted[ $company->getId() ] = $this->getStashcatApiClient()->channelsSubscripted( $this->getLoginResponse()->getClientKey() , $company->getId() );
     }
@@ -159,9 +201,18 @@ class StashcatMediator
      */
     public function sendMessageToChannel( string $plainMessage , Channel $channel ): \App\Stashcat\Responses\SendMessageResponse
     {
+        $metainfo = null;
         $ivMessage = "";
+        $verification = ""; // @TODO: Verification! Seems to be: MD5 of "Text" + deviceId + microTime + location longitude + location latitude + timestamp, but its never used???
+
+        // simple markdown check... maybe changing in the future!
+        $markdown = preg_match_all("#[*].*[*]#" , $plainMessage ) || preg_match_all("#_.*_#" , $plainMessage );
+        if( $markdown ){
+            $metainfo = json_encode([ "v" => 1 , "style" => "md" ]);
+        }
+
         $encryptedMessage = $this->getStashcatCryptoBox()->getChannelMessageEncrypted( $plainMessage , $channel->getId() , $ivMessage );
-        return $this->getStashcatApiClient()->sendMessageToChannel( $this->getLoginResponse()->getClientKey() , $channel->getCompanyId() , $channel->getId() , $encryptedMessage , $ivMessage );
+        return $this->getStashcatApiClient()->sendMessageToChannel( $this->getLoginResponse()->getClientKey() , $channel->getCompanyId() , $channel->getId() , $encryptedMessage , $ivMessage , $verification , $metainfo );
     }
 
     /**
