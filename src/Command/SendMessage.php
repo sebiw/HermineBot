@@ -107,13 +107,13 @@ class SendMessage extends Command
             $context = 'Console';
         }
 
-        $channelTarget = trim( $input->getOption('channel') );
+        $channelTarget = trim( $input->getOption('channel') ?? '' );
         if( empty( $channelTarget ) || !in_array( $channelTarget , $this->getAppService()->getAppConfig()->getAllowedChannelNames() ) ){
             throw new \Exception('Invalid Channel-Target: ' . $channelTarget );
         }
 
         foreach( [ 'message' => null , 'message-b64' => 'base64_decode' ] AS $key => $callback ){
-            $eventText =  trim( $input->getOption($key ) );
+            $eventText =  trim( $input->getOption( $key ) ?? '' );
             if( !empty( $eventText ) && strlen( $eventText ) > 0 ){
                 if( $callback !== null && is_callable( $callback ) ){
                     $eventText = $callback( $eventText );
