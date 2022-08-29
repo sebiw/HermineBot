@@ -46,6 +46,14 @@ class Config extends ArrayDataCollection {
     }
 
     /**
+     * @return array [ key => callback ]
+     * @throws \Exception
+     */
+    public function getReplacementCallbacks() : array {
+        return $this->getResults('replacement_callbacks');
+    }
+
+    /**
      * @return string
      * @throws \Exception
      */

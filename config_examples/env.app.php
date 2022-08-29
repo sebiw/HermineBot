@@ -22,5 +22,17 @@ return [
         "P1Y" => "Jedes Jahr",
         "P2Y" => "Alle 2 Jahre",
         "P3Y" => "Alle 3 Jahre"
+    ],
+    "replacementCallbacks" => [
+        // Return string or null....
+        'stan_manager_files' => function(){
+            $output = [];
+            $code = 0;
+            exec('php bin/console output:command' , $output , $code );
+            if( !empty( $output ) && $code == \Symfony\Component\Console\Command\Command::SUCCESS ){
+                return implode('' , $output );
+            }
+            return null;
+        }
     ]
 ];

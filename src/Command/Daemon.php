@@ -143,6 +143,21 @@ class Daemon extends Command
                 $eventText = $event->getText();
                 $allowedIntervals = $this->getAppService()->getAppConfig()->getAllowedIntervals();
 
+                $replacementCallbacks = $this->getAppService()->getAppConfig()->getReplacementCallbacks();
+                foreach( $replacementCallbacks AS $key => $callback ){
+                    if( is_callable( $callback ) ){
+                        $replaceKey = '{{' . $key . '}}';
+                        if( str_contains( $eventText , $replaceKey ) ){
+                            $callbackResult = $callback();
+                            if( !empty( $callbackResult ) && is_string( $callbackResult ) ){
+                                $eventText = str_replace( $replaceKey , $callbackResult , $eventText );
+                            } else {
+                                $eventText = str_replace( $replaceKey , '!! ERROR !!' , $eventText );
+                            }
+                        }
+                    }
+                }
+
                 // Replacements...
                 $replacements = [
                     '{{CompanyActiveUser}}' => $THWCompany->getActiveUser(),
