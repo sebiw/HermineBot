@@ -12,9 +12,13 @@ use Doctrine\Persistence\ManagerRegistry;
 use Psr\Log\LogLevel;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Bundle\FrameworkBundle\Console\Application;
+use Symfony\Component\Console\Input\ArrayInput;
+use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
@@ -86,7 +90,7 @@ class EventsController extends AbstractController
             ->setParameter('deleteFrom' , $deleteFromDateTime )
             ->getQuery()->getResult();
 
-        $logger->info(sprintf('Delete log entries starting from %s' , $deleteFromDateTime->format($app->getAppConfig()->getDateFormat() . " - " . $app->getAppConfig()->getTimeFormat())));
+        $logger->info(sprintf(/** @lang text */ 'Delete log entries starting from %s' , $deleteFromDateTime->format($app->getAppConfig()->getDateFormat() . " - " . $app->getAppConfig()->getTimeFormat())));
         return $this->redirectToRoute('events_log');
     }
 
@@ -161,10 +165,41 @@ class EventsController extends AbstractController
     }
 
     #[Route('/events/execute', name: 'execute_events', methods: [ 'GET' ] )]
-    public function executeEvent( #[CurrentUser] ?User $user ){
-        $response = $this->forward('App\Controller\JobController::main', [ 'context' => 'Manual' ]);
+    public function executeEvent( KernelInterface $kernel, #[CurrentUser] ?User $user ){
+
+        $application = new Application($kernel);
+        $application->setAutoExit(false);
+
+        $input = new ArrayInput([
+            'command' => 'daemon:tick',
+            '--context' => 'Manual'
+        ]);
+
+        // You can use NullOutput() if you don't need the output
+        $output = new BufferedOutput();
+        $application->run($input, $output);
+
         return $this->render('default/events.execute.html.twig' , [
-            'response' => $response,
+            'response' => $output->fetch(),
         ]);
     }
+
+    // @TODO: Mail to Hermine?
+    // Materialanforderungen / Materialeingang automatisch in Hermine Posten?
+    // Tracking von Material: Was für Anforderungen wurden erfasst / Welche sind noch offen?
+
+    // @TODO: iCal to Hermine?
+    // Trigger events by Kalender entries
+
+    // @TODO: Hermine Bot?
+    // Keywords trigger messages? => Kombination mit "Question Bot"
+
+    // @TODO: Question Bot?
+    // Umfragen / Abfragen vereinfachen: Rückmeldungen Lesen unter Bereitstellen um Übersichten zu planen.
+    // Kombinieren mit der Helferdislozierungsliste aus dem THWin könnte man Excel-Dateien in Software gießen.
+    // Antwort-Optionen durch Emojies? (JA / NEIN)
+    // Mehrere Termine: unterschiedliche Emojies / Keywords?
+    // => DENNOCH Manuelles Editieren muss möglich sein!!!
+    // PRIVATE Nachrichten entschlüsseln?
+
 }

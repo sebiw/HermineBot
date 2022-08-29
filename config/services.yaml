@@ -19,7 +19,6 @@ services:
             - '../src/DependencyInjection/'
             - '../src/Entity/'
             - '../src/Kernel.php'
-            - '../src/JobKernel.php'
 
     logger.events:
         class: App\Core\DatabaseLogger

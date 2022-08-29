@@ -1,32 +1,117 @@
 <?php
 
-namespace App\Controller;
+// src/Command/CreateUserCommand.php
+namespace App\Command;
 
 use App\Core\DatabaseLogger;
 use App\Entity\Event;
+use App\Entity\File;
+use App\Entity\File_Status;
+use App\Entity\Material_Message;
+use App\Kernel;
 use App\Service\AppService;
 use DateInterval;
 use DateTime;
 use Doctrine\Persistence\ManagerRegistry;
+use PhpImap\Mailbox;
 use Psr\Log\LogLevel;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Console\Attribute\AsCommand;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputDefinition;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Annotation\Route;
 
-class JobController extends AbstractController
+// the name of the command is what users type after "php bin/console"
+#[AsCommand(name: 'daemon:tick', description: 'One Tick for the Background Daemon')]
+class Daemon extends Command
 {
 
-    #[Route('/', name: 'handler', methods: [ 'GET' ])]
-    public function main( AppService $app , ManagerRegistry $doctrine , #[Autowire(service: 'logger.events')] DatabaseLogger $logger , string $context = 'Console'): Response
+    private ManagerRegistry $doctrine;
+    private DatabaseLogger $logger;
+    private Kernel $kernel;
+    private AppService $appService;
+
+    /**
+     * @param AppService $app
+     * @param ManagerRegistry $doctrine
+     * @param DatabaseLogger $logger
+     * @param Kernel $kernel
+     * @param string|null $name
+     */
+    public function __construct(  AppService $app , ManagerRegistry $doctrine , #[Autowire(service: 'logger.events')] DatabaseLogger $logger , Kernel $kernel , string $name = null)
+    {
+        parent::__construct($name);
+        $this->doctrine = $doctrine;
+        $this->logger = $logger;
+        $this->kernel = $kernel;
+        $this->appService = $app;
+    }
+
+    /**
+     * @return void
+     */
+    protected function configure()
+    {
+        parent::configure();
+        $this->addOption('context' , '-x' , InputOption::VALUE_OPTIONAL , 'Context of this Call' , 'Console' );
+    }
+
+    /**
+     * @return AppService
+     */
+    protected function getAppService(): AppService
+    {
+        return $this->appService;
+    }
+
+    /**
+     * @return ManagerRegistry
+     */
+    protected function getDoctrine(): ManagerRegistry
+    {
+        return $this->doctrine;
+    }
+
+    /**
+     * @return DatabaseLogger
+     */
+    protected function getLogger(): DatabaseLogger
+    {
+        return $this->logger;
+    }
+
+    /**
+     * @return Kernel
+     */
+    protected function getKernel(): Kernel
+    {
+        return $this->kernel;
+    }
+
+    /**
+     * @param InputInterface $input
+     * @param OutputInterface $output
+     * @return int
+     * @throws \Exception
+     */
+    protected function execute(InputInterface $input, OutputInterface $output ): int
     {
 
-        $logger->log(LogLevel::INFO , sprintf('%s: Started event handler' , $context ) );
+        $context = $input->getOption('context');
+        if( empty( $context ) ){
+            $context = 'Console';
+        }
+
+        $this->getLogger()->log(LogLevel::INFO , sprintf('%s: Started event handler' , $context ) );
 
         $jsonResult = [];
         $now = new DateTime();
-        $entityManager = $doctrine->getManagerForClass( Event::class );
+        $entityManager = $this->getDoctrine()->getManagerForClass( Event::class );
 
         /* @var $events Event[] */
         $events = $entityManager->getRepository( Event::class )
@@ -42,7 +127,7 @@ class JobController extends AbstractController
         $eventsProcessed = 0;
         if( count( $events ) > 0 ){
             // Mediator -> ease of access
-            $stashcatMediator = $app->getMediator();
+            $stashcatMediator = $this->getAppService()->getMediator();
             $stashcatMediator->login();
             $stashcatMediator->decryptPrivateKey();
             $stashcatMediator->loadCompanies();
@@ -56,7 +141,7 @@ class JobController extends AbstractController
                 $stashcatMediator->decryptChannelPrivateKey( $THWChannel );
 
                 $eventText = $event->getText();
-                $allowedIntervals = $app->getAppConfig()->getAllowedIntervals();
+                $allowedIntervals = $this->getAppService()->getAppConfig()->getAllowedIntervals();
 
                 // Replacements...
                 $replacements = [
@@ -82,7 +167,7 @@ class JobController extends AbstractController
                 }
 
                 // Send message!
-                $result = $stashcatMediator->sendMessageToChannel( $eventText . $app->getAppConfig()->getAutoAppendToMessages() , $THWChannel );
+                $result = $stashcatMediator->sendMessageToChannel( $eventText . $this->getAppService()->getAppConfig()->getAutoAppendToMessages() , $THWChannel );
 
                 // Update next due date time...
                 if( !empty( $event->getDateInterval() ) ){
@@ -98,7 +183,7 @@ class JobController extends AbstractController
                 $event->increaseTransmissionsCount();
 
                 if( $result->_getStatusValue() == 'OK' ){
-                    $logger->log(LogLevel::INFO , sprintf('Message sent to channel %s' , $event->getChannelTarget() ) , [ 'text' => $eventText ]);
+                    $this->getLogger()->log(LogLevel::INFO , sprintf('Message sent to channel %s' , $event->getChannelTarget() ) , [ 'text' => $eventText ]);
                     $event->setDoneDateTime( $now );
                     $entityManager->persist( $event );
                     $entityManager->flush();
@@ -108,12 +193,15 @@ class JobController extends AbstractController
                 $stashcatMediator->likeMessage( $result->getMessage() );
             }
         }
+
         $jsonResult['status'] = 'OK';
         $jsonResult['events'] = [
             'processed' => $eventsProcessed,
             'details' => $events
         ];
-        return new JsonResponse( $jsonResult );
+
+        $output->writeln( json_encode( $jsonResult , JSON_PRETTY_PRINT ) );
+        return Command::SUCCESS;
     }
 
 }

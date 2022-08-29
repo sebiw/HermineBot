@@ -1,3 +1,0 @@
-controllers:
-    resource: ../src/Controller/JobController.php
-    type: attribute
