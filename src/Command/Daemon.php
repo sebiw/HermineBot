@@ -15,14 +15,18 @@ use DateTime;
 use Doctrine\Persistence\ManagerRegistry;
 use PhpImap\Mailbox;
 use Psr\Log\LogLevel;
+use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -113,6 +117,8 @@ class Daemon extends Command
         $now = new DateTime();
         $entityManager = $this->getDoctrine()->getManagerForClass( Event::class );
 
+        $this->checkMessageFiles( $input , $output );
+
         /* @var $events Event[] */
         $events = $entityManager->getRepository( Event::class )
             ->createQueryBuilder('entries')
@@ -152,7 +158,7 @@ class Daemon extends Command
                             if( !empty( $callbackResult ) && is_string( $callbackResult ) ){
                                 $eventText = str_replace( $replaceKey , $callbackResult , $eventText );
                             } else {
-                                $eventText = str_replace( $replaceKey , '!! ERROR !!' , $eventText );
+                                $eventText = str_replace( $replaceKey , '! ERROR: PLACEHOLDER EMPTY !' , $eventText );
                             }
                         }
                     }
@@ -217,6 +223,38 @@ class Daemon extends Command
 
         $output->writeln( json_encode( $jsonResult , JSON_PRETTY_PRINT ) );
         return Command::SUCCESS;
+    }
+
+    /**
+     * @param InputInterface $input
+     * @param OutputInterface $output
+     * @return void
+     * @throws \Symfony\Component\Console\Exception\ExceptionInterface
+     */
+    protected function checkMessageFiles( InputInterface $input, OutputInterface $output  ){
+        $messageFilesIn = trim( $this->getKernel()->getContainer()->getParameter('app.message_files_in') ?? '' );
+        if( empty( $messageFilesIn ) ){
+            return;
+        }
+        $messageInDir = BASE_PATH . $messageFilesIn;
+        $fileSystem = new Filesystem();
+        $fileSystem->mkdir( $messageInDir );
+        $finder = new Finder();
+        $finder->files()->in( $messageInDir )->name('*.json');
+        foreach( $finder AS $file ){
+            $this->getLogger()->log(LogLevel::INFO , 'Processing message file...' , [ 'file' => $file->getRealPath() ]);
+            $message = json_decode( $file->getContents() , true );
+            if( isset( $message['message'] , $message['channel'] , $message['context'] ) ){
+                $command = $this->getApplication()->find('hermine:send-message');
+                $input = new ArrayInput([
+                    '--context' => $message['context'],
+                    '--channel' => $message['channel'],
+                    '--message' => $message['message']
+                ]);
+                $command->run( $input , $output );
+            }
+            $fileSystem->remove( $file->getRealPath() );
+        }
     }
 
 }
