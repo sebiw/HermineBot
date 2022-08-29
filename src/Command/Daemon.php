@@ -251,7 +251,11 @@ class Daemon extends Command
                     '--channel' => $message['channel'],
                     '--message' => $message['message']
                 ]);
-                $command->run( $input , $output );
+                if( $command->run( $input , $output ) === self::SUCCESS ){
+                    $this->getLogger()->log(LogLevel::INFO , 'hermine:send-message executed!');
+                }
+            } else {
+                $this->getLogger()->log(LogLevel::INFO , 'Message malformed!' , [ 'keys_exist' => is_array( $message ) ? array_keys( $message ) : null ]);
             }
             $fileSystem->remove( $file->getRealPath() );
         }
