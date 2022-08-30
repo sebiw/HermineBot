@@ -30,7 +30,7 @@ class HerminePlaceholderHandler
 
         $placeholderData = [];
         if( $filesystem->exists( $placeholderFile ) ){
-            $placeholderData = json_decode( file_get_contents( $placeholderFile ) );
+            $placeholderData = json_decode( file_get_contents( $placeholderFile ) , true );
         }
 
         $placeholderName = sprintf('%s:%s' , $message->getContext() , $message->getKey() );
