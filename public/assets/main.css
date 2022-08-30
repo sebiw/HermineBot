@@ -130,6 +130,11 @@ td, th {
     text-align: center;
 }
 
+.object-center {
+    margin-left: auto;
+    margin-right: auto;
+}
+
 .event-done {
     background-color: rgba(120, 120, 120, 0.70);
 }

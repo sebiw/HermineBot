@@ -6,7 +6,7 @@
         <a href="{{ path('events_log_truncate') }}">Logs bereinigen</a>
     </nav>
 
-    <table>
+    <table class="object-center">
         <thead>
         <tr>
             <th>DateTime</th>
@@ -23,7 +23,7 @@
                 <td>{{ log.getChannel()|upper }}</td>
                 <td>{{ log.getLevel()|upper }}</td>
                 <td>{{ log.getMessage() }}</td>
-                <td><pre>{{ log.getContext()|json_encode(constant('JSON_PRETTY_PRINT')  b-or constant('JSON_UNESCAPED_UNICODE')) }}</pre></td>
+                <td>{{ log.getContext()|json_encode(constant('JSON_PRETTY_PRINT')  b-or constant('JSON_UNESCAPED_UNICODE'))|nl2br }}</td>
             </tr>
         {% endfor %}
         </tbody>
