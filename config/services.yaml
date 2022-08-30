@@ -6,6 +6,8 @@
 parameters:
     app.message_files_in: '%env(MESSAGE_FILES_IN)% '
 
+    app.message_placeholder: '/data/placeholder.json'
+
 services:
     # default configuration for services in *this* file
     _defaults:

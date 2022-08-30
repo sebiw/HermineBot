@@ -26,6 +26,7 @@ use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Filesystem\Path;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -148,6 +149,21 @@ class Daemon extends Command
 
                 $eventText = $event->getText();
                 $allowedIntervals = $this->getAppService()->getAppConfig()->getAllowedIntervals();
+
+                $filesystem = new Filesystem();
+                $placeholderFile = Path::normalize( BASE_PATH . trim( $this->getKernel()->getContainer()->getParameter('app.message_placeholder') ) );
+
+                if( $filesystem->exists( $placeholderFile ) ){
+                    $placeholderData = json_decode( file_get_contents( $placeholderFile ) , true );
+                    if( is_array( $placeholderData ) ){
+                        foreach( $placeholderData AS $key => $data ){
+                            $replaceKey = '{{' . $key . '}}';
+                            if( str_contains( $eventText , $replaceKey ) && isset( $data['message'] ) ){
+                                $eventText = str_replace( $replaceKey , $data['message'] , $eventText );
+                            }
+                        }
+                    }
+                }
 
                 $replacementCallbacks = $this->getAppService()->getAppConfig()->getReplacementCallbacks();
                 foreach( $replacementCallbacks AS $key => $callback ){
