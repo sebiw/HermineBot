@@ -150,58 +150,26 @@ class Daemon extends Command
                 $eventText = $event->getText();
                 $allowedIntervals = $this->getAppService()->getAppConfig()->getAllowedIntervals();
 
-                $filesystem = new Filesystem();
-                $placeholderFile = Path::normalize( BASE_PATH . trim( $this->getKernel()->getContainer()->getParameter('app.message_placeholder') ) );
-
-                if( $filesystem->exists( $placeholderFile ) ){
-                    $placeholderData = json_decode( file_get_contents( $placeholderFile ) , true );
-                    if( is_array( $placeholderData ) ){
-                        foreach( $placeholderData AS $key => $data ){
-                            $replaceKey = '{{' . $key . '}}';
-                            if( str_contains( $eventText , $replaceKey ) && isset( $data['message'] ) ){
-                                $eventText = str_replace( $replaceKey , $data['message'] , $eventText );
-                            }
+                // Prepare Message...
+                $placeholderCallbacks = SendMessage::getMessageCallbackDecorator( $this->getKernel()->getContainer() , [
+                    'CompanyActiveUser' => $THWCompany->getActiveUser(),
+                    'CompanyCreatedUser' => $THWCompany->getCreatedUser(),
+                    'CompanyName' => $THWCompany->getName(),
+                    'ChannelUserCount' => $THWChannel->getUserCount(),
+                    'CompanyGroupsStatsCallback' => function() use ( $THWCompany , $stashcatMediator ){
+                        $stashcatMediator->loadGroups( $THWCompany );
+                        $THWGroups = $stashcatMediator->getGroupsOfCompany( $THWCompany );
+                        $groupStatistics = [];
+                        foreach( $THWGroups AS $group ){
+                            $groupStatistics[ $group->getPossibleUser() ] = sprintf('%s: %s mögliche Nutzer' , $group->getName() , $group->getPossibleUser() );
                         }
-                    }
-                }
+                        ksort( $groupStatistics );
+                        return implode( "\r\n" , $groupStatistics );
+                    },
+                    'EventInterval' => !empty( $event->getDateInterval() ) ? ( $allowedIntervals[ $event->getDateInterval() ] ?? '#N/A' ) : ''
+                ]);
 
-                $replacementCallbacks = $this->getAppService()->getAppConfig()->getReplacementCallbacks();
-                foreach( $replacementCallbacks AS $key => $callback ){
-                    if( is_callable( $callback ) ){
-                        $replaceKey = '{{' . $key . '}}';
-                        if( str_contains( $eventText , $replaceKey ) ){
-                            $callbackResult = $callback();
-                            if( !empty( $callbackResult ) && is_string( $callbackResult ) ){
-                                $eventText = str_replace( $replaceKey , $callbackResult , $eventText );
-                            } else {
-                                $eventText = str_replace( $replaceKey , '! ERROR: PLACEHOLDER EMPTY !' , $eventText );
-                            }
-                        }
-                    }
-                }
-
-                // Replacements...
-                $replacements = [
-                    '{{CompanyActiveUser}}' => $THWCompany->getActiveUser(),
-                    '{{CompanyCreatedUser}}' => $THWCompany->getCreatedUser(),
-                    '{{CompanyName}}' => $THWCompany->getName(),
-                    '{{ChannelUserCount}}' => $THWChannel->getUserCount(),
-                    '{{EventInterval}}' => !empty( $event->getDateInterval() ) ? ( $allowedIntervals[ $event->getDateInterval() ] ?? '#N/A' ) : ''
-                ];
-                $eventText = str_replace( array_keys( $replacements ) , array_values( $replacements ) , $eventText );
-
-                // Prepare Group Stats if required...
-                $groupStatsKey = '{{CompanyGroupsStats}}';
-                if( str_contains( $eventText , $groupStatsKey ) ){
-                    $stashcatMediator->loadGroups( $THWCompany );
-                    $THWGroups = $stashcatMediator->getGroupsOfCompany( $THWCompany );
-                    $groupStatistics = [];
-                    foreach( $THWGroups AS $group ){
-                        $groupStatistics[ $group->getPossibleUser() ] = sprintf('%s: %s mögliche Nutzer' , $group->getName() , $group->getPossibleUser() );
-                    }
-                    ksort( $groupStatistics );
-                    $eventText = str_replace( $groupStatsKey , implode( "\r\n" , $groupStatistics ) , $eventText );
-                }
+                $eventText = SendMessage::replaceByCallbacks( $placeholderCallbacks , $eventText );
 
                 // Send message!
                 $result = $stashcatMediator->sendMessageToChannel( $eventText . $this->getAppService()->getAppConfig()->getAutoAppendToMessages() , $THWChannel );
@@ -247,7 +215,8 @@ class Daemon extends Command
      * @return void
      * @throws \Symfony\Component\Console\Exception\ExceptionInterface
      */
-    protected function checkMessageFiles( InputInterface $input, OutputInterface $output  ){
+    protected function checkMessageFiles( InputInterface $input, OutputInterface $output  ): void
+    {
         $messageFilesIn = trim( $this->getKernel()->getContainer()->getParameter('app.message_files_in') ?? '' );
         if( empty( $messageFilesIn ) ){
             return;

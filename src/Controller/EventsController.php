@@ -2,10 +2,12 @@
 
 namespace App\Controller;
 
+use App\Command\SendMessage;
 use App\Core\DatabaseLogger;
 use App\Entity\Event;
 use App\Entity\LogEntry;
 use App\Entity\User;
+use App\Kernel;
 use App\Service\AppService;
 use Doctrine\ORM\Tools\Pagination\Paginator;
 use Doctrine\Persistence\ManagerRegistry;
@@ -28,7 +30,7 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 class EventsController extends AbstractController
 {
     #[Route('/events', name: 'events', methods: [ 'GET' ])]
-    public function main( AppService $app , ManagerRegistry $doctrine , Request $request, #[CurrentUser] ?User $user ): Response
+    public function main( AppService $app , Kernel $kernel , ManagerRegistry $doctrine , Request $request, #[CurrentUser] ?User $user ): Response
     {
         $manager = $doctrine->getManagerForClass( Event::class );
 
@@ -44,20 +46,7 @@ class EventsController extends AbstractController
             throw new \Exception('Entity not found!');
         }
 
-        $filesystem = new Filesystem();
-        $placeholderFile = Path::normalize( BASE_PATH . trim( $this->getParameter('app.message_placeholder') ) );
-        $additionalReplacements = [];
-        if( $filesystem->exists( $placeholderFile ) ){
-            $placeholderData = json_decode( file_get_contents( $placeholderFile ) , true );
-            if( is_array( $placeholderData ) ){
-                foreach( $placeholderData AS $key => $data ){
-                    $replaceKey = '{{' . $key . '}}';
-                    if( isset( $data['message'] ) ){
-                        $additionalReplacements[ $replaceKey ] = $data['message'];
-                    }
-                }
-            }
-        }
+        $replacementKeys = SendMessage::getMessageCallbackDecorator( $kernel->getContainer() );
 
         return $this->render('default/index.html.twig' , [
             'events' => $events,
@@ -67,7 +56,7 @@ class EventsController extends AbstractController
             'current_entry' => $entity,
             'allowed_intervals' => $app->getAppConfig()->getAllowedIntervals(),
             'allowed_channels' => $app->getAppConfig()->getAllowedChannelNames(),
-            'additionalReplacements' => $additionalReplacements
+            'replacementKeys' => array_map(function( $val ){ return '{{' . $val . '}}'; } , array_keys( $replacementKeys ) )
         ]);
     }
 

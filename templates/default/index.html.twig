@@ -49,8 +49,7 @@
 {% block body %}
         <form method="post" id="action" action="{{ path('save_event') }}">
             <input type="hidden" name="id" id="actionButtonId" value="{{ current_entry.getId() ?? '' }}">
-            <p class="text-center">Verfügbare Platzhalter: {{ '{{' }}CompanyActiveUser{{ '}}' }}, {{ '{{' }}CompanyCreatedUser{{ '}}' }}, {{ '{{' }}CompanyName{{ '}}' }}, {{ '{{' }}ChannelUserCount{{ '}}' }}, {{ '{{' }}EventInterval{{ '}}' }}, {{ '{{' }}CompanyGroupsStats{{ '}}' }}<br>
-            Zusätzliche Platzhalter: {% for key, data in additionalReplacements %} {{ key}} {% endfor %}</p>
+            <p class="text-center">Verfügbare Platzhalter: {{ replacementKeys|join(', ') }}</p>
 
             <table class="object-center">
                 <thead>

@@ -104,6 +104,7 @@ td, th {
 }
 
 .pagination a {
+    display: inline-block;
     padding: 0.1rem;
     border: 1px solid black;
     border-radius: 0.2rem;
@@ -122,12 +123,17 @@ td, th {
 }
 
 .pagination li {
+    margin: 0.1rem;
     display: inline-block;
     list-style: none;
 }
 
 .text-center {
     text-align: center;
+}
+
+.text-overflow-wrap-anywhere {
+    overflow-wrap: anywhere;
 }
 
 .object-center {
@@ -143,4 +149,9 @@ td, th {
     text-align: right;
     font-size: 0.8rem;
     padding: 0.2rem;
+}
+
+.layout-compact {
+    margin: 0px auto;
+    max-width: 1200px;
 }
