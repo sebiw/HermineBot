@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Core;
+namespace App\MessageHandler;
 
+use App\Core\DatabaseLogger;
 use App\Kernel;
 use HermineBotCom\Message;
 use Symfony\Bundle\FrameworkBundle\Console\Application;

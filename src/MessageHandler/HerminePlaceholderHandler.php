@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Core;
+namespace App\MessageHandler;
 
+use App\Core\DatabaseLogger;
 use App\Kernel;
 use HermineBotCom\Placeholder;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -39,7 +40,7 @@ class HerminePlaceholderHandler
 
         $placeholderData[ $placeholderName ] = [
             'message' => $placeholderMessage,
-            'datetime' => $placeholderDate
+            'message_datetime' => $placeholderDate
         ];
 
         $fileContent = json_encode( $placeholderData, JSON_PRETTY_PRINT );

@@ -142,13 +142,19 @@ class Daemon extends Command
             $THWCompany = $stashcatMediator->getCompanyMembers()->getCompanyByName('THW');
             $stashcatMediator->loadChannelSubscripted( $THWCompany );
 
+            $allowedIntervals = $this->getAppService()->getAppConfig()->getAllowedIntervals();
+
             foreach( $events AS $event ){
+
+                $eventText = $event->getText();
+                // Analyze Event -> Pull Requirements / Check Requirements => If all Requirements exist => Process!
+                // If not, skip processing this event, fire Events to get Requirements. => DateTime Check -> Request <-> Response | if to old, fire new Request
 
                 $THWChannel = $stashcatMediator->getChannelOfCompany( $event->getChannelTarget() , $THWCompany );
                 $stashcatMediator->decryptChannelPrivateKey( $THWChannel );
 
-                $eventText = $event->getText();
-                $allowedIntervals = $this->getAppService()->getAppConfig()->getAllowedIntervals();
+
+
 
                 // Prepare Message...
                 $placeholderCallbacks = SendMessage::getMessageCallbackDecorator( $this->getKernel()->getContainer() , [
