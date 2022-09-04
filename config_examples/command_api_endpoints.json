@@ -1,0 +1,16 @@
+{
+  "StAN-Manager:open-messages" : {
+    "url" : "http://stan-manager.localhost/api/open-messages",
+    "payload" : {
+      "user" : "hermine-api",
+      "key" : "api"
+    }
+  },
+  "StAN-Manager:open-files" : {
+    "url" : "http://stan-manager.localhost/api/open-files",
+    "payload" : {
+      "user" : "hermine-api",
+      "key" : "api"
+    }
+  }
+}

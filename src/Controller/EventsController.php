@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Command\SendMessage;
 use App\Core\DatabaseLogger;
+use App\Core\MessageDecorator;
 use App\Entity\Event;
 use App\Entity\LogEntry;
 use App\Entity\User;
@@ -46,7 +47,8 @@ class EventsController extends AbstractController
             throw new \Exception('Entity not found!');
         }
 
-        $replacementKeys = SendMessage::getMessageCallbackDecorator( $kernel->getContainer() );
+        $decorator = new MessageDecorator( $kernel->getContainer() , [] );
+
 
         return $this->render('default/index.html.twig' , [
             'events' => $events,
@@ -56,7 +58,7 @@ class EventsController extends AbstractController
             'current_entry' => $entity,
             'allowed_intervals' => $app->getAppConfig()->getAllowedIntervals(),
             'allowed_channels' => $app->getAppConfig()->getAllowedChannelNames(),
-            'replacementKeys' => array_map(function( $val ){ return '{{' . $val . '}}'; } , array_keys( $replacementKeys ) )
+            'replacementKeys' => $decorator->getAvailableReplacements()
         ]);
     }
 

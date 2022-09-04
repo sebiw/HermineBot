@@ -14,7 +14,7 @@ class RestClient {
     const RESPONSE_FORMAT_JSON = 'json';
     const RESPONSE_FORMAT_PLAIN = 'plain';
 
-    protected $defaultResponseFormat = self::RESPONSE_FORMAT_PLAIN;
+    protected string $defaultResponseFormat = self::RESPONSE_FORMAT_PLAIN;
 
     /**
      *
@@ -45,11 +45,12 @@ class RestClient {
      * @param $url
      * @param null $data
      * @param string|null $responseFormat
+     * @param array $additionalHeader
      * @return bool|string|array
      * @throws \Exception
      */
-    public function post( $url , $data = null , ?string $responseFormat = null ){
-        $result = $this->doRequest( self::METHOD_POST , $url , $data );
+    public function post( $url , $data = null , ?string $responseFormat = null , array $additionalHeader = [] ){
+        $result = $this->doRequest( self::METHOD_POST , $url , $data , $additionalHeader );
 
         if( $responseFormat === null ){
             $responseFormat = $this->defaultResponseFormat;
@@ -84,10 +85,11 @@ class RestClient {
      * @param $method
      * @param $url
      * @param null $data
+     * @param array $additionalHeader
      * @return bool|string
      * @throws \Exception
      */
-    protected function doRequest( $method , $url , $data = null ){
+    protected function doRequest( $method , $url , $data = null , array $additionalHeader = [] ){
 
         if( !in_array( $method , self::getValidMethods() ) ){
             throw new \Exception('Method not valid!');
@@ -112,6 +114,14 @@ class RestClient {
                 if ($data !== null ){
                     $url = sprintf("%s?%s", $url, http_build_query($data));
                 }
+        }
+
+        if( !empty( $additionalHeader ) ){
+            $headers = [];
+            foreach( $additionalHeader AS $headerName => $headerData ){
+                $headers[] = sprintf('%s: %s' , $headerName , $headerData );
+            }
+            curl_setopt( $session, CURLOPT_HTTPHEADER, $headers);
         }
 
         curl_setopt( $session , CURLOPT_URL, $url);
