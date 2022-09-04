@@ -4,32 +4,24 @@
 namespace App\Command;
 
 use App\Core\DatabaseLogger;
+use App\Core\MessageDecorator;
 use App\Entity\Event;
-use App\Entity\File;
-use App\Entity\File_Status;
-use App\Entity\Material_Message;
 use App\Kernel;
 use App\Service\AppService;
 use DateInterval;
 use DateTime;
 use Doctrine\Persistence\ManagerRegistry;
-use PhpImap\Mailbox;
 use Psr\Log\LogLevel;
-use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\ArrayInput;
-use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Filesystem\Filesystem;
-use Symfony\Component\Filesystem\Path;
 use Symfony\Component\Finder\Finder;
-use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 // the name of the command is what users type after "php bin/console"
 #[AsCommand(name: 'daemon:tick', description: 'One Tick for the Background Daemon')]
@@ -48,7 +40,7 @@ class Daemon extends Command
      * @param Kernel $kernel
      * @param string|null $name
      */
-    public function __construct(  AppService $app , ManagerRegistry $doctrine , #[Autowire(service: 'logger.events')] DatabaseLogger $logger , Kernel $kernel , string $name = null)
+    public function __construct(  AppService $app , ManagerRegistry $doctrine , #[Autowire(service: 'logger.events')] DatabaseLogger $logger, Kernel $kernel , string $name = null)
     {
         parent::__construct($name);
         $this->doctrine = $doctrine;
@@ -153,31 +145,16 @@ class Daemon extends Command
                 $THWChannel = $stashcatMediator->getChannelOfCompany( $event->getChannelTarget() , $THWCompany );
                 $stashcatMediator->decryptChannelPrivateKey( $THWChannel );
 
-
-
-
-                // Prepare Message...
-                $placeholderCallbacks = SendMessage::getMessageCallbackDecorator( $this->getKernel()->getContainer() , [
-                    'CompanyActiveUser' => $THWCompany->getActiveUser(),
-                    'CompanyCreatedUser' => $THWCompany->getCreatedUser(),
-                    'CompanyName' => $THWCompany->getName(),
-                    'ChannelUserCount' => $THWChannel->getUserCount(),
-                    'CompanyGroupsStatsCallback' => function() use ( $THWCompany , $stashcatMediator ){
-                        $stashcatMediator->loadGroups( $THWCompany );
-                        $THWGroups = $stashcatMediator->getGroupsOfCompany( $THWCompany );
-                        $groupStatistics = [];
-                        foreach( $THWGroups AS $group ){
-                            $groupStatistics[ $group->getPossibleUser() ] = sprintf('%s: %s mögliche Nutzer' , $group->getName() , $group->getPossibleUser() );
-                        }
-                        ksort( $groupStatistics );
-                        return implode( "\r\n" , $groupStatistics );
-                    },
-                    'EventInterval' => !empty( $event->getDateInterval() ) ? ( $allowedIntervals[ $event->getDateInterval() ] ?? '#N/A' ) : ''
+                // Decorator....
+                $messageDecorator = new MessageDecorator( $this->getKernel()->getContainer() , [
+                    $THWCompany,
+                    $THWChannel,
+                    $this->getAppService(),
+                    $event
                 ]);
 
-                $eventText = SendMessage::replaceByCallbacks( $placeholderCallbacks , $eventText );
+                $eventText = $messageDecorator->replace( $eventText );
 
-                // Send message!
                 $result = $stashcatMediator->sendMessageToChannel( $eventText . $this->getAppService()->getAppConfig()->getAutoAppendToMessages() , $THWChannel );
 
                 // Update next due date time...

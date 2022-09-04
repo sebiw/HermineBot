@@ -28,7 +28,7 @@ class MessageDecorator {
     {
         foreach( $serviceInstances AS $serviceInstance ){
             if( is_object( $serviceInstance ) && !isset( $this->serviceInstances[ get_class( $serviceInstance ) ] ) ){
-                $this->serviceInstances[ get_class( $serviceInstance ) ] = $serviceInstances;
+                $this->serviceInstances[ get_class( $serviceInstance ) ] = $serviceInstance;
             } else {
                 throw new \Exception('Service-Instance already exist or is not a Object!');
             }
@@ -41,7 +41,7 @@ class MessageDecorator {
      * @param $key
      * @return string
      */
-    public function getPlaceholderSyntax( $key ): string
+    protected function getPlaceholderSyntax( $key ): string
     {
         return sprintf('{{%s}}' , $key );
     }
@@ -50,7 +50,7 @@ class MessageDecorator {
      * @param $key
      * @return string
      */
-    public function getCommandSyntax( $key ): string
+    protected function getCommandSyntax( $key ): string
     {
         return sprintf('{%%%s%%}' , $key );
     }
@@ -65,47 +65,12 @@ class MessageDecorator {
 
     /**
      * @param string $eventText
-     * @return array
-     */
-    public function checkRequirements( string $eventText ): array
-    {
-        $defaultLifeTime = new \DateInterval('PT1M'); // Data min lifetime 1 min
-        $overdueCommands = [];
-
-        $filesystem = new Filesystem();
-        $commandContentFile = Path::normalize( BASE_PATH . trim( $this->container->getParameter('app.message_command_content') ) );
-        if( $filesystem->exists( $commandContentFile ) ){
-            $commandContent = json_decode( file_get_contents( $commandContentFile ) , true );
-            if( is_array( $commandContent ) ){
-                foreach( $commandContent AS $key => $data ){
-                    $command = $this->getCommandSyntax( $key );
-                    if( str_contains( $eventText , $command ) && isset( $data['message_datetime'] ) && isset( $data['command_datetime'] ) ){
-                        $messageDateTime = \DateTime::createFromFormat( DateTimeInterface::W3C , $data['message_datetime'] ); // last time the Data was updated
-                        $commandDateTime = \DateTime::createFromFormat( DateTimeInterface::W3C , $data['command_datetime'] ); // maybe once a day the commands will be populated ???
-
-                        // Prüfen vor dem Event auf Requirements?
-                        // Einholen von den Voraussetzungen durch Events
-                        // => Hoffen das die Ergebnisse eintreffen bevor die Nachricht verschickt wird?
-                        // ORDER: DELAY der Message BIS die Ergebnisse da sind!!!! => sinnvoller
-                        if( $messageDateTime->sub( $defaultLifeTime ) < (new \DateTime()) ){
-                            $overdueCommands[] = $key;
-                        }
-                    }
-                }
-            }
-        }
-        return $overdueCommands;
-    }
-
-    /**
-     * @param string $eventText
      * @return array|string
      */
     public function replace( string $eventText ): array|string
     {
-        foreach( $this->replaceCallbacks AS $key => $callback ){
-            $realKey = $this->getPlaceholderSyntax( $key ); // Simple placeholder replacement
-            if( str_contains( $eventText , $realKey ) && ( $callbackResult = $callback() ) !== null && is_string( $callbackResult ) ){
+        foreach( $this->replaceCallbacks AS $realKey => $callback ){
+            if( str_contains( $eventText , $realKey ) && ( $callbackResult = $callback() ) !== null && is_scalar( $callbackResult ) ){
                 $eventText = str_replace( $realKey , $callbackResult , $eventText );
             }
         }
@@ -113,12 +78,29 @@ class MessageDecorator {
     }
 
     /**
+     * @return array
+     */
+    public function getAvailableReplacements(): array
+    {
+        return array_keys( $this->replaceCallbacks );
+    }
+
+    /**
      * @param string $key
      * @param callable $callback
      * @return void
      */
-    public function addPlaceholderDecoration( string $key , callable $callback ){
-        $this->replaceCallbacks[ $key ] = $callback;
+    protected function addPlaceholderDecoration( string $key , callable $callback ){
+        $this->replaceCallbacks[ $this->getPlaceholderSyntax( $key ) ] = $callback;
+    }
+
+    /**
+     * @param string $key
+     * @param callable $callback
+     * @return void
+     */
+    protected function addCommandDecoration( string $key , callable $callback ){
+        $this->replaceCallbacks[ $this->getCommandSyntax( $key ) ] = $callback;
     }
 
     /**
@@ -128,19 +110,21 @@ class MessageDecorator {
     private function setup(): void
     {
         $filesystem = new Filesystem();
+        /* @var $appService AppService */
+        $appService = $this->getServiceInstance( AppService::class );
         /* @var $stashCatCompany Company|null */
         $stashCatCompany = $this->getServiceInstance( Company::class );
         /* @var $stashCatChannel Channel|null */
         $stashCatChannel = $this->getServiceInstance( Channel::class );
         /* @var $stashcatMediator StashcatMediator */
-        $stashcatMediator = $this->getServiceInstance( StashcatMediator::class );
+        $stashcatMediator = $appService?->getMediator();
         /* @var $event Event */
         $event = $this->getServiceInstance( Event::class );
-        /* @var $appService AppService */
-        $appService = $this->getServiceInstance( Event::class );
+
         /* @var $allowedIntervals array|null */
         $allowedIntervals = $appService?->getAppConfig()?->getAllowedIntervals();
 
+        // Placeholder-file...
         $placeholderFile = Path::normalize( BASE_PATH . trim( $this->container->getParameter('app.message_placeholder') ) );
         if( $filesystem->exists( $placeholderFile ) ){
             $placeholderData = json_decode( file_get_contents( $placeholderFile ) , true );
@@ -151,12 +135,21 @@ class MessageDecorator {
             }
         }
 
-        $commandContentFile = Path::normalize( BASE_PATH . trim( $this->container->getParameter('app.message_command_content') ) );
+        // Commands...
+        $commandContentFile = Path::normalize( BASE_PATH . trim( $this->container->getParameter('app.message_command_api_endpoints') ) );
         if( $filesystem->exists( $commandContentFile ) ){
             $commandContentData = json_decode( file_get_contents( $commandContentFile ) , true );
             if( is_array( $commandContentData ) ){
                 foreach( $commandContentData AS $key => $data ){
-                    $this->addPlaceholderDecoration( $key , fn() => ( isset( $data['message'] ) && is_string( $data['message'] ) ) ? $data['message'] : null );
+                    // Data => URL DATA
+                    $this->addCommandDecoration( $key , function() use ($data){
+                        if( isset( $data['url'] ) && isset( $data['payload'] ) ){
+                            $rest = new RestClient( RestClient::RESPONSE_FORMAT_JSON );
+                            $result = $rest->post( $data['url'] , json_encode( $data['payload'] ) , null , [ 'Content-Type' => 'application/json'] );
+                            return $result['content'] ?? $result['message'] ?? null;
+                        }
+                        return null;
+                    } );
                 }
             }
         }

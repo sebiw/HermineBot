@@ -4,6 +4,7 @@
 namespace App\Command;
 
 use App\Core\DatabaseLogger;
+use App\Core\MessageDecorator;
 use App\Kernel;
 use App\Service\AppService;
 use Doctrine\Persistence\ManagerRegistry;
@@ -135,24 +136,14 @@ class SendMessage extends Command
         $stashcatMediator->decryptChannelPrivateKey( $THWChannel );
 
         // Prepare Message...
-        $placeholderCallbacks = self::getMessageCallbackDecorator( $this->getKernel()->getContainer() , [
-            'CompanyActiveUser' => $THWCompany->getActiveUser(),
-            'CompanyCreatedUser' => $THWCompany->getCreatedUser(),
-            'CompanyName' => $THWCompany->getName(),
-            'ChannelUserCount' => $THWChannel->getUserCount(),
-            'CompanyGroupsStatsCallback' => function() use ( $THWCompany , $stashcatMediator ){
-                $stashcatMediator->loadGroups( $THWCompany );
-                $THWGroups = $stashcatMediator->getGroupsOfCompany( $THWCompany );
-                $groupStatistics = [];
-                foreach( $THWGroups AS $group ){
-                    $groupStatistics[ $group->getPossibleUser() ] = sprintf('%s: %s mögliche Nutzer' , $group->getName() , $group->getPossibleUser() );
-                }
-                ksort( $groupStatistics );
-                return implode( "\r\n" , $groupStatistics );
-            }
+        // Decorator....
+        $messageDecorator = new MessageDecorator( $this->getKernel()->getContainer() , [
+            $THWCompany,
+            $THWChannel,
+            $this->getAppService()
         ]);
 
-        $eventText = self::replaceByCallbacks( $placeholderCallbacks , $eventText );
+        $eventText = $messageDecorator->replace( $eventText );
 
         // Send message!
         $result = $stashcatMediator->sendMessageToChannel( $eventText . $this->getAppService()->getAppConfig()->getAutoAppendToMessages() , $THWChannel );
@@ -174,70 +165,6 @@ class SendMessage extends Command
 
         $output->writeln( json_encode( $jsonResult , JSON_PRETTY_PRINT ) );
         return Command::SUCCESS;
-    }
-
-    /**
-     * @param array $placeholderCallbacks
-     * @param string $eventText
-     * @return array|string
-     */
-    public static function replaceByCallbacks( array $placeholderCallbacks , string $eventText ): array|string
-    {
-        foreach( $placeholderCallbacks AS $key => $callback ){
-            $realKey = '{{' . $key . '}}';
-            if( str_contains( $eventText , $realKey ) && ( $callbackResult = $callback() ) !== null && is_string( $callbackResult ) ){
-                $eventText = str_replace( $realKey , $callbackResult , $eventText );
-            }
-        }
-        return $eventText;
-    }
-
-    /**
-     * @param Container $container
-     * @param array $contextData
-     * @return array
-     */
-    public static function getMessageCallbackDecorator( ContainerInterface $container , array $contextData = [] ): array
-    {
-        $returnCallbacks = [];
-        $filesystem = new Filesystem();
-        $placeholderFile = Path::normalize( BASE_PATH . trim( $container->getParameter('app.message_placeholder') ) );
-        if( $filesystem->exists( $placeholderFile ) ){
-            $placeholderData = json_decode( file_get_contents( $placeholderFile ) , true );
-            if( is_array( $placeholderData ) ){
-                foreach( $placeholderData AS $key => $data ){
-                    // Return NULL => No replacement possible -> ERROR, Return String => Nice!
-                    $returnCallbacks[ $key ] = function() use ( $data ){
-                        if( isset( $data['message'] ) && is_string( $data['message'] ) ){
-                            return $data['message'];
-                        }
-                        return null;
-                    };
-                }
-            }
-        }
-
-        // Pass through...
-        foreach( [ 'CompanyActiveUser' , 'CompanyCreatedUser' , 'CompanyName' , 'ChannelUserCount' , 'EventInterval' ] AS $key ){
-            $returnCallbacks[ $key ] = function() use ( $contextData , $key ){
-                if( isset( $contextData[ $key ] ) && is_scalar( $contextData[ $key ] ) ){
-                    return (string) $contextData[ $key ];
-                }
-                return null;
-            };
-        }
-
-        // Callback pass through
-        foreach( [ 'CompanyGroupsStats' => 'CompanyGroupsStatsCallback' ] AS $key => $contextKey ){
-            $returnCallbacks[ $key ] = function() use ( $contextData , $contextKey ){
-                if( isset( $contextData[ $contextKey ] ) && is_callable( $contextData[ $contextKey ] ) ){
-                    return $contextData[ $contextKey ]();
-                }
-                return null;
-            };
-        }
-
-        return $returnCallbacks;
     }
 
 }
