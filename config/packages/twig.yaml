@@ -2,7 +2,7 @@ twig:
     default_path: '%kernel.project_dir%/templates'
     globals:
         title: 'Hermine Bot'
-        ov: 'Wächtersbach'
+        ov: 'OV Wächtersbach'
 when@test:
     twig:
         strict_variables: true
