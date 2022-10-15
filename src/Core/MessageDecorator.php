@@ -196,11 +196,11 @@ class MessageDecorator {
                                                 if( isset( $todo->PRIORITY ) && $todo->PRIORITY instanceof Property ){
                                                     $priority = (int) $todo->PRIORITY->getValue();
                                                     if( $priority > 5 ){
-                                                        $priorityText = '🟦 niedrig';
+                                                        $priorityText = '🟦 niedrig (' . $priority . ')';
                                                     } else if( $priority < 5 ){
-                                                        $priorityText = '🟥 hoch';
+                                                        $priorityText = '🟥 hoch (' . $priority . ')';
                                                     } else {
-                                                        $priorityText = '🟨 mittel';
+                                                        $priorityText = '🟨 mittel (' . $priority . ')';
                                                     }
                                                 }
 
