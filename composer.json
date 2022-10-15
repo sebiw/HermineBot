@@ -30,6 +30,7 @@
         "oomphinc/composer-installers-extender": "*",
         "phpdocumentor/reflection-docblock": "^5.3",
         "phpstan/phpdoc-parser": "^1.6",
+        "sabre/vobject": "~4.1",
         "sensio/framework-extra-bundle": "^6.2",
         "symfony/apache-pack": "^1.0",
         "symfony/asset": "6.1.*",

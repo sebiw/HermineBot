@@ -64,6 +64,28 @@ class RestClient {
     }
 
     /**
+     * @param $url
+     * @param $data
+     * @param string|null $responseFormat
+     * @param array $additionalHeader
+     * @return bool|mixed|string
+     * @throws \Exception
+     */
+    public function get( $url , $data = null , ?string $responseFormat = null , array $additionalHeader = [] ){
+        $result = $this->doRequest( self::METHOD_GET , $url , $data , $additionalHeader );
+
+        if( $responseFormat === null ){
+            $responseFormat = $this->defaultResponseFormat;
+        }
+
+        switch ( $responseFormat ){
+            case self::RESPONSE_FORMAT_JSON :
+                return json_decode( $result , true );
+        }
+        return $result;
+    }
+
+    /**
      * @return false|resource
      * @throws \Exception
      */

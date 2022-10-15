@@ -7,6 +7,8 @@ use App\Service\AppService;
 use App\Stashcat\Entities\Channel;
 use App\Stashcat\Entities\Company;
 use DateTimeInterface;
+use Sabre\VObject\Property;
+use Sabre\VObject\Reader;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Filesystem\Path;
@@ -142,14 +144,93 @@ class MessageDecorator {
             if( is_array( $commandContentData ) ){
                 foreach( $commandContentData AS $key => $data ){
                     // Data => URL DATA
-                    $this->addCommandDecoration( $key , function() use ($data){
-                        if( isset( $data['url'] ) && isset( $data['payload'] ) ){
-                            $rest = new RestClient( RestClient::RESPONSE_FORMAT_JSON );
-                            $result = $rest->post( $data['url'] , json_encode( $data['payload'] ) , null , [ 'Content-Type' => 'application/json'] );
-                            return $result['content'] ?? $result['message'] ?? null;
+
+                    if( isset( $data['type'] ) && is_string( $data['type'] ) ){
+                        switch( strtoupper( $data['type'] ) ){
+                            case 'REST_JSON' :
+                                $this->addCommandDecoration( $key , function() use ($data){
+                                    if( isset( $data['url'] ) && isset( $data['payload'] ) ){
+                                        $rest = new RestClient( RestClient::RESPONSE_FORMAT_JSON );
+                                        $result = $rest->post( $data['url'] , json_encode( $data['payload'] ) , null , [ 'Content-Type' => 'application/json'] );
+                                        return $result['content'] ?? $result['message'] ?? null;
+                                    }
+                                    return null;
+                                } );
+                                break;
+
+                            case 'ICAL_DOWNLOAD_VTODO':
+                                $this->addCommandDecoration( $key , function() use ($data){
+                                    if( isset( $data['url'] ) ){
+                                        $rest = new RestClient( RestClient::RESPONSE_FORMAT_PLAIN );
+                                        $additionalHeader = [];
+                                        if( isset( $data['authorization_basic'] , $data['authorization_basic']['user'] , $data['authorization_basic']['password'] ) ){
+                                            $basicKey = $data['authorization_basic']['user'] . ':' . $data['authorization_basic']['password'];
+                                            $basicKey = base64_encode( $basicKey );
+                                            $additionalHeader['Authorization'] = 'BASIC ' . $basicKey;
+                                        }
+                                        $result = $rest->get( $data['url'] , null , null , $additionalHeader );
+                                        $vCalendar = Reader::read( $result , Reader::OPTION_FORGIVING );
+
+                                        $vToDos = [];
+                                        if( isset( $vCalendar->VTODO ) ){
+                                            foreach($vCalendar->VTODO as $todo) {
+
+                                                // Title
+                                                $title = (string) $todo->SUMMARY;
+
+                                                // Status
+                                                $statusText = null;
+                                                if( isset( $todo->STATUS ) ){
+                                                    $status = strtoupper( (string) $todo->STATUS );
+                                                    $statusText = match( $status ){
+                                                        'CANCELLED' => '❌ Abgebrochen',
+                                                        'COMPLETED' => '✅ Fertiggestellt',
+                                                        'IN-PROCESS' => '🛠️ In Bearbeitung',
+                                                        'NEEDS-ACTION' => '⚠️ Handlungsbedarf',
+                                                        default => $status
+                                                    };
+                                                }
+
+                                                // Prio
+                                                $priorityText = null;
+                                                if( isset( $todo->PRIORITY ) && $todo->PRIORITY instanceof Property ){
+                                                    $priority = (int) $todo->PRIORITY->getValue();
+                                                    if( $priority > 5 ){
+                                                        $priorityText = '🟦 niedrig';
+                                                    } else if( $priority < 5 ){
+                                                        $priorityText = '🟥 hoch';
+                                                    } else {
+                                                        $priorityText = '🟨 mittel';
+                                                    }
+                                                }
+
+                                                // Description
+                                                $additionalDescription = null;
+                                                if( isset( $todo->DESCRIPTION ) ){
+                                                    $additionalDescription = (string) $todo->DESCRIPTION;
+                                                }
+
+                                                $priorityText = ( $priorityText ? 'Priorität: ' . $priorityText : null );
+                                                $statusText = ( $statusText ? 'Status: ' . $statusText : null );
+                                                $hints = array_filter( [ $priorityText , $statusText ] );
+
+                                                $vToDos[] = '🔖 ' . $title . ( !empty( $hints ) ? PHP_EOL . '     _' . implode(', ' , $hints ) . '_' : '' ) . ( $additionalDescription ? PHP_EOL . '     _' . $additionalDescription  . '_' : '' );
+                                            }
+                                        }
+
+                                        if( empty( $vToDos ) ){
+                                            $vToDos[] = 'Derzeit gibt es keine Aufgaben!';
+                                        }
+
+                                        return implode( PHP_EOL , $vToDos );
+                                    }
+                                    return null;
+                                } );
+                                break;
                         }
-                        return null;
-                    } );
+                    }
+
+
                 }
             }
         }
