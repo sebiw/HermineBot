@@ -7,6 +7,7 @@ use App\Service\AppService;
 use App\Stashcat\Entities\Channel;
 use App\Stashcat\Entities\Company;
 use DateTimeInterface;
+use Sabre\VObject\Component\VTodo;
 use Sabre\VObject\Property;
 use Sabre\VObject\Reader;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -161,6 +162,8 @@ class MessageDecorator {
                             case 'ICAL_DOWNLOAD_VTODO':
                                 $this->addCommandDecoration( $key , function() use ($data){
                                     if( isset( $data['url'] ) ){
+
+                                        $mode = $data['events'] ?? 'OPEN';
                                         $rest = new RestClient( RestClient::RESPONSE_FORMAT_PLAIN );
                                         $additionalHeader = [];
                                         if( isset( $data['authorization_basic'] , $data['authorization_basic']['user'] , $data['authorization_basic']['password'] ) ){
@@ -172,11 +175,21 @@ class MessageDecorator {
                                         $vCalendar = Reader::read( $result , Reader::OPTION_FORGIVING );
 
                                         $vToDos = [];
-                                        if( isset( $vCalendar->VTODO ) ){
-                                            foreach($vCalendar->VTODO as $todo) {
 
+                                        $completedLimit = ( new \DateTime() )->modify('-4 weeks');
+                                        $counter = 0;
+
+                                        if( isset( $vCalendar->VTODO ) ){
+                                            /* @var $todo VTodo */
+                                            foreach($vCalendar->VTODO as $todo) {
                                                 // Title
                                                 $title = (string) $todo->SUMMARY;
+                                                $counter++;
+
+                                                $sortKey = $title . '_' . $counter;
+
+                                                $isCompleted = false;
+                                                $completedDateTime = null;
 
                                                 // Status
                                                 $statusText = null;
@@ -189,6 +202,21 @@ class MessageDecorator {
                                                         'NEEDS-ACTION' => '⚠️ Handlungsbedarf',
                                                         default => $status
                                                     };
+                                                    $isCompleted = ($status == 'COMPLETED');
+                                                }
+
+                                                if( $isCompleted && isset( $todo->COMPLETED ) ){
+                                                    $completedDateTime = new \DateTime( $todo->COMPLETED->getValue() );
+                                                }
+
+                                                if( $mode === 'OPEN' && $isCompleted ){
+                                                    continue;
+                                                } else if( $mode === 'COMPLETED' ){
+                                                    if( $isCompleted && $completedDateTime !== null && $completedDateTime < $completedLimit ){
+                                                        continue;
+                                                    } else if( !$isCompleted) {
+                                                        continue;
+                                                    }
                                                 }
 
                                                 // Prio
@@ -202,6 +230,7 @@ class MessageDecorator {
                                                     } else {
                                                         $priorityText = '🟨 mittel (' . $priority . ')';
                                                     }
+                                                    $sortKey = $priority . '_' . $sortKey;
                                                 }
 
                                                 // Description
@@ -214,12 +243,19 @@ class MessageDecorator {
                                                 $statusText = ( $statusText ? 'Status: ' . $statusText : null );
                                                 $hints = array_filter( [ $priorityText , $statusText ] );
 
-                                                $vToDos[] = '🔖 ' . $title . ( !empty( $hints ) ? PHP_EOL . '     _' . implode(', ' , $hints ) . '_' : '' ) . ( $additionalDescription ? PHP_EOL . '     _' . $additionalDescription  . '_' : '' );
+                                                $toDoText = '🔖 ' . $title . ( !empty( $hints ) ? PHP_EOL . '     _' . implode(', ' , $hints ) . '_' : '' ) . ( $additionalDescription ? PHP_EOL . '     _' . $additionalDescription  . '_' : '' );
+                                                $vToDos[ $sortKey ] = $toDoText;
                                             }
                                         }
 
+                                        ksort( $vToDos , SORT_REGULAR );
+
                                         if( empty( $vToDos ) ){
-                                            $vToDos[] = 'Derzeit gibt es keine Aufgaben!';
+                                            if( $mode === 'COMPLETED' ){
+                                                $vToDos[] = 'In letzter Zeit wurden keine Aufgaben erledigt!';
+                                            } else {
+                                                $vToDos[] = 'Derzeit gibt es keine Aufgaben!';
+                                            }
                                         }
 
                                         return implode( PHP_EOL , $vToDos );
