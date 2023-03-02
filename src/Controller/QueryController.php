@@ -19,7 +19,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
-#[IsGranted('IS_AUTHENTICATED_FULLY')]
+#[IsGranted('ROLE_ADMIN')]
 class QueryController extends AbstractController
 {
 

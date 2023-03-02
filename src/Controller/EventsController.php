@@ -27,7 +27,7 @@ use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
-#[IsGranted('IS_AUTHENTICATED_FULLY')]
+#[IsGranted('ROLE_ADMIN')]
 class EventsController extends AbstractController
 {
     #[Route('/events', name: 'events', methods: [ 'GET' ])]

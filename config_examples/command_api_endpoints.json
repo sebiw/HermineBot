@@ -12,5 +12,23 @@
       "user" : "hermine-api",
       "key" : "api"
     }
+  },
+  "Hofdienst:ToDo" : {
+    "type" : "ICAL_DOWNLOAD_VTODO",
+    "url" : "https://domain.de/path/dav/calendars/aufgaben?export",
+    "authorization_basic" : {
+      "user" : "user",
+      "password" : "password"
+    },
+    "events" : "OPEN"
+  },
+  "Hofdienst:done" : {
+    "type" : "ICAL_DOWNLOAD_VTODO",
+    "url" : "https://domain.de/path/dav/calendars/aufgaben?export",
+    "authorization_basic" : {
+      "user" : "user",
+      "password" : "password"
+    },
+    "events" : "COMPLETED"
   }
 }

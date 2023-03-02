@@ -9,9 +9,6 @@ return [
     "date_format" => "d.m.Y",
     "time_format" => "H:i",
     "base_url" => "http://localhost:8080/",
-    "user" => [
-        'admin' => 'admin'
-    ],
     "allowed_intervals" => [
         "PT1M" => "Jede Minute", // Only for DEV
         "P1D" => "Jeden Tag",

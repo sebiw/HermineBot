@@ -70,14 +70,6 @@ class Config extends ArrayDataCollection {
     }
 
     /**
-     * @return array
-     * @throws \Exception
-     */
-    public function getUser() : array {
-        return $this->getResults('user');
-    }
-
-    /**
      * @param string|null $append
      * @return string
      * @throws \Exception

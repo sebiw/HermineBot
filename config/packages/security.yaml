@@ -11,6 +11,8 @@ security:
                 property: username
     firewalls:
         secured_area:
+            custom_authenticators:
+                - App\Security\ApiKeyAuthenticator
             logout:
                 path: app_logout
             form_login:
@@ -31,12 +33,15 @@ security:
             # https://symfony.com/doc/current/security/impersonating_user.html
             # switch_user: true
 
-
+    role_hierarchy:
+        ROLE_API: # Special API User
+        ROLE_USER: # User, currently alias for Admin
+        ROLE_ADMIN: ROLE_USER # Admin
 
     # Easy way to control access for large sections of your site
     # Note: Only the *first* access control that matches will be used
     access_control:
-        # - { path: ^/admin, roles: ROLE_ADMIN }
+        - { path: ^/api, roles: ROLE_API }
         # - { path: ^/profile, roles: ROLE_USER }
 
 when@test:
