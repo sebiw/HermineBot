@@ -7,11 +7,13 @@ use App\Stashcat\ApiClient;
 use App\Stashcat\CryptoBox;
 use App\Stashcat\Entities\Channel;
 use App\Stashcat\Entities\Company;
+use App\Stashcat\Entities\Conversation;
 use App\Stashcat\Entities\Group;
 use App\Stashcat\Entities\Message;
 use App\Stashcat\Responses\CompanyGroupsResponse;
 use App\Stashcat\Responses\CompanyMemberResponse;
 use App\Stashcat\Responses\LoginResponse;
+use App\Stashcat\Responses\SendMessageResponse;
 
 class StashcatMediator
 {
@@ -25,6 +27,8 @@ class StashcatMediator
     private ?CompanyMemberResponse $companyMembersResponse = null;
     private array $companyGroups = [];
     private array $channelsSubscripted = [];
+
+    private array $conversations = [];
 
     /**
      * @param Config $config
@@ -168,6 +172,15 @@ class StashcatMediator
     }
 
     /**
+     * @param Conversation $conversation
+     * @return void
+     * @throws \Exception
+     */
+    public function decryptConversationPrivateKey( Conversation $conversation ){
+        $this->getStashcatCryptoBox()->setConversationEncryptionConversation( $conversation->getKey() , $conversation->getId() );
+    }
+
+    /**
      * @return void
      * @throws \Exception
      */
@@ -194,6 +207,37 @@ class StashcatMediator
     }
 
     /**
+     * @return void
+     * @throws \Exception
+     */
+    public function loadConversations(): void
+    {
+        $this->conversations = $this->getStashcatApiClient()->messageConversations( $this->getLoginResponse()->getClientKey() )->getConversations();
+    }
+
+    /**
+     * @param $id
+     * @return Conversation|null
+     */
+    public function getConversationById( $id ) : ?Conversation{
+        /* @var $conversation Conversation */
+        foreach( $this->conversations AS $conversation ){
+            if( $conversation->getId() === $id ){
+                return $conversation;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * @return array|Conversation[]
+     */
+    public function getLoadedConversations(): array
+    {
+        return $this->conversations;
+    }
+
+    /**
      * @param string $plainMessage
      * @param Channel $channel
      * @return \App\Stashcat\Responses\SendMessageResponse
@@ -216,6 +260,30 @@ class StashcatMediator
     }
 
     /**
+     * @param string $plainMessage
+     * @param Conversation $conversation
+     * @return SendMessageResponse
+     * @throws \Exception
+     */
+    public function sendMessageToConversation( string $plainMessage , Conversation $conversation ): \App\Stashcat\Responses\SendMessageResponse
+    {
+        $metainfo = null;
+        $ivMessage = "";
+        $verification = ""; // @TODO: Verification! Seems to be: MD5 of "Text" + deviceId + microTime + location longitude + location latitude + timestamp, but its never used???
+
+        // simple markdown check... maybe changing in the future!
+        // @TODO: Check markdown support for conversations?
+        $markdown = preg_match_all("#[*].*[*]#" , $plainMessage ) || preg_match_all("#_.*_#" , $plainMessage );
+        if( $markdown ){
+            $metainfo = json_encode([ "v" => 1 , "style" => "md" ]);
+        }
+
+        $encryptedMessage = $this->getStashcatCryptoBox()->getConversationMessageEncrypted( $plainMessage , $conversation->getId() , $ivMessage );
+
+        return $this->getStashcatApiClient()->sendMessageToConversation( $this->getLoginResponse()->getClientKey() , $conversation->getId() , $encryptedMessage , $ivMessage , $verification , $metainfo );
+    }
+
+    /**
      * @param Channel $channel
      * @param int $limit
      * @param int $offset
@@ -230,6 +298,26 @@ class StashcatMediator
         // Encrypt messages...
         foreach( $messageContentResult->getMessages() AS $message ){
             $messageDecryptResult = $this->getStashcatCryptoBox()->getChannelMessageDecrypted( $message , $channel->getId() );
+            $messages[] = $message->toDecrypted( $messageDecryptResult );
+        }
+        return $messages;
+    }
+
+    /**
+     * @param Conversation $conversation
+     * @param int $limit
+     * @param int $offset
+     * @return array|Message[]
+     * @throws \Exception
+     */
+    public function getMessagesFromConversation( Conversation $conversation , int $limit = 30 , int $offset = 0 ): array
+    {
+        // get Messages...
+        $messages = [];
+        $messageContentResult = $this->getStashcatApiClient()->getMessagesFromConversation( $this->getLoginResponse()->getClientKey() , $conversation->getId() , $limit , $offset );
+        // Encrypt messages...
+        foreach( $messageContentResult->getMessages() AS $message ){
+            $messageDecryptResult = $this->getStashcatCryptoBox()->getConversationMessageDecrypted( $message , $conversation->getId() );
             $messages[] = $message->toDecrypted( $messageDecryptResult );
         }
         return $messages;

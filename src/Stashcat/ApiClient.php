@@ -8,9 +8,13 @@ use App\Stashcat\Responses\ChannelsSubscriptedResponse;
 use App\Stashcat\Responses\CompanyGroupsResponse;
 use App\Stashcat\Responses\CompanyMemberResponse;
 use App\Stashcat\Responses\LoginResponse;
+use App\Stashcat\Responses\MessageContentResponse;
+use App\Stashcat\Responses\MessageConversationsResponse;
 use App\Stashcat\Responses\PrivateKeyResponse;
+use App\Stashcat\Responses\SendMessageResponse;
 use App\Stashcat\Responses\SuccessResponse;
 use Exception;
+use mysql_xdevapi\Result;
 
 class ApiClient {
 
@@ -165,6 +169,53 @@ class ApiClient {
 
     /**
      * @param string $client_key
+     * @param string $conversation_id
+     * @param string $text
+     * @param string $iv
+     * @param string $verification
+     * @param string|null $metainfo
+     * @return SendMessageResponse
+     * @throws Exception
+     */
+    public function sendMessageToConversation( string $client_key , string $conversation_id , string $text , string $iv , string $verification = "" , ?string $metainfo = null ) : Responses\SendMessageResponse
+    {
+        $sendResult = $this->getRestClient()->post( $this->getConfig()->getMessageSendURL() , [
+            "client_key" => $client_key,
+            "device_id" => $this->getConfig()->getDeviceId(),
+            "target" => 'conversation',
+            'conversation_id' => $conversation_id, // @TODO: Get Conversation-Ids...
+            "text" => $text,
+            "iv" => $iv,
+            "files" => "[]",
+            "url" => "[]",
+            "type" => "text",
+            "verification" => $verification,
+            "encrypted" => true,
+            "is_forwarded" => false,
+            "metainfo" => $metainfo
+        ]);
+        return new Responses\SendMessageResponse( $sendResult );
+    }
+
+    /**
+     * @param string $client_key
+     * @return MessageConversationsResponse
+     * @throws Exception
+     */
+    public function messageConversations( string $client_key ) : MessageConversationsResponse {
+        $conversations = $this->getRestClient()->post( $this->getConfig()->getMessageConversations() , [
+            "client_key" => $client_key,
+            "device_id" => $this->getConfig()->getDeviceId(),
+            "limit" => -1,
+            "offset" => 0,
+            "archive" => 0,
+            "sorting" => json_encode( ["favorite_desc","last_action_desc"] )
+        ]);
+        return new MessageConversationsResponse( $conversations );
+    }
+
+    /**
+     * @param string $client_key
      * @param string $message_id
      * @return SuccessResponse
      * @throws Exception
@@ -192,6 +243,27 @@ class ApiClient {
             "device_id" => $this->getConfig()->getDeviceId(),
             "channel_id" => $channel_id,
             "source" => "channel",
+            "limit" => $limit,
+            "offset" => $offset
+        ]);
+        return new Responses\MessageContentResponse( $messageContentResult );
+    }
+
+    /**
+     * @param string $client_key
+     * @param string $conversation_id
+     * @param int $limit
+     * @param int $offset
+     * @return MessageContentResponse
+     * @throws Exception
+     */
+    public function getMessagesFromConversation( string $client_key , string $conversation_id , int $limit = 30 , int $offset = 0 ): Responses\MessageContentResponse
+    {
+        $messageContentResult = $this->getRestClient()->post( $this->getConfig()->getMessageContentURL() , [
+            "client_key" => $client_key,
+            "device_id" => $this->getConfig()->getDeviceId(),
+            "conversation_id" => $conversation_id,
+            "source" => "conversation",
             "limit" => $limit,
             "offset" => $offset
         ]);

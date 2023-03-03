@@ -33,25 +33,42 @@ class ApiController extends AbstractController
         $content = json_decode( $request->getContent() , true );
 
         $channel = $request->get('channel') ?? $content['channel'] ?? null;
+        $conversationId = $request->get('conversationId') ?? $content['conversationId'] ?? null;
         $message = $request->get('message') ?? $content['message'] ?? null;
 
-        if( empty( $channel ) || empty( $message) ){
-            throw new \Exception('channel or message missing!');
+        if( empty( $message ) ){
+            throw new \Exception('Message missing!');
         }
 
-        $input = new ArrayInput([
-            'command' => 'hermine:send-message',
-            '--context' => 'REST',
-            '--channel' => $channel,
-            '--message' => $message
-        ]);
+        if( !empty( $channel ) )
+        {
+            $input = new ArrayInput([
+                'command' => 'hermine:send-message',
+                '--context' => 'REST',
+                '--channel' => $channel,
+                '--message' => $message
+            ]);
+        }
+        else if( !empty( $conversationId ) )
+        {
+            $input = new ArrayInput([
+                'command' => 'hermine:send-message',
+                '--context' => 'REST',
+                '--conversationId' => $conversationId,
+                '--message' => $message
+            ]);
+        }
+        else
+        {
+            throw new \Exception('channel or conversationId missing!');
+        }
 
         // You can use NullOutput() if you don't need the output
         $output = new BufferedOutput();
         if( $application->run($input, $output) === Command::SUCCESS ){
-            $logger->info(sprintf('Message sent via REST to %s' , $channel) );
+            $logger->info(sprintf('Message sent via REST to %s' , $channel ?? $conversationId ) );
         } else {
-            $logger->emergency(sprintf('Message sent via REST to %s FAILED' , $channel) );
+            $logger->emergency(sprintf('Message sent via REST to %s FAILED' , $channel ?? $conversationId ) );
         }
 
         return new JsonResponse([

@@ -107,6 +107,20 @@ class Crypt {
     }
 
     /**
+     * @param string $messageText
+     * @param string $algo
+     * @param string $passphrase
+     * @param $padding
+     * @param $messageIv
+     * @return false|string
+     * @throws \Exception
+     */
+    public static function encodeWithConversationKey( string $messageText , string $algo , string $passphrase , $padding , $messageIv ){
+        // Alias-Function maybe required in the future
+        return self::encodeWithChannelKey( $messageText , $algo , $passphrase , $padding , $messageIv );
+    }
+
+    /**
      * @param string $message
      * @param int $length
      * @return string

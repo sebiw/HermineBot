@@ -47,6 +47,7 @@ class SendMessage extends Command
         parent::configure();
         $this->addOption('context' , '-x' , InputOption::VALUE_OPTIONAL , 'Context of this Call' , 'Console' );
         $this->addOption('channel' , '-c' , InputOption::VALUE_REQUIRED , 'Target-Channel' , 'T_OWBH_TEST' );
+        $this->addOption('conversationId' , null , InputOption::VALUE_REQUIRED , 'Target-Conversation ID' , null );
         $this->addOption('message' , '-m' , InputOption::VALUE_REQUIRED , 'Message to send' );
         $this->addOption('message-b64' , '-b' , InputOption::VALUE_REQUIRED , 'Message to send as Base64 encoded string' );
     }
@@ -97,9 +98,13 @@ class SendMessage extends Command
             $context = 'Console';
         }
 
-        $channelTarget = trim( $input->getOption('channel') ?? '' );
-        if( empty( $channelTarget ) || !in_array( $channelTarget , $this->getAppService()->getAppConfig()->getAllowedChannelNames() ) ){
-            throw new \Exception('Invalid Channel-Target: ' . $channelTarget );
+        $channelTarget = $conversationId = $conversation = null;
+
+        if( ( $conversationId = $input->getOption('conversationId' ) ) === null ){
+            $channelTarget = trim( $input->getOption('channel') ?? '' );
+            if( empty( $channelTarget ) || !in_array( $channelTarget , $this->getAppService()->getAppConfig()->getAllowedChannelNames() ) ){
+                throw new \Exception('Invalid Channel-Target: ' . $channelTarget );
+            }
         }
 
         foreach( [ 'message' => null , 'message-b64' => 'base64_decode' ] AS $key => $callback ){
@@ -125,27 +130,69 @@ class SendMessage extends Command
         $stashcatMediator->decryptPrivateKey();
         $stashcatMediator->loadCompanies();
 
-        $THWCompany = $stashcatMediator->getCompanyMembers()->getCompanyByName('THW');
-        $stashcatMediator->loadChannelSubscripted( $THWCompany );
+        if( $channelTarget !== null ){
 
-        $THWChannel = $stashcatMediator->getChannelOfCompany( $channelTarget , $THWCompany );
-        $stashcatMediator->decryptChannelPrivateKey( $THWChannel );
+            $THWCompany = $stashcatMediator->getCompanyMembers()->getCompanyByName('THW');
+            $stashcatMediator->loadChannelSubscripted( $THWCompany );
 
-        // Prepare Message...
-        // Decorator....
-        $messageDecorator = new MessageDecorator( $this->getKernel()->getContainer() , [
-            $THWCompany,
-            $THWChannel,
-            $this->getAppService()
-        ]);
+            $THWChannel = $stashcatMediator->getChannelOfCompany( $channelTarget , $THWCompany );
+            $stashcatMediator->decryptChannelPrivateKey( $THWChannel );
+
+            // Prepare Message...
+            // Decorator....
+            $messageDecorator = new MessageDecorator( $this->getKernel()->getContainer() , [
+                $THWCompany,
+                $THWChannel,
+                $this->getAppService()
+            ]);
+
+        } elseif( $conversationId !== null ){
+
+            $THWCompany = $stashcatMediator->getCompanyMembers()->getCompanyByName('THW');
+            $stashcatMediator->loadConversations();
+
+            if( ( $conversation = $stashcatMediator->getConversationById( $conversationId ) ) === null ){
+                throw new \Exception(sprintf("Conversation not found by ID #%s " , $conversationId ) );
+            }
+
+            $stashcatMediator->decryptConversationPrivateKey( $conversation );
+
+            // Prepare Message...
+            // Decorator....
+            $messageDecorator = new MessageDecorator( $this->getKernel()->getContainer() , [
+                $THWCompany,
+                $this->getAppService()
+            ]);
+
+        } else {
+            throw new \Exception('Argument missing!');
+        }
 
         $eventText = $messageDecorator->replace( $eventText );
 
         // Send message!
-        $result = $stashcatMediator->sendMessageToChannel( $eventText . $this->getAppService()->getAppConfig()->getAutoAppendToMessages() , $THWChannel );
+        if( $channelTarget !== null ){
+            $result = $stashcatMediator->sendMessageToChannel( $eventText . $this->getAppService()->getAppConfig()->getAutoAppendToMessages() , $THWChannel );
 
-        if( $result->_getStatusValue() == 'OK' ){
-            $this->getLogger()->log(LogLevel::INFO , sprintf('Message sent to channel %s' , $channelTarget ) , [ 'text' => $eventText ]);
+            if( $result->_getStatusValue() == 'OK' ){
+                $this->getLogger()->log(LogLevel::INFO , sprintf('Message sent to channel %s' , $channelTarget  ) , [ 'text' => $eventText ]);
+            }
+
+        } elseif( $conversationId !== null && $conversation !== null ){
+
+            $memberNames = [];
+            foreach( $conversation->getMembers() AS $member ){
+                $memberNames[] = $member->getCompleteName();
+            }
+
+            $result = $stashcatMediator->sendMessageToConversation( $eventText . $this->getAppService()->getAppConfig()->getAutoAppendToMessages() , $conversation );
+
+            if( $result->_getStatusValue() == 'OK' ){
+                $this->getLogger()->log(LogLevel::INFO , sprintf('Message sent to conversation %s, members: %s' , $conversation->getId() , implode(', ' , $memberNames ) ) , [ 'text' => $eventText ]);
+            }
+
+        } else {
+            throw new \Exception('Message-Target (Channel or Conversation) is invalid!');
         }
 
         $stashcatMediator->likeMessage( $result->getMessage() );

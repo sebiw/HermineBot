@@ -28,6 +28,7 @@ class Config {
     protected string $urlPath_channels_subscripted = "channels/subscripted";
     protected string $urlPath_message_content = "message/content";
     protected string $urlPath_message_send = "message/send";
+    protected string $urlPath_message_conversations = "message/conversations";
     protected string $urlPath_message_like = "message/like";
     protected string $urlPath_auth_check = "auth/check";
     protected string $urlPath_company_member = "company/member";
@@ -136,6 +137,13 @@ class Config {
     public function getCompanyGroupsURL(): string
     {
         return $this->addToBaseURL( $this->urlPath_company_groups );
+    }
+
+    /**
+     * @return string
+     */
+    public function getMessageConversations() : string {
+        return $this->addToBaseURL( $this->urlPath_message_conversations );
     }
 
     /**
