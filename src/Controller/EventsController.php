@@ -16,6 +16,7 @@ use Psr\Log\LogLevel;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
+use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Filesystem\Filesystem;
@@ -58,7 +59,8 @@ class EventsController extends AbstractController
             'current_entry' => $entity,
             'allowed_intervals' => $app->getAppConfig()->getAllowedIntervals(),
             'allowed_channels' => $app->getAppConfig()->getAllowedChannelNames(),
-            'replacementKeys' => $decorator->getAvailableReplacements()
+            'replacementKeys' => $decorator->getAvailableReplacements(),
+            'conversation_channel_placeholder_name' => $app->getAppConfig()->getConversationChannelPlaceholderName()
         ]);
     }
 
@@ -104,7 +106,7 @@ class EventsController extends AbstractController
     }
 
     #[Route('/events', name: 'save_event', methods: [ 'POST' ] )]
-    public function saveEvent( Request $request , ManagerRegistry $doctrine , AppService $app, DatabaseLogger $logger, #[CurrentUser] ?User $user ): RedirectResponse
+    public function saveEvent( Request $request , ManagerRegistry $doctrine , AppService $app, DatabaseLogger $logger, #[CurrentUser] ?User $user , Kernel $kernel ): RedirectResponse
     {
         $manager = $doctrine->getManagerForClass( Event::class );
 
@@ -121,7 +123,15 @@ class EventsController extends AbstractController
                     $now = new \DateTime();
                     $date = \DateTime::createFromFormat( $app->getAppConfig()->getDateFormat() . '-' . $app->getAppConfig()->getTimeFormat() , $request->get('date') . '-' . $request->get('time') );
 
-                    $entity->setChannelTarget( $request->get('channel') );
+                    if( in_array( $request->get('channel') , $app->getAppConfig()->getAllowedChannelNames() ) ){
+                        $entity->setChannelTarget( $request->get('channel') );
+                    } else {
+                        throw new \Exception('Channel-Name not allowed!');
+                    }
+
+
+                    $entity->setConversationIdToPayload( $request->get('channel_payload_conversation_id') );
+
                     $entity->setStartDateTime( $date );
                     $entity->setDueDateTime( $date );
                     $entity->setText( $request->get('text') );
@@ -166,6 +176,43 @@ class EventsController extends AbstractController
             case 'edit' :
                 if( ( $id = $request->get('id') ) !== null ){
                     return $this->redirectToRoute('events' , ['id' => $id ] );
+                }
+                break;
+            case 'trigger' :
+                /* @var $entity Event */
+                if( ( $id = $request->get('id') )  !== null && ( $entity = $manager->getRepository( Event::class )->find( $id ) ) !== null ){
+
+                    $application = new Application( $kernel );
+                    $application->setAutoExit(false);
+
+                    $arguments = [
+                        'command' => 'hermine:send-message',
+                        '--context' => 'GUI-TRIGGER',
+                        '--channel' => $entity->getChannelTarget(),
+                        '--message' => $entity->getText()
+                    ];
+
+                    $channelPayload = $entity->getChannelTargetPayload();
+                    if( isset( $channelPayload['conversationId'] ) ){
+                        $arguments['--conversationId'] = $channelPayload['conversationId'];
+                    }
+
+                    $input = new ArrayInput( $arguments );
+
+                    // You can use NullOutput() if you don't need the output
+                    $output = new BufferedOutput();
+                    if( $application->run($input, $output) === Command::SUCCESS ){
+
+                        $entity->increaseTransmissionsCount();
+                        $manager->persist( $entity );
+                        $manager->flush();
+
+                        $logger->info('Message Event triggered & processed' );
+                    } else {
+                        $logger->emergency('Message Event triggered & failed' , ['error' => $output->fetch()] );
+                    }
+
+                    return $this->redirectToRoute('events' );
                 }
                 break;
         }

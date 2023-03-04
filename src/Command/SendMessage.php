@@ -3,6 +3,7 @@
 // src/Command/CreateUserCommand.php
 namespace App\Command;
 
+use App\Core\Config;
 use App\Core\DatabaseLogger;
 use App\Core\MessageDecorator;
 use App\Kernel;
@@ -35,18 +36,18 @@ class SendMessage extends Command
      */
     public function __construct(  AppService $app , ManagerRegistry $doctrine , #[Autowire(service: 'logger.events')] DatabaseLogger $logger , Kernel $kernel , string $name = null)
     {
-        parent::__construct($name);
         $this->doctrine = $doctrine;
         $this->logger = $logger;
         $this->kernel = $kernel;
         $this->appService = $app;
+        parent::__construct($name);
     }
 
     protected function configure()
     {
         parent::configure();
         $this->addOption('context' , '-x' , InputOption::VALUE_OPTIONAL , 'Context of this Call' , 'Console' );
-        $this->addOption('channel' , '-c' , InputOption::VALUE_REQUIRED , 'Target-Channel' , 'T_OWBH_TEST' );
+        $this->addOption('channel' , '-c' , InputOption::VALUE_REQUIRED , 'Target-Channel' , $this->getAppService()->getAppConfig()->getConversationChannelPlaceholderName() );
         $this->addOption('conversationId' , null , InputOption::VALUE_REQUIRED , 'Target-Conversation ID' , null );
         $this->addOption('message' , '-m' , InputOption::VALUE_REQUIRED , 'Message to send' );
         $this->addOption('message-b64' , '-b' , InputOption::VALUE_REQUIRED , 'Message to send as Base64 encoded string' );
@@ -98,12 +99,18 @@ class SendMessage extends Command
             $context = 'Console';
         }
 
-        $channelTarget = $conversationId = $conversation = null;
+        $conversationId = $conversation = null;
 
-        if( ( $conversationId = $input->getOption('conversationId' ) ) === null ){
-            $channelTarget = trim( $input->getOption('channel') ?? '' );
-            if( empty( $channelTarget ) || !in_array( $channelTarget , $this->getAppService()->getAppConfig()->getAllowedChannelNames() ) ){
-                throw new \Exception('Invalid Channel-Target: ' . $channelTarget );
+        $channelTarget = trim( $input->getOption('channel') );
+        if( empty( $channelTarget ) || !in_array( $channelTarget , $this->getAppService()->getAppConfig()->getAllowedChannelNames() ) ){
+            throw new \Exception('Invalid Channel-Target: ' . $channelTarget );
+        }
+
+        // Remove channel target if its a conversation
+        if( $channelTarget === $this->getAppService()->getAppConfig()->getConversationChannelPlaceholderName() ){
+            $channelTarget = null;
+            if( ( $conversationId = $input->getOption('conversationId' ) ) === null ){
+                throw new \Exception('Conversation ID Missing!' );
             }
         }
 
@@ -130,9 +137,10 @@ class SendMessage extends Command
         $stashcatMediator->decryptPrivateKey();
         $stashcatMediator->loadCompanies();
 
+        $THWCompany = $stashcatMediator->getCompanyMembers()->getCompanyByName('THW');
+
         if( $channelTarget !== null ){
 
-            $THWCompany = $stashcatMediator->getCompanyMembers()->getCompanyByName('THW');
             $stashcatMediator->loadChannelSubscripted( $THWCompany );
 
             $THWChannel = $stashcatMediator->getChannelOfCompany( $channelTarget , $THWCompany );
@@ -148,7 +156,6 @@ class SendMessage extends Command
 
         } elseif( $conversationId !== null ){
 
-            $THWCompany = $stashcatMediator->getCompanyMembers()->getCompanyByName('THW');
             $stashcatMediator->loadConversations();
 
             if( ( $conversation = $stashcatMediator->getConversationById( $conversationId ) ) === null ){

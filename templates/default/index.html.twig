@@ -14,6 +14,9 @@
     <script type="application/javascript" src="/assets/npm-asset/timepicker/jquery.timepicker.min.js"></script>
     <script type="text/javascript">
         $( function() {
+
+            let conversation_channel_placeholder_name = '{{ conversation_channel_placeholder_name }}';
+
             $( ".thw-datepicker" ).datepicker(
                 $.datepicker.regional[ "de" ]
             );
@@ -42,6 +45,11 @@
                     $('#untilTime').prop( "disabled", false );
                 }
             }).change();
+
+            $('.channel').change(function(){
+                let self = $(this);
+                self.parents('tr').find('.conversation-id').prop('disabled' , !( self.val() === conversation_channel_placeholder_name ) );
+            }).change();
         } );
     </script>
 {% endblock %}
@@ -58,7 +66,7 @@
                     <th colspan="2">Startdatum</th>
                     <th colspan="2">Enddatum</th>
                     <th>Interval</th>
-                    <th>Channel-Ziel</th>
+                    <th>Ziel</th>
                     <th>Text</th>
                     <th>zuletzt Versendet</th>
                     <th>nächste Übermittlung</th>
@@ -67,7 +75,7 @@
                 </thead>
                 <tbody>
                 <tr>
-                    <td>
+                    <td class="text-center">
                         {% if current_entry.getId() is null %}
                             <button type="submit" name="action" value="add">Hinzufügen</button>
                         {% else %}
@@ -87,12 +95,17 @@
                             {% endfor %}
                         </select>
                     </td>
-                    <td>
-                        <select name="channel">
-                            {% for channelName in allowed_channels  %}
-                                <option value="{{ channelName }}" {{ channelName == current_entry.getChannelTarget() ? 'selected' : '' }}>{{ channelName }}</option>
-                            {% endfor %}
-                        </select>
+                    <td class="text-center">
+                        <div>
+                            <select name="channel" class="channel">
+                                {% for channelName in allowed_channels  %}
+                                    <option value="{{ channelName }}" {{ channelName == current_entry.getChannelTarget() ? 'selected' : '' }}>{{ channelName }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <input type="text" class="conversation-id" name="channel_payload_conversation_id" placeholder="ID der Konversation" value="{{ current_entry.getConversationIdFromPayload() }}">
+                        </div>
                     </td>
                     <td>
                         <textarea name="text" class="thw-textarea">{{ current_entry.text ?? '' }}</textarea>
@@ -102,13 +115,23 @@
                 {% for event in events  %}
                     <tr class="{{ event.eventDone() ? 'event-done' : 'event' }}">
                         <td>
-                            <button type="submit" class="action-button" name="action" value="edit" data-id="{{ event.getId() ?? '' }}">Editieren</button>
-                            <button type="submit" class="action-button" name="action" value="delete" data-id="{{ event.getId() ?? '' }}">Löschen</button>
+                            <div>
+                                <button type="submit" class="action-button" name="action" value="edit" data-id="{{ event.getId() ?? '' }}">Editieren</button>
+                                <button type="submit" class="action-button" name="action" value="delete" data-id="{{ event.getId() ?? '' }}">Löschen</button>
+                            </div>
+                            <div class="text-center" style="padding: 1rem;">
+                                <button type="submit" class="action-button" name="action" value="trigger" data-id="{{ event.getId() ?? '' }}">Manuell senden</button>
+                            </div>
                         </td>
                         <td colspan="2" class="text-center">{{ event.getStartDateTime()|date(date_time_format) }}</td>
                         <td colspan="2" class="text-center">{{ event.getUntilDateTime()|date(date_time_format) }}</td>
                         <td>{{ allowed_intervals[ event.getDateInterval() ] ?? "" }}</td>
-                        <td>{{ event.getChannelTarget() }}</td>
+                        <td>
+                            <div>{{ event.getChannelTarget() }}</div>
+                            {% if event.getConversationIdFromPayload() is not null %}
+                                <div style="font-size: 0.7em;">ID der Konversation: <span style="font-style: italic;">{{ event.getConversationIdFromPayload() }}</span></div>
+                            {% endif %}
+                        </td>
                         <td><pre>{{ event.getText() }}</pre></td>
                         <td>{{ event.getDoneDateTime()|date(date_time_format) }}</td>
                         <td>{{ event.getDueDateTime()|date(date_time_format) }}</td>

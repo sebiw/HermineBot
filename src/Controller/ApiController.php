@@ -68,7 +68,7 @@ class ApiController extends AbstractController
         if( $application->run($input, $output) === Command::SUCCESS ){
             $logger->info(sprintf('Message sent via REST to %s' , $channel ?? $conversationId ) );
         } else {
-            $logger->emergency(sprintf('Message sent via REST to %s FAILED' , $channel ?? $conversationId ) );
+            $logger->emergency(sprintf('Message sent via REST to %s FAILED' , $channel ?? $conversationId ), ['error' => $output->fetch()] );
         }
 
         return new JsonResponse([

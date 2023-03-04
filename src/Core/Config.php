@@ -4,6 +4,8 @@ namespace App\Core;
 
 class Config extends ArrayDataCollection {
 
+    const DEFAULT_CHANNEL_CONVERSATION_PLACEHOLDER = '[[Konversation]]';
+
     /**
      * @return bool
      * @throws \Exception
@@ -34,7 +36,21 @@ class Config extends ArrayDataCollection {
      * @throws \Exception
      */
     public function getAllowedChannelNames() : array {
-        return $this->getResults('allowed_channel');
+        $allowedChannels = $this->getResults('allowed_channel');
+        $allowedChannels[] = $this->getConversationChannelPlaceholderName();
+        return $allowedChannels;
+    }
+
+    /**
+     * @return string
+     */
+    public function getConversationChannelPlaceholderName() : string {
+        try {
+            // Try to load from Config if this name will conflict with a real channel
+            return $this->getResults('conversation_channel_placeholder_name');
+        } catch ( \Exception $e ){
+            return self::DEFAULT_CHANNEL_CONVERSATION_PLACEHOLDER;
+        }
     }
 
     /**

@@ -132,7 +132,6 @@ class Daemon extends Command
             $stashcatMediator->loadCompanies();
 
             $THWCompany = $stashcatMediator->getCompanyMembers()->getCompanyByName('THW');
-            $stashcatMediator->loadChannelSubscripted( $THWCompany );
 
             $allowedIntervals = $this->getAppService()->getAppConfig()->getAllowedIntervals();
 
@@ -142,20 +141,69 @@ class Daemon extends Command
                 // Analyze Event -> Pull Requirements / Check Requirements => If all Requirements exist => Process!
                 // If not, skip processing this event, fire Events to get Requirements. => DateTime Check -> Request <-> Response | if to old, fire new Request
 
-                $THWChannel = $stashcatMediator->getChannelOfCompany( $event->getChannelTarget() , $THWCompany );
-                $stashcatMediator->decryptChannelPrivateKey( $THWChannel );
+                $result = $messageSentLogMessage = null;
 
-                // Decorator....
-                $messageDecorator = new MessageDecorator( $this->getKernel()->getContainer() , [
-                    $THWCompany,
-                    $THWChannel,
-                    $this->getAppService(),
-                    $event
-                ]);
+                // Conversation ???
+                if( $event->getChannelTarget() === $this->getAppService()->getAppConfig()->getConversationChannelPlaceholderName() ){
 
-                $eventText = $messageDecorator->replace( $eventText );
+                    $stashcatMediator->loadConversations();
 
-                $result = $stashcatMediator->sendMessageToChannel( $eventText . $this->getAppService()->getAppConfig()->getAutoAppendToMessages() , $THWChannel );
+                    $channelPayload = $event->getChannelTargetPayload();
+                    if( isset( $channelPayload['conversationId'] ) ){
+
+                        if( ( $conversation = $stashcatMediator->getConversationById( $channelPayload['conversationId'] ) ) === null ){
+                            $this->getLogger()->log(LogLevel::CRITICAL , sprintf("Conversation not found by ID #%s" , $channelPayload['conversationId'] ) , [ 'text' => $eventText ]);
+                        }
+                        else
+                        {
+                            $stashcatMediator->decryptConversationPrivateKey( $conversation );
+
+                            // Decorator....
+                            $messageDecorator = new MessageDecorator( $this->getKernel()->getContainer() , [
+                                $THWCompany,
+                                $this->getAppService(),
+                                $event
+                            ]);
+
+                            $eventText = $messageDecorator->replace( $eventText );
+
+                            $memberNames = [];
+                            foreach( $conversation->getMembers() AS $member ){
+                                $memberNames[] = $member->getCompleteName();
+                            }
+
+                            $result = $stashcatMediator->sendMessageToConversation( $eventText . $this->getAppService()->getAppConfig()->getAutoAppendToMessages() , $conversation );
+
+                            $messageSentLogMessage = sprintf('Message sent to conversation %s, members: %s' , $conversation->getId() , implode(', ' , $memberNames ) );
+
+                        }
+                    }
+
+                }
+                // Channel-Message ???
+                else
+                {
+
+                    $stashcatMediator->loadChannelSubscripted( $THWCompany );
+
+                    $THWChannel = $stashcatMediator->getChannelOfCompany( $event->getChannelTarget() , $THWCompany );
+                    $stashcatMediator->decryptChannelPrivateKey( $THWChannel );
+
+                    // Decorator....
+                    $messageDecorator = new MessageDecorator( $this->getKernel()->getContainer() , [
+                        $THWCompany,
+                        $THWChannel,
+                        $this->getAppService(),
+                        $event
+                    ]);
+
+                    $eventText = $messageDecorator->replace( $eventText );
+
+                    $result = $stashcatMediator->sendMessageToChannel( $eventText . $this->getAppService()->getAppConfig()->getAutoAppendToMessages() , $THWChannel );
+                    $messageSentLogMessage = sprintf('Message sent to channel %s' , $event->getChannelTarget() );
+
+                }
+
 
                 // Update next due date time...
                 if( !empty( $event->getDateInterval() ) ){
@@ -170,15 +218,24 @@ class Daemon extends Command
 
                 $event->increaseTransmissionsCount();
 
-                if( $result->_getStatusValue() == 'OK' ){
-                    $this->getLogger()->log(LogLevel::INFO , sprintf('Message sent to channel %s' , $event->getChannelTarget() ) , [ 'text' => $eventText ]);
+                if( $result?->_getStatusValue() == 'OK' ){
+
+                    if( $messageSentLogMessage !== null ){
+                        $this->getLogger()->log(LogLevel::INFO , $messageSentLogMessage , [ 'text' => $eventText ]);
+                    }
+
                     $event->setDoneDateTime( $now );
                     $entityManager->persist( $event );
                     $entityManager->flush();
                     $eventsProcessed++;
+
+                    $stashcatMediator->likeMessage( $result->getMessage() );
+                }
+                else
+                {
+                    $this->getLogger()->log(LogLevel::CRITICAL , sprintf("Sending message failed for Event #%s" , $event->getId() ) , [ 'status' => $result?->_getStatusValue() ]);
                 }
 
-                $stashcatMediator->likeMessage( $result->getMessage() );
             }
         }
 

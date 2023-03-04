@@ -44,7 +44,7 @@ class HermineMessageHandler
         if( $application->run($input, $output) === Command::SUCCESS ){
             $this->logger->info('Message Event processed' );
         } else {
-            $this->logger->emergency('Message Event failed' );
+            $this->logger->emergency('Message Event failed' , ['error' => $output->fetch()]);
         }
     }
 
