@@ -177,7 +177,7 @@ class MessageDecorator {
                                         $vToDos = [];
 
                                         $completedLimit = ( new \DateTime() )->modify('-4 weeks');
-                                        $completedLimitShort = ( new \DateTime() )->modify('-2 weeks');
+                                        $completedLimitRecently = ( new \DateTime() )->modify('-1 weeks')->modify('-5 days');
                                         $counter = 0;
 
                                         if( isset( $vCalendar->VTODO ) ){
@@ -218,8 +218,8 @@ class MessageDecorator {
                                                     } else if( !$isCompleted) {
                                                         continue;
                                                     }
-                                                } else if( $mode === 'COMPLETED_SHORT' ){
-                                                    if( $isCompleted && $completedDateTime !== null && $completedDateTime < $completedLimitShort ){
+                                                } else if( $mode === 'COMPLETED_RECENTLY' ){
+                                                    if( $isCompleted && $completedDateTime !== null && $completedDateTime < $completedLimitRecently ){
                                                         continue;
                                                     } else if( !$isCompleted) {
                                                         continue;
