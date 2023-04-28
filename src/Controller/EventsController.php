@@ -129,14 +129,17 @@ class EventsController extends AbstractController
                         throw new \Exception('Channel-Name not allowed!');
                     }
 
-
                     $entity->setConversationIdToPayload( $request->get('channel_payload_conversation_id') );
-
                     $entity->setStartDateTime( $date );
-                    $entity->setDueDateTime( $date );
+
+                    if( $request->get('resetDue' ) == 1 ){
+                        $entity->setDueDateTime( $date );
+                    }
+
                     $entity->setText( $request->get('text') );
 
                     if( ( $interval = $request->get('interval') ) !== null && !empty( $interval ) ){
+
                         if( ( $untilDate = $request->get('untilDate') ) !== null && !empty( $untilDate ) && ( $untilTime = $request->get('untilTime') ) !== null && !empty( $untilTime )  ){
                             $untilDate = \DateTime::createFromFormat( $app->getAppConfig()->getDateFormat() . '-' . $app->getAppConfig()->getTimeFormat() , $untilDate . '-' . $untilTime );
                             if( !in_array( $interval , array_keys( $app->getAppConfig()->getAllowedIntervals() ) ) ){
@@ -148,6 +151,7 @@ class EventsController extends AbstractController
                         }
                         $interval = strval( $_POST['interval'] );
                         $entity->setDateInterval( $interval );
+
                     } else {
                         $entity->setUntilDateTime( null );
                         $entity->setDateInterval( null );

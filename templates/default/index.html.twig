@@ -78,9 +78,13 @@
                     <td class="text-center">
                         {% if current_entry.getId() is null %}
                             <button type="submit" name="action" value="add">Hinzufügen</button>
+                            <input type="hidden" name="resetDue" value="1">
                         {% else %}
                             <button type="submit" name="action" value="save">Speichern</button>
                             <button type="submit" name="action" value="">Abbrechen</button>
+                            <div style="font-size: 0.6rem">
+                                <label for="resetDue">Übermittlung zurücksetzen</label><input type="checkbox" id="resetDue" name="resetDue" value="1">
+                            </div>
                         {% endif %}
                     </td>
                     <td><input type="text" name="date" class="thw-datepicker" value="{{ current_entry.getStartDateTime()|date(date_format) }}"></td>
