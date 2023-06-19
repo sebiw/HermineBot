@@ -2,6 +2,8 @@
 
 namespace App\Core;
 
+use Psr\Log\LoggerInterface;
+
 /**
  *
  */
@@ -16,15 +18,25 @@ class RestClient {
 
     protected string $defaultResponseFormat = self::RESPONSE_FORMAT_PLAIN;
 
+    protected ?LoggerInterface $logger = null;
+
     /**
      *
      * @throws \Exception
      */
-    public function __construct( $defaultResponseFormat = self::RESPONSE_FORMAT_PLAIN ){
+    public function __construct( $defaultResponseFormat = self::RESPONSE_FORMAT_PLAIN , ?LoggerInterface $logger = null ){
         if( !in_array( $defaultResponseFormat , self::getValidFormats() ) ){
             throw new \Exception("Default response format not valid!");
         }
         $this->defaultResponseFormat = $defaultResponseFormat;
+        $this->logger = $logger;
+    }
+
+    /**
+     * @return LoggerInterface|null
+     */
+    protected function getLogger() : ?LoggerInterface {
+        return $this->logger;
     }
 
     /**
@@ -86,7 +98,7 @@ class RestClient {
     }
 
     /**
-     * @return false|resource
+     * @return false|\CurlHandle
      * @throws \Exception
      */
     protected function initCURLSession(){
@@ -151,6 +163,11 @@ class RestClient {
 
         $result = curl_exec( $session );
         $this->closeCURLSession( $session );
+
+        $this->getLogger()?->info( sprintf('%s %s' , $method , $url ) , [ 'status' => curl_getinfo( $session , CURLINFO_HTTP_CODE ) ] );
+
+        $this->getLogger()?->debug( sprintf('%s %s' , $method , $url ) , [ 'additionalHeader' => $additionalHeader , 'data' => $data , 'result' => $result ] );
+
         return $result;
     }
 

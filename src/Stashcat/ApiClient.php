@@ -14,7 +14,7 @@ use App\Stashcat\Responses\PrivateKeyResponse;
 use App\Stashcat\Responses\SendMessageResponse;
 use App\Stashcat\Responses\SuccessResponse;
 use Exception;
-use mysql_xdevapi\Result;
+use Psr\Log\LoggerInterface;
 
 class ApiClient {
 
@@ -22,14 +22,24 @@ class ApiClient {
 
     private RestClient $restClient;
 
+    private ?LoggerInterface $logger = null;
+
     /**
      * @param Config $config
      * @param RestClient $restClient
      */
-    public function __construct( Config $config , RestClient $restClient )
+    public function __construct( Config $config , RestClient $restClient , ?LoggerInterface $logger = null )
     {
         $this->config = $config;
         $this->restClient = $restClient;
+        $this->logger = $logger;
+    }
+
+    /**
+     * @return LoggerInterface|null
+     */
+    protected function getLogger() : ?LoggerInterface {
+        return $this->logger;
     }
 
     /**
@@ -89,7 +99,16 @@ class ApiClient {
             "client_key" => $client_key,
             "device_id" => $this->getConfig()->getDeviceId()
         ]);
-        return new PrivateKeyResponse( $authCheckResult );
+
+        $pkr = new PrivateKeyResponse( $authCheckResult );
+
+        try {
+            $pkr->getPrivateKeyRaw();
+        } catch (Exception $e) {
+            $this->getLogger()?->critical( sprintf('PrivateKey result invalid: %s' , $e->getMessage() ));
+        }
+
+        return $pkr;
     }
 
     /**

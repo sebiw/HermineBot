@@ -5,7 +5,7 @@ return [
     'baseUrl' => "https://url.de",
     'version' => "x.xx.x",
     'appNamePattern' => "browser-Chrome:103.0.0.0-{version}",
-    'deviceId' => '12345678901234567890123456789012',
+    'deviceId' => '12345678901234567890123456789012', /* 32 Alpha-Numeric char! */
 
     // Login...
     'userEmail' => "a@b.de",

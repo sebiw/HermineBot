@@ -23,7 +23,7 @@ class ArrayDataCollection {
             if( isset( $current[ $key ] ) ){
                 $current = &$current[ $key ];
             } else {
-                throw new \Exception(sprintf('Key %s not found!' , $key ));
+                throw new \Exception(sprintf('Key %s not found in: %s' , $key , json_encode( $this->results ) ));
             }
         }
         return $current;

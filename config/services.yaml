@@ -28,6 +28,12 @@ services:
         arguments:
             $channel: 'events'
 
+    logger.stashcat:
+        class: App\Core\DatabaseLogger
+        arguments:
+            $channel: 'stashcat'
+            $ignoreLevel: [ 'debug' ]
+
     logger.app:
         class: App\Core\DatabaseLogger
         arguments:

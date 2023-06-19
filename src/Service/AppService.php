@@ -8,6 +8,8 @@ use App\Core\StashcatMediator;
 use App\Stashcat\ApiClient;
 use App\Stashcat\Config;
 use App\Stashcat\CryptoBox;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 class AppService {
 
@@ -22,13 +24,13 @@ class AppService {
     /**
      * @throws \Exception
      */
-    public function __construct()
+    public function __construct( #[Autowire(service: 'logger.stashcat')] ?LoggerInterface $logger = null )
     {
         // Stashcat API Setup
-        $restClient = new RestClient( RestClient::RESPONSE_FORMAT_JSON );
+        $restClient = new RestClient( RestClient::RESPONSE_FORMAT_JSON , $logger );
         $this->appConfig = new AppConfig(include BASE_PATH . '/config/legacy/env.app.php');
         $stashcatConfig = new Config(include BASE_PATH . '/config/legacy/env.api.php');
-        $this->stashcatApiClient = new ApiClient( $stashcatConfig , $restClient );
+        $this->stashcatApiClient = new ApiClient( $stashcatConfig , $restClient , $logger );
         $this->stashcatCryptoBox = new CryptoBox( $stashcatConfig );
         $this->stashcatMediator = new StashcatMediator( $this->appConfig , $this->stashcatApiClient , $this->stashcatCryptoBox );
     }
