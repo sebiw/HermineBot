@@ -10,10 +10,10 @@ Nebst dem üblichen `composer install`
 * `DATABASE_URL` an die eigene Datenbank anpassen
 * Kopiere Konfigurationsdateien aus `/config_examples` in `/config/legacy` kopieren und den eigenen Bedürfnissen anpassen.
 * Führe `doctrine:migrations:migrate` aus
-* Cron-Job einrichten der `private/runner.php` (am besten jede Minute) aufruft.
+* Cron-Jobs einrichten (jeweils jede Minute): `php bin/console daemon:tick` und `php bin/console messenger:consume -q` (siehe unten).
 
 ## Installation für Einsteiger
-Die Installation wird in diesem Beispiel auf einem Debian 12 und eigener MySQL-SB durchgeführt.
+Die Installation wird in diesem Beispiel auf einem Debian 12 und eigener MySQL-DB durchgeführt.
 ### Installation von PHP und Apache
 #### Pakete für die Installation des Repo-Keys von PHP installieren
 * `sudo apt update`
@@ -33,12 +33,12 @@ Die Installation wird in diesem Beispiel auf einem Debian 12 und eigener MySQL-S
 * `sudo apt install mariadb-server mariadb-client`
 
 ### Installation von sonstigen Paketen
-* `sudo apt install doctrine git curl git unzip`
+* `sudo apt install git curl unzip`
 
 ### Installation des Composer
 > Ausführliche Anleitung zu Composer: https://www.digitalocean.com/community/tutorials/how-to-install-and-use-composer-on-debian-11
 * `curl -sS https://getcomposer.org/installer -o composer-setup.php`
-* `HASH="curl -sS https://composer.github.io/installer.sig"`
+* `HASH="$(curl -sS https://composer.github.io/installer.sig)"`
 * `php -r "if (hash_file('SHA384', 'composer-setup.php') === '$HASH') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;"`
 
 * `sudo php composer-setup.php --install-dir=/usr/local/bin --filename=composer`
@@ -54,14 +54,14 @@ Die Installation wird in diesem Beispiel auf einem Debian 12 und eigener MySQL-S
 > Nach Bedarf auch die "config_examples/command_api_endpoints.json" nach config/legacy/ kopieren
 
 #### env.api.php anpassen
-* `ǹano /opt/HermineBot/config/legacy/env.api.php`
+* `nano /opt/HermineBot/config/legacy/env.api.php`
 * `'baseUrl' => "https://api.thw-messenger.de/"`
 * `'userEmail' => "<Mail-Adresse des Hermine-Accounts>",`
 * `'userPassword' => "<Passwort des Hermine-Accounts>",`
 * `'userPassphrase' => "<Verschlüsselungskennwort des Hermine-Accounts>",`
     
 #### env.app.php anpassen
-* `ǹano /opt/HermineBot/config/legacy/env.app.php`
+* `nano /opt/HermineBot/config/legacy/env.app.php`
 * `"stashcat_event_company" => "THW OV <Ortschaft>"`
 * `"allowed_channel" => [ "<T_OV_Testchannel>","<T_OV_Testchannel2>" ]` #Channels eintragen, in die der Bot Nachrichten senden darf
 * `"base_url" => "http://localhost:80/"` #DNS-Name oder IP bei Bedarf an den Server anpassen
@@ -75,7 +75,7 @@ Die Installation wird in diesem Beispiel auf einem Debian 12 und eigener MySQL-S
 * Folgenden Block in die Config einfügen/anpassen:\
         `DocumentRoot /opt/HermineBot/public`\
         `<Directory /opt/HermineBot/public>`\
-                `Options Indexes FollowSymLinks`\
+                `Options -Indexes +FollowSymLinks`\
                 `AllowOverride All`\
                 `Require all granted`\
         `</Directory>`
@@ -87,19 +87,22 @@ Die Installation wird in diesem Beispiel auf einem Debian 12 und eigener MySQL-S
 `sudo su -`
 * MySQL-Client starten\
 `mysql`
-* DB anlegen\
-`create database hermine_bot;`
+* DBs anlegen (`messages` ist die Nachrichten-Warteschlange, die z. B. der StAN-Manager mitbenutzt)\
+`create database hermine_bot;`\
+`create database messages;`
 * DB-User anlegen\
 `CREATE USER '<DB-Benutzernamen>'@localhost IDENTIFIED BY '<Passwort>';`
 * DB-User Berechtigungen vergeben\
-`GRANT ALL PRIVILEGES ON hermine_bot.* TO '<DB-Benutzernamen>'@'localhost';`
+`GRANT ALL PRIVILEGES ON hermine_bot.* TO '<DB-Benutzernamen>'@'localhost';`\
+`GRANT ALL PRIVILEGES ON messages.* TO '<DB-Benutzernamen>'@'localhost';`
 * MySQL-Client beenden\
 `quit;`
 * Aus Root-Kontext raus\
 `exit`
 
 ### DB-User im Hermine-Bot eintragen
-* `nano .env`
+* `nano .env.local`
+> Zugangsdaten nie in die eingecheckte `.env` eintragen, sondern nur in `.env.local` (wird von Git ignoriert).
 * Config bearbeiten:\
 `DATABASE_URL="mysql://<DB-Benutzernamen>:<Passwort>@127.0.0.1:3306/hermine_bot?charset=utf8mb4"` #DB-Benutzername und Passwort eintragen und die server_Version rausnehmen\
 `DATABASE_MESSAGE_URL="mysql://<DB-Usernamen>:<Passwort>@127.0.0.1:3306/messages?charset=utf8mb4"` #DB-Benutzername und Passwort eintragen und die server_Version rausnehmen
@@ -107,14 +110,22 @@ Die Installation wird in diesem Beispiel auf einem Debian 12 und eigener MySQL-S
 ### Composer erforderliche Pakete installieren lassen
 `composer install`
 
-### Config-Äenderungen (.env) in den Produktivbetrieb übernehmen
+### Config-Änderungen (.env.local) in den Produktivbetrieb übernehmen
 `composer dump-env prod`
 
 ### DB-Grundstruktur importieren
 `php bin/console doctrine:migrations:migrate`
 
+### Tabelle für die Nachrichten-Warteschlange anlegen
+`php bin/console messenger:setup-transports`
+
 ### Berechtigung an Webserver übergeben
 `sudo chown www-data:www-data -R /opt/HermineBot/`
+
+## Cron-Jobs einrichten
+Ohne Cron-Jobs verschickt der Bot keine geplanten Nachrichten. `messenger:consume` beendet sich automatisch, sobald die Warteschlange leer ist. Als Webserver-Benutzer einrichten (`sudo crontab -u www-data -e`):\
+`* * * * * php /opt/HermineBot/bin/console daemon:tick`\
+`* * * * * php /opt/HermineBot/bin/console messenger:consume -q`
 
 ## Web-Benutzer anlegen
 ### Passwort-Hash erstellen
@@ -140,6 +151,7 @@ Die Installation wird in diesem Beispiel auf einem Debian 12 und eigener MySQL-S
 
 ## Nachricht per Bash-Console / -Script verschicken
 `php /opt/HermineBot/bin/console hermine:send-message -c <Hermine-Channel> -m "<Nachricht>"`
+> Achtung: Die Nachricht geht sofort und echt an den Channel – zum Testen nur einen Test-Channel aus `allowed_channel` verwenden.
 
 ## Disclaimer
 Ich arbeite nicht für StashCat und habe auch ansonsten keinen Bezug zur `stashcat GmbH`. Es war ein Hobby-Projekt um die Funktionen für den im THW eingesetzten Stashcat-Brand "Hermine" zu erweitern.
