@@ -19,12 +19,8 @@
     {{ parent() }}
 {% endblock %}
 
-{% block footer %}
-
+{% block topnav %}
     {% if app.user %}
-        <div class="login-hint no-print">Eingeloggt als {{ app.user.username }}, <a href="{{ path('app_logout') }}">Ausloggen</a></div>
+        <span class="login-hint no-print">Eingeloggt als {{ app.user.username }}, <a href="{{ path('app_logout') }}">Ausloggen</a></span>
     {% endif %}
-
-    {{ parent() }}
-
 {% endblock %}

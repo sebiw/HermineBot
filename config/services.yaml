@@ -4,6 +4,8 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
+    # Software-Version nach SemVer – bei jedem Release zusammen mit CHANGELOG.md anpassen
+    app.version: '1.0.0'
     app.message_files_in: '%env(MESSAGE_FILES_IN)% '
     app.message_placeholder: '/data/placeholder.json'
     app.message_command_api_endpoints: '/config/legacy/command_api_endpoints.json'

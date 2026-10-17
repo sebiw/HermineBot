@@ -5,10 +5,14 @@
     <title>{% block title %}{{ title }} - {{ ov }}{% endblock %}</title>
     {% block stylesheets %}
         <link rel="stylesheet" type="text/css" href="/assets/main.css" media="screen">
+        <link rel="stylesheet" href="/assets/npm-asset/jquery-ui/dist/themes/base/jquery-ui.min.css">
         {{ encore_entry_link_tags('app') }}
     {% endblock %}
 
     {% block javascripts %}
+        <script type="application/javascript" src="/assets/npm-asset/jquery/dist/jquery.min.js"></script>
+        <script type="application/javascript" src="/assets/npm-asset/jquery-ui/dist/jquery-ui.min.js"></script>
+        <script type="application/javascript" src="/assets/app.js"></script>
         {{ encore_entry_script_tags('app') }}
     {% endblock %}
 </head>
@@ -17,6 +21,17 @@
         {{ title }} - {{ ov }}
     </header>
     <div class="wrapper">
+
+        <div class="topnav">
+            {% block topnav %}{% endblock %}
+            <div class="app-version-line no-print">
+                {% if is_granted('ROLE_USER') %}
+                    <a href="#" class="app-version" title="Changelog anzeigen" data-changelog-url="{{ path('changelog') }}">v{{ app_version }}</a>
+                {% else %}
+                    <span class="app-version">v{{ app_version }}</span>
+                {% endif %}
+            </div>
+        </div>
 
         <nav class="primary">
             {% block nav %}{% endblock %}

@@ -155,3 +155,49 @@ td, th {
     margin: 0px auto;
     max-width: 1200px;
 }
+
+.topnav {
+    text-align: right;
+}
+
+.app-version-line {
+    text-align: right;
+    padding: 0 0.2rem 0.2rem;
+}
+
+/* Klickbare Version (Link) nutzt die globalen Link-Styles, ohne Login nur grauer Text */
+.app-version {
+    font-size: 0.7rem;
+}
+
+span.app-version {
+    color: #5E5D5B;
+}
+
+.changelog-dialog {
+    font-size: 0.9rem;
+}
+
+.changelog-dialog h3 {
+    margin: 1rem 0 0.25rem 0;
+    color: #003399;
+}
+
+.changelog-dialog h3:first-child {
+    margin-top: 0;
+}
+
+.changelog-dialog h4 {
+    margin: 0.5rem 0 0.25rem 0;
+}
+
+.changelog-dialog ul {
+    margin: 0;
+    padding-left: 1.25rem;
+}
+
+@media print {
+    .app-version-line {
+        display: none;
+    }
+}

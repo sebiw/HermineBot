@@ -68,6 +68,18 @@ Symfony-6.1-Anwendung (PHP ≥ 8.1), die automatisiert Nachrichten in Channels u
 - Bot → StAN-Manager: REST-Abrufe der Reports über `command_api_endpoints.json`.
 - Geplant: Inventarnummern in Hermine-Channels automatisch auflösen (StAN-Manager-Issues #16 Lookup-Endpunkt, #17 Hermine-Auskunft). Dafür braucht der Bot: Channels lesen, verarbeitete Nachrichten merken, klaren Auslöser erkennen, eigene Nachrichten ignorieren.
 
+## Versionierung & Changelog
+
+- Version nach [SemVer](https://semver.org/lang/de/), einzige Quelle ist der Parameter `app.version` in `config/services.yaml`. Er wird als Twig-Global `app_version` oben rechts unter dem Login-Hinweis angezeigt (Block `topnav`) (`templates/base.html.twig`, Styles in `public/assets/main.css`); nach dem Login lädt ein Klick `/changelog` (`ChangelogController`, `Core/ChangelogRenderer`) per AJAX in einen jQuery-UI-Dialog (`public/assets/app.js`). jQuery und jQuery-UI werden dafür in `base.html.twig` auf allen Seiten geladen.
+- Änderungen stehen in `CHANGELOG.md` (Format „Keep a Changelog“, Deutsch). Gleiche Regeln wie im StAN-Manager:
+
+**Anweisung für Agenten – bei jeder Änderung automatisch beachten:**
+
+1. **Bei jedem Commit mit wesentlicher Änderung** einen Eintrag unter `## [Unreleased]` in `CHANGELOG.md` ergänzen – im selben Commit, ohne Rückfrage. Das Changelog richtet sich **nur an Endnutzer** und ist in der App sichtbar: neue Funktionen, behobene Fehler, geändertes Verhalten, Sicherheitsfixes. Nicht eintragen: Betrieb/Deployment, Refactorings ohne Verhaltensänderung, Formatierung, Kommentare, Entwickler-Doku, Tests, Tooling.
+2. **Rubriken** (nur verwenden, was vorkommt): `### Hinzugefügt`, `### Geändert`, `### Behoben`, `### Entfernt`, `### Sicherheit`.
+3. **Formulierung**: ein Satz pro Eintrag, auf Deutsch, aus Sicht der Anwender, ohne Klassennamen, Dateipfade oder Commit-Hashes. Kein Inline-Code mit Backticks (der Renderer unterstützt nur Überschriften, Listen, Absätze, Links und Fettschrift). **Repo ist öffentlich** – keine URLs, Hostnamen oder internen Details.
+4. **Release** nur auf ausdrücklichen Wunsch: Versionssprung aus `[Unreleased]` ableiten (MAJOR: inkompatibel, z. B. geänderte `/api/*` oder `HermineBotCom`-Nachrichten, manuelle Deployment-Schritte; MINOR: neue Funktionen; PATCH: Fehlerbehebungen), `## [Unreleased]` in `## [X.Y.Z] - JJJJ-MM-TT` umbenennen, neuen leeren `[Unreleased]`-Abschnitt anlegen, `app.version` anpassen, Commit `MOD Release vX.Y.Z` und annotierten Tag `vX.Y.Z`; pushen mit `git push origin main --follow-tags`, sofern gewünscht.
+
 ## Hinweise
 
 - Ändern sich Klassen in `HermineBotCom`, müssen StAN-Manager und Bot beide aktualisiert und deployt werden.
