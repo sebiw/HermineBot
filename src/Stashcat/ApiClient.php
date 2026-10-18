@@ -4,6 +4,13 @@ namespace App\Stashcat;
 
 use App\Core\RestClient;
 use App\Stashcat\Responses\AuthCheckResponse;
+use App\Stashcat\Responses\ChannelInfosResponse;
+use App\Stashcat\Responses\ChannelMembersResponse;
+use App\Stashcat\Responses\ConversationResponse;
+use App\Stashcat\Responses\MessageSeenUsersCountResponse;
+use App\Stashcat\Responses\MessageSeenUsersResponse;
+use App\Stashcat\Responses\UserInfoResponse;
+use App\Stashcat\Responses\UsersListingResponse;
 use App\Stashcat\Responses\ChannelsSubscriptedResponse;
 use App\Stashcat\Responses\CompanyGroupsResponse;
 use App\Stashcat\Responses\CompanyMemberResponse;
@@ -287,6 +294,143 @@ class ApiClient {
             "offset" => $offset
         ]);
         return new Responses\MessageContentResponse( $messageContentResult );
+    }
+
+    /**
+     * Mitglieder eines Channels (seitenweise)
+     * @param string $client_key
+     * @param string $channel_id
+     * @param int $limit
+     * @param int $offset
+     * @return ChannelMembersResponse
+     * @throws Exception
+     */
+    public function channelMembers( string $client_key , string $channel_id , int $limit = 40 , int $offset = 0 ) : ChannelMembersResponse {
+        $membersResult = $this->getRestClient()->post( $this->getConfig()->getChannelsMembersURL() , [
+            "client_key" => $client_key,
+            "device_id" => $this->getConfig()->getDeviceId(),
+            "channel_id" => $channel_id,
+            "limit" => $limit,
+            "offset" => $offset,
+            "sorting" => json_encode( ["first_name_asc","last_name_asc"] ),
+            "filter" => "members"
+        ]);
+        return new ChannelMembersResponse( $membersResult );
+    }
+
+    /**
+     * Aktuelle Daten einzelner Channels (ohne die komplette Liste zu laden)
+     * @param string $client_key
+     * @param array $channel_ids
+     * @return ChannelInfosResponse
+     * @throws Exception
+     */
+    public function channelInfos( string $client_key , array $channel_ids ) : ChannelInfosResponse {
+        $infosResult = $this->getRestClient()->post( $this->getConfig()->getChannelsInfosURL() , [
+            "client_key" => $client_key,
+            "device_id" => $this->getConfig()->getDeviceId(),
+            "channel_ids" => json_encode( array_values( array_map( 'intval' , $channel_ids ) ) )
+        ]);
+        return new ChannelInfosResponse( $infosResult );
+    }
+
+    /**
+     * Personen suchen bzw. nach Gruppen auflisten (seitenweise)
+     * @param string $client_key
+     * @param string $search
+     * @param array $group_ids
+     * @param array $exclude_user_ids
+     * @param int $limit
+     * @param int $offset
+     * @return UsersListingResponse
+     * @throws Exception
+     */
+    public function usersListing( string $client_key , string $search = '' , array $group_ids = [] , array $exclude_user_ids = [] , int $limit = 50 , int $offset = 0 ) : UsersListingResponse {
+        $parameters = [
+            "client_key" => $client_key,
+            "device_id" => $this->getConfig()->getDeviceId(),
+            "limit" => $limit,
+            "offset" => $offset,
+            "sorting" => json_encode( ["first_name_asc","last_name_asc"] )
+        ];
+        if( $search !== '' ){
+            $parameters['search'] = $search;
+        }
+        if( !empty( $group_ids ) ){
+            $parameters['group_ids'] = json_encode( array_values( array_map( 'intval' , $group_ids ) ) );
+        }
+        if( !empty( $exclude_user_ids ) ){
+            $parameters['exclude_user_ids'] = json_encode( array_values( array_map( 'intval' , $exclude_user_ids ) ) );
+        }
+        return new UsersListingResponse( $this->getRestClient()->post( $this->getConfig()->getUsersListingURL() , $parameters ) );
+    }
+
+    /**
+     * @param string $client_key
+     * @param string $user_id
+     * @param bool $withKey inkl. öffentlicher Schlüssel
+     * @return UserInfoResponse
+     * @throws Exception
+     */
+    public function userInfo( string $client_key , string $user_id , bool $withKey = false ) : UserInfoResponse {
+        $userResult = $this->getRestClient()->post( $this->getConfig()->getUsersInfoURL() , [
+            "client_key" => $client_key,
+            "device_id" => $this->getConfig()->getDeviceId(),
+            "user_id" => $user_id,
+            "withkey" => $withKey ? 'true' : 'false'
+        ]);
+        return new UserInfoResponse( $userResult );
+    }
+
+    /**
+     * Eine einzelne Unterhaltung
+     * @param string $client_key
+     * @param string $conversation_id
+     * @return ConversationResponse
+     * @throws Exception
+     */
+    public function conversation( string $client_key , string $conversation_id ) : ConversationResponse {
+        $conversationResult = $this->getRestClient()->post( $this->getConfig()->getMessageConversationURL() , [
+            "client_key" => $client_key,
+            "device_id" => $this->getConfig()->getDeviceId(),
+            "conversation_id" => $conversation_id
+        ]);
+        return new ConversationResponse( $conversationResult );
+    }
+
+    /**
+     * Wer hat eine Nachricht gesehen (laut Erfahrung nicht zuverlässig)
+     * @param string $client_key
+     * @param string $message_id
+     * @param int $limit
+     * @param int $offset
+     * @return MessageSeenUsersResponse
+     * @throws Exception
+     */
+    public function messageSeenUsers( string $client_key , string $message_id , int $limit = 100 , int $offset = 0 ) : MessageSeenUsersResponse {
+        $seenResult = $this->getRestClient()->post( $this->getConfig()->getMessageSeenUsersURL() , [
+            "client_key" => $client_key,
+            "device_id" => $this->getConfig()->getDeviceId(),
+            "message_id" => $message_id,
+            "limit" => $limit,
+            "offset" => $offset
+        ]);
+        return new MessageSeenUsersResponse( $seenResult );
+    }
+
+    /**
+     * @param string $client_key
+     * @param string $message_id
+     * @return MessageSeenUsersCountResponse
+     * @throws Exception
+     */
+    public function messageSeenUsersCount( string $client_key , string $message_id ) : MessageSeenUsersCountResponse {
+        $countResult = $this->getRestClient()->post( $this->getConfig()->getMessageSeenUsersCountURL() , [
+            "client_key" => $client_key,
+            "device_id" => $this->getConfig()->getDeviceId(),
+            "message_id" => $message_id
+        ]);
+        return new MessageSeenUsersCountResponse( $countResult );
     }
 
 }

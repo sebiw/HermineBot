@@ -10,6 +10,8 @@ use App\Stashcat\Entities\Company;
 use App\Stashcat\Entities\Conversation;
 use App\Stashcat\Entities\Group;
 use App\Stashcat\Entities\Message;
+use App\Stashcat\Entities\MessageSeenUser;
+use App\Stashcat\Entities\User;
 use App\Stashcat\Responses\CompanyGroupsResponse;
 use App\Stashcat\Responses\CompanyMemberResponse;
 use App\Stashcat\Responses\LoginResponse;
@@ -321,6 +323,93 @@ class StashcatMediator
             $messages[] = $message->toDecrypted( $messageDecryptResult );
         }
         return $messages;
+    }
+
+    /**
+     * Alle Mitglieder eines Channels (lädt alle Seiten)
+     * @param Channel $channel
+     * @param int $pageSize
+     * @return array|User[]
+     * @throws \Exception
+     */
+    public function getChannelMembers( Channel $channel , int $pageSize = 40 ): array
+    {
+        $members = [];
+        $offset = 0;
+        do {
+            $page = $this->getStashcatApiClient()->channelMembers( $this->getLoginResponse()->getClientKey() , $channel->getId() , $pageSize , $offset )->getMembers();
+            $members += $page;
+            $offset += $pageSize;
+        } while( count( $page ) === $pageSize );
+        return $members;
+    }
+
+    /**
+     * Aktuelle Daten einzelner Channels laden (z. B. Mitgliederzahl, letzte Aktivität)
+     * @param array $channelIds
+     * @return array|Channel[]
+     * @throws \Exception
+     */
+    public function getChannelInfos( array $channelIds ): array
+    {
+        return $this->getStashcatApiClient()->channelInfos( $this->getLoginResponse()->getClientKey() , $channelIds )->getChannels();
+    }
+
+    /**
+     * Personen suchen bzw. nach Gruppen auflisten (eine Seite)
+     * @param string $search
+     * @param array $groupIds
+     * @param int $limit
+     * @param int $offset
+     * @return array|User[]
+     * @throws \Exception
+     */
+    public function searchUsers( string $search = '' , array $groupIds = [] , int $limit = 50 , int $offset = 0 ): array
+    {
+        return $this->getStashcatApiClient()->usersListing( $this->getLoginResponse()->getClientKey() , $search , $groupIds , [] , $limit , $offset )->getUsers();
+    }
+
+    /**
+     * @param string $userId
+     * @param bool $withKey
+     * @return User
+     * @throws \Exception
+     */
+    public function getUserInfo( string $userId , bool $withKey = false ): User
+    {
+        return $this->getStashcatApiClient()->userInfo( $this->getLoginResponse()->getClientKey() , $userId , $withKey )->getUser();
+    }
+
+    /**
+     * Eine Unterhaltung direkt laden (ohne die komplette Liste)
+     * @param string $conversationId
+     * @return Conversation
+     * @throws \Exception
+     */
+    public function loadConversation( string $conversationId ): Conversation
+    {
+        return $this->getStashcatApiClient()->conversation( $this->getLoginResponse()->getClientKey() , $conversationId )->getConversation();
+    }
+
+    /**
+     * Wer hat eine Nachricht gesehen – laut Erfahrung nicht zuverlässig, nicht für Auswertungen nutzen
+     * @param Message $message
+     * @return array|MessageSeenUser[]
+     * @throws \Exception
+     */
+    public function getMessageSeenUsers( Message $message ): array
+    {
+        return $this->getStashcatApiClient()->messageSeenUsers( $this->getLoginResponse()->getClientKey() , $message->getId() )->getSeenUsers();
+    }
+
+    /**
+     * @param Message $message
+     * @return int
+     * @throws \Exception
+     */
+    public function getMessageSeenCount( Message $message ): int
+    {
+        return $this->getStashcatApiClient()->messageSeenUsersCount( $this->getLoginResponse()->getClientKey() , $message->getId() )->getCount();
     }
 
     /**

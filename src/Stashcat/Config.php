@@ -33,6 +33,14 @@ class Config {
     protected string $urlPath_auth_check = "auth/check";
     protected string $urlPath_company_member = "company/member";
     protected string $urlPath_company_groups = 'groups/get_company_groups';
+    // Aus einem Mitschnitt des Web-Clients ermittelt (2026-10-18), nur lesend
+    protected string $urlPath_channels_members = 'channels/members';
+    protected string $urlPath_channels_infos = 'channels/infos';
+    protected string $urlPath_users_listing = 'users/listing';
+    protected string $urlPath_users_info = 'users/info';
+    protected string $urlPath_message_conversation = 'message/conversation';
+    protected string $urlPath_message_seen_users = 'message/list_message_seen_users';
+    protected string $urlPath_message_seen_users_count = 'message/get_message_seen_users_count';
 
 
     /**
@@ -144,6 +152,55 @@ class Config {
      */
     public function getMessageConversations() : string {
         return $this->addToBaseURL( $this->urlPath_message_conversations );
+    }
+
+    /**
+     * @return string
+     */
+    public function getChannelsMembersURL() : string {
+        return $this->addToBaseURL( $this->urlPath_channels_members );
+    }
+
+    /**
+     * @return string
+     */
+    public function getChannelsInfosURL() : string {
+        return $this->addToBaseURL( $this->urlPath_channels_infos );
+    }
+
+    /**
+     * @return string
+     */
+    public function getUsersListingURL() : string {
+        return $this->addToBaseURL( $this->urlPath_users_listing );
+    }
+
+    /**
+     * @return string
+     */
+    public function getUsersInfoURL() : string {
+        return $this->addToBaseURL( $this->urlPath_users_info );
+    }
+
+    /**
+     * @return string
+     */
+    public function getMessageConversationURL() : string {
+        return $this->addToBaseURL( $this->urlPath_message_conversation );
+    }
+
+    /**
+     * @return string
+     */
+    public function getMessageSeenUsersURL() : string {
+        return $this->addToBaseURL( $this->urlPath_message_seen_users );
+    }
+
+    /**
+     * @return string
+     */
+    public function getMessageSeenUsersCountURL() : string {
+        return $this->addToBaseURL( $this->urlPath_message_seen_users_count );
     }
 
     /**

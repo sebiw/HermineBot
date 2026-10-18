@@ -73,6 +73,70 @@ class Message extends DefaultEntity {
     }
 
     /**
+     * Felder, die nicht in jeder Antwort enthalten sind
+     * @param string $key
+     * @param mixed $default
+     * @return mixed
+     */
+    protected function getOptionalResult( string $key , mixed $default = null ): mixed
+    {
+        try {
+            return $this->getResults( $key ) ?? $default;
+        } catch ( \Exception $e ){
+            return $default;
+        }
+    }
+
+    /**
+     * Emoji-Reaktionen, nur Anzahl je Emoji (wer reagiert hat, liefert Hermine nicht)
+     * @return array [ emoji => Anzahl ]
+     */
+    public function getReactions(): array
+    {
+        $reactions = [];
+        foreach( $this->getOptionalResult( 'reactions' , [] ) AS $reaction ){
+            if( isset( $reaction['emoji'] ) ){
+                $reactions[ $reaction['emoji'] ] = intval( $reaction['num_reactions'] ?? 0 );
+            }
+        }
+        return $reactions;
+    }
+
+    /**
+     * @return mixed ID bzw. Daten der Nachricht, auf die geantwortet wurde
+     */
+    public function getReplyTo(): mixed
+    {
+        return $this->getOptionalResult( 'reply_to' );
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getThreadId(): ?string
+    {
+        $threadId = $this->getOptionalResult( 'thread_id' );
+        return empty( $threadId ) ? null : strval( $threadId );
+    }
+
+    /**
+     * @return bool
+     */
+    public function isSeenByOthers(): bool
+    {
+        return boolval( $this->getOptionalResult( 'seen_by_others' , false ) );
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getSenderId(): ?string
+    {
+        $sender = $this->getOptionalResult( 'sender' , [] );
+        return isset( $sender['id'] ) ? strval( $sender['id'] ) : null;
+    }
+
+    /**
      * @return bool
      */
     public function isEncrypted(): bool
