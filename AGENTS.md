@@ -128,7 +128,7 @@ Hosting-Anbieter, Hostnamen, Produktiv-URLs, Server-Pfade, Benutzer- und Kanalna
 1. **Bei jedem Commit mit wesentlicher Änderung** einen Eintrag unter `## [Unreleased]` in `CHANGELOG.md` ergänzen – im selben Commit, ohne Rückfrage.
    - Das Changelog richtet sich **nur an Endnutzer** (Anwender der Software) und ist in der App sichtbar. Wesentlich = für Anwender spürbar: neue Funktionen, behobene Fehler, geändertes Verhalten, Sicherheitsfixes.
    - Nicht eintragen: alles rund um Betrieb und Deployment (Konfiguration, Migrationen, Cronjobs, Server-Schritte – das gehört in Commit-Message bzw. `AGENTS.md`), reine Refactorings ohne Verhaltensänderung, Code-Formatierung, Kommentare, Entwickler-Doku, Tests, Tooling.
-2. **Rubriken** (nur verwenden, was vorkommt): `### Hinzugefügt`, `### Geändert`, `### Behoben`, `### Entfernt`, `### Sicherheit`. Die Liste steht direkt unter der Rubrik (ohne Leerzeile).
+2. **Rubriken** (nur verwenden, was vorkommt, in dieser Reihenfolge): `### Hinzugefügt`, `### Geändert`, `### Entfernt`, `### Sicherheit`, `### Behoben`. Die Liste steht direkt unter der Rubrik (ohne Leerzeile).
 3. **Formulierung**: ein Satz pro Eintrag, auf Deutsch, aus Sicht der Anwender („Geplante Nachrichten werden nicht mehr doppelt verschickt, wenn ein Durchlauf länger als eine Minute dauert.“), keine Fachbegriffe aus der Technik, keine Klassennamen, Dateipfade oder Commit-Hashes. Kein Inline-Code mit Backticks (der Changelog-Renderer unterstützt nur Überschriften, Listen, Absätze, Links und Fettschrift). **Repo ist öffentlich** – keine URLs, Hostnamen, Kanalnamen oder internen Details.
 4. **Release** nur auf ausdrücklichen Wunsch („Release machen“, „Version erhöhen“):
    - Versionssprung aus den Einträgen unter `[Unreleased]` ableiten:
