@@ -4,6 +4,8 @@ Alle wesentlichen Änderungen am Hermine-Bot werden in dieser Datei festgehalten
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-10-18
+
 ### Geändert
 - Der Event-Ausführer startet erst nach einem Klick auf den Button, nicht mehr schon beim Öffnen der Seite.
 
