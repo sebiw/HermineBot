@@ -54,6 +54,7 @@
 {% block body %}
         <form method="post" id="action" action="{{ path('save_event') }}">
             <input type="hidden" name="id" id="actionButtonId" value="{{ current_entry.getId() ?? '' }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('events') }}">
             <p class="text-center">Verfügbare Platzhalter: {{ replacementKeys|join(', ') }}</p>
 
             <table class="object-center">

@@ -90,8 +90,10 @@ class EventsController extends AbstractController
         ]);
     }
 
-    #[Route('/events/log/truncate', name: 'events_log_truncate', methods: [ 'GET' ])]
-    public function truncateLogs( AppService $app, ManagerRegistry $doctrine ,DatabaseLogger $logger, #[CurrentUser] ?User $user ){
+    #[Route('/events/log/truncate', name: 'events_log_truncate', methods: [ 'POST' ])]
+    public function truncateLogs( Request $request , AppService $app, ManagerRegistry $doctrine ,DatabaseLogger $logger, #[CurrentUser] ?User $user ){
+        $this->denyAccessUnlessCsrfTokenValid( 'events_log_truncate' , $request );
+
         $manager = $doctrine->getManagerForClass( LogEntry::class );
         $deleteFromDateTime = (new \DateTime())->modify('-1 weeks');
         $manager->getRepository(LogEntry::class )
@@ -108,6 +110,8 @@ class EventsController extends AbstractController
     #[Route('/events', name: 'save_event', methods: [ 'POST' ] )]
     public function saveEvent( Request $request , ManagerRegistry $doctrine , AppService $app, DatabaseLogger $logger, #[CurrentUser] ?User $user , Kernel $kernel ): RedirectResponse
     {
+        $this->denyAccessUnlessCsrfTokenValid( 'events' , $request );
+
         $manager = $doctrine->getManagerForClass( Event::class );
 
         switch( $request->get('action') ){
@@ -228,7 +232,17 @@ class EventsController extends AbstractController
     }
 
     #[Route('/events/execute', name: 'execute_events', methods: [ 'GET' ] )]
-    public function executeEvent( KernelInterface $kernel, #[CurrentUser] ?User $user ){
+    public function executeEventForm( #[CurrentUser] ?User $user ): Response
+    {
+        return $this->render('default/events.execute.html.twig' , [
+            'response' => null,
+        ]);
+    }
+
+    #[Route('/events/execute', name: 'execute_events_run', methods: [ 'POST' ] )]
+    public function executeEvent( Request $request , KernelInterface $kernel, #[CurrentUser] ?User $user ){
+        // Sendet echte Nachrichten -> nur per POST mit Token (Schutz vor CSRF über Links/Bilder)
+        $this->denyAccessUnlessCsrfTokenValid( 'execute_events' , $request );
 
         $application = new Application($kernel);
         $application->setAutoExit(false);
@@ -245,6 +259,18 @@ class EventsController extends AbstractController
         return $this->render('default/events.execute.html.twig' , [
             'response' => $output->fetch(),
         ]);
+    }
+
+    /**
+     * @param string $tokenId
+     * @param Request $request
+     * @return void
+     */
+    protected function denyAccessUnlessCsrfTokenValid( string $tokenId , Request $request ): void
+    {
+        if( !$this->isCsrfTokenValid( $tokenId , (string) $request->request->get('_token') ) ){
+            throw $this->createAccessDeniedException('Ungültiges Formular-Token – bitte Seite neu laden.');
+        }
     }
 
     // @TODO: Mail to Hermine?

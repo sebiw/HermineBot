@@ -3,7 +3,10 @@
 {% block body %}
 
     <nav class="secondary">
-        <a href="{{ path('events_log_truncate') }}">Logs bereinigen</a>
+        <form method="post" action="{{ path('events_log_truncate') }}" class="inline-form">
+            <input type="hidden" name="_token" value="{{ csrf_token('events_log_truncate') }}">
+            <button type="submit">Logs bereinigen</button>
+        </form>
     </nav>
 
     <table class="object-center layout-compact">

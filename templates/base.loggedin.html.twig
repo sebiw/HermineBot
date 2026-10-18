@@ -21,6 +21,6 @@
 
 {% block topnav %}
     {% if app.user %}
-        <span class="login-hint no-print">Eingeloggt als {{ app.user.username }}, <a href="{{ path('app_logout') }}">Ausloggen</a></span>
+        <span class="login-hint no-print">Eingeloggt als {{ app.user.username }}, <a href="{{ logout_path() }}">Ausloggen</a></span>
     {% endif %}
 {% endblock %}

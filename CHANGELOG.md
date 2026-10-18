@@ -4,6 +4,10 @@ Alle wesentlichen Änderungen am Hermine-Bot. Format nach [Keep a Changelog](htt
 
 ## [Unreleased]
 
+### Geändert
+
+- Der Event-Ausführer startet erst nach einem Klick auf den Button, nicht mehr schon beim Öffnen der Seite.
+
 ### Behoben
 
 - Geplante Nachrichten werden nicht mehr doppelt verschickt, wenn ein Durchlauf länger als eine Minute dauert, und ein nicht antwortender Dienst hält den Versand nicht mehr unbegrenzt auf.
@@ -14,6 +18,7 @@ Alle wesentlichen Änderungen am Hermine-Bot. Format nach [Keep a Changelog](htt
 ### Sicherheit
 
 - Bei einer fehlgeschlagenen Anmeldung an der Schnittstelle werden die gesendeten Daten nicht mehr in der Antwort zurückgegeben.
+- Speichern, Löschen und Senden von Events, der Event-Ausführer, das Bereinigen der Logs und das Ausloggen lassen sich nicht mehr über Links oder Formulare fremder Webseiten auslösen.
 
 ## [1.1.0] - 2026-10-18
 

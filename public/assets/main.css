@@ -145,6 +145,10 @@ td, th {
     background-color: rgba(120, 120, 120, 0.70);
 }
 
+.inline-form {
+    display: inline;
+}
+
 .event-failed {
     background-color: rgba(200, 60, 60, 0.35);
 }
