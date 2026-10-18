@@ -105,6 +105,39 @@ class Daemon extends Command
             $context = 'Console';
         }
 
+        // Sperre gegen parallele Läufe (Cron jede Minute, manueller Start) – sonst würden fällige Events doppelt gesendet.
+        // flock wird beim Prozessende automatisch freigegeben, auch nach einem Absturz.
+        $lockFile = $this->getKernel()->getProjectDir() . '/var/daemon-tick.lock';
+        ( new Filesystem() )->mkdir( dirname( $lockFile ) );
+        if( ( $lockHandle = fopen( $lockFile , 'c' ) ) === false ){
+            throw new \Exception(sprintf('Lock file could not be opened: %s' , $lockFile ));
+        }
+
+        if( !flock( $lockHandle , LOCK_EX | LOCK_NB ) ){
+            fclose( $lockHandle );
+            $this->getLogger()->log(LogLevel::WARNING , sprintf('%s: Event handler already running, skipped' , $context ) );
+            $output->writeln( json_encode( [ 'status' => 'LOCKED' ] , JSON_PRETTY_PRINT ) );
+            return Command::SUCCESS;
+        }
+
+        try {
+            return $this->tick( $context , $input , $output );
+        } finally {
+            flock( $lockHandle , LOCK_UN );
+            fclose( $lockHandle );
+        }
+    }
+
+    /**
+     * @param string $context
+     * @param InputInterface $input
+     * @param OutputInterface $output
+     * @return int
+     * @throws \Exception
+     */
+    protected function tick( string $context , InputInterface $input, OutputInterface $output ): int
+    {
+
         $this->getLogger()->log(LogLevel::INFO , sprintf('%s: Started event handler' , $context ) );
 
         $jsonResult = [];

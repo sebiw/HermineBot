@@ -16,6 +16,10 @@ class RestClient {
     const RESPONSE_FORMAT_JSON = 'json';
     const RESPONSE_FORMAT_PLAIN = 'plain';
 
+    // Ohne Timeouts kann ein hängender Dienst den Daemon über den nächsten Cron-Lauf hinaus blockieren
+    const CONNECT_TIMEOUT_SECONDS = 10;
+    const TIMEOUT_SECONDS = 30;
+
     protected string $defaultResponseFormat = self::RESPONSE_FORMAT_PLAIN;
 
     protected ?LoggerInterface $logger = null;
@@ -105,6 +109,8 @@ class RestClient {
         if( ( $curlInstance = curl_init() ) === false ){
             throw new \Exception('Could not init curl');
         }
+        curl_setopt( $curlInstance , CURLOPT_CONNECTTIMEOUT , self::CONNECT_TIMEOUT_SECONDS );
+        curl_setopt( $curlInstance , CURLOPT_TIMEOUT , self::TIMEOUT_SECONDS );
         return $curlInstance;
     }
 
@@ -162,9 +168,16 @@ class RestClient {
         curl_setopt( $session , CURLOPT_RETURNTRANSFER, 1);
 
         $result = curl_exec( $session );
+        $httpStatus = curl_getinfo( $session , CURLINFO_HTTP_CODE );
+        $curlError = curl_error( $session );
         $this->closeCURLSession( $session );
 
-        $this->getLogger()?->info( sprintf('%s %s' , $method , $url ) , [ 'status' => curl_getinfo( $session , CURLINFO_HTTP_CODE ) ] );
+        if( $result === false ){
+            // z. B. Timeout oder Verbindungsfehler
+            $this->getLogger()?->error( sprintf('%s %s failed' , $method , $url ) , [ 'error' => $curlError ] );
+        }
+
+        $this->getLogger()?->info( sprintf('%s %s' , $method , $url ) , [ 'status' => $httpStatus ] );
 
         $this->getLogger()?->debug( sprintf('%s %s' , $method , $url ) , [ 'additionalHeader' => $additionalHeader , 'data' => $data , 'result' => $result ] );
 

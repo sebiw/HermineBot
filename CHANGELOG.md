@@ -4,6 +4,10 @@ Alle wesentlichen Änderungen am Hermine-Bot. Format nach [Keep a Changelog](htt
 
 ## [Unreleased]
 
+### Behoben
+
+- Geplante Nachrichten werden nicht mehr doppelt verschickt, wenn ein Durchlauf länger als eine Minute dauert, und ein nicht antwortender Dienst hält den Versand nicht mehr unbegrenzt auf.
+
 ## [1.1.0] - 2026-10-18
 
 ### Hinzugefügt
