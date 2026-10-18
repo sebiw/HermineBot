@@ -4,6 +4,8 @@ Alle wesentlichen Änderungen am Hermine-Bot. Format nach [Keep a Changelog](htt
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-18
+
 ### Hinzugefügt
 
 - Die Versionsnummer wird oben rechts unter dem Login-Hinweis angezeigt; nach dem Login öffnet ein Klick darauf dieses Changelog.
