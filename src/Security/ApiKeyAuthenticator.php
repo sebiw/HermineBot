@@ -23,19 +23,20 @@ class ApiKeyAuthenticator extends AbstractAuthenticator
      */
     public function supports(Request $request): ?bool
     {
-        return str_starts_with( $request->get('_route') , 'api_');
+        return str_starts_with( (string) $request->get('_route') , 'api_');
     }
 
     public function authenticate(Request $request): Passport
     {
-        $jsonRequest = $request->getContentType();
+        $jsonRequest = (string) $request->getContentType();
         if (!str_contains( $jsonRequest , 'json')) {
             throw new CustomUserMessageAuthenticationException(sprintf('No API token provided: Content-Type "%s" not supported!' , $jsonRequest ));
         }
 
         $content = json_decode( $request->getContent() , true );
         if( !isset( $content['user']) || !isset( $content['key'] ) ) {
-            throw new CustomUserMessageAuthenticationException('No API token provided: User and Key not submitted!' . $request->getContent());
+            // Request-Inhalt bewusst nicht zurückgeben (kann Zugangsdaten enthalten)
+            throw new CustomUserMessageAuthenticationException('No API token provided: User and Key not submitted!');
         }
 
         return new Passport( new UserBadge( $content['user'] ) , new PasswordCredentials( $content['key'] ) );
@@ -51,8 +52,8 @@ class ApiKeyAuthenticator extends AbstractAuthenticator
     {
         $data = [
             // you may want to customize or obfuscate the message first
-            'message' => strtr($exception->getMessageKey(), $exception->getMessageData()),
-            'status' => 500
+            'status' => 'ERROR',
+            'message' => strtr($exception->getMessageKey(), $exception->getMessageData())
             // or to translate this message
             // $this->translator->trans($exception->getMessageKey(), $exception->getMessageData())
         ];

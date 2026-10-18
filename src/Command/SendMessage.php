@@ -202,7 +202,17 @@ class SendMessage extends Command
             throw new \Exception('Message-Target (Channel or Conversation) is invalid!');
         }
 
-        $stashcatMediator->likeMessage( $result->getMessage() );
+        // Nicht angenommen -> Fehler melden (Queue versucht es erneut), statt Erfolg vorzutäuschen
+        if( $result->_getStatusValue() != 'OK' ){
+            throw new \Exception(sprintf('Sending message failed, status: %s' , $result->_getStatusValue() ));
+        }
+
+        // Ab hier ist die Nachricht gesendet – ein Fehler beim Liken darf kein erneutes Senden auslösen
+        try {
+            $stashcatMediator->likeMessage( $result->getMessage() );
+        } catch ( \Throwable $e ){
+            $this->getLogger()->log(LogLevel::WARNING , 'Liking message failed' , [ 'error' => $e->getMessage() ]);
+        }
 
         $jsonResult['status'] = 'OK';
         $jsonResult['events'] = [

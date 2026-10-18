@@ -362,20 +362,34 @@ class Daemon extends Command
         foreach( $finder AS $file ){
             $this->getLogger()->log(LogLevel::INFO , 'Processing message file...' , [ 'file' => $file->getRealPath() ]);
             $message = json_decode( $file->getContents() , true );
+            $sent = false;
             if( isset( $message['message'] , $message['channel'] , $message['context'] ) ){
-                $command = $this->getApplication()->find('hermine:send-message');
-                $input = new ArrayInput([
-                    '--context' => $message['context'],
-                    '--channel' => $message['channel'],
-                    '--message' => $message['message']
-                ]);
-                if( $command->run( $input , $output ) === self::SUCCESS ){
-                    $this->getLogger()->log(LogLevel::INFO , 'hermine:send-message executed!');
+                try {
+                    $command = $this->getApplication()->find('hermine:send-message');
+                    $input = new ArrayInput([
+                        '--context' => $message['context'],
+                        '--channel' => $message['channel'],
+                        '--message' => $message['message']
+                    ]);
+                    if( $command->run( $input , $output ) === self::SUCCESS ){
+                        $this->getLogger()->log(LogLevel::INFO , 'hermine:send-message executed!');
+                        $sent = true;
+                    }
+                } catch ( \Throwable $e ){
+                    // Darf den Tick (und damit die Events) nicht abbrechen
+                    $this->getLogger()->log(LogLevel::ERROR , 'Sending message file failed' , [ 'file' => $file->getRealPath() , 'error' => $e->getMessage() ]);
                 }
             } else {
-                $this->getLogger()->log(LogLevel::INFO , 'Message malformed!' , [ 'keys_exist' => is_array( $message ) ? array_keys( $message ) : null ]);
+                $this->getLogger()->log(LogLevel::ERROR , 'Message malformed!' , [ 'keys_exist' => is_array( $message ) ? array_keys( $message ) : null ]);
             }
-            $fileSystem->remove( $file->getRealPath() );
+
+            if( $sent ){
+                $fileSystem->remove( $file->getRealPath() );
+            } else {
+                // Nicht löschen, sondern beiseitelegen (wird wegen der Endung nicht erneut verarbeitet)
+                $fileSystem->rename( $file->getRealPath() , $file->getRealPath() . '.failed' , true );
+                $this->getLogger()->log(LogLevel::CRITICAL , 'Message file not sent, kept as .failed' , [ 'file' => $file->getRealPath() . '.failed' ]);
+            }
         }
     }
 

@@ -37,7 +37,7 @@ class ApiController extends AbstractController
         $message = $request->get('message') ?? $content['message'] ?? null;
 
         if( empty( $message ) ){
-            throw new \Exception('Message missing!');
+            return $this->errorResponse('Message missing!' , Response::HTTP_BAD_REQUEST );
         }
 
         if( !empty( $channel ) )
@@ -60,20 +60,41 @@ class ApiController extends AbstractController
         }
         else
         {
-            throw new \Exception('channel or conversationId missing!');
+            return $this->errorResponse('channel or conversationId missing!' , Response::HTTP_BAD_REQUEST );
         }
 
         // You can use NullOutput() if you don't need the output
         $output = new BufferedOutput();
-        if( $application->run($input, $output) === Command::SUCCESS ){
+        $exitCode = $application->run($input, $output);
+        // Ausgabe nur einmal lesen – fetch() leert den Puffer
+        $commandOutput = $output->fetch();
+
+        if( $exitCode === Command::SUCCESS ){
             $logger->info(sprintf('Message sent via REST to %s' , $channel ?? $conversationId ) );
-        } else {
-            $logger->emergency(sprintf('Message sent via REST to %s FAILED' , $channel ?? $conversationId ), ['error' => $output->fetch()] );
+            return new JsonResponse([
+                'status' => 'OK',
+                'content' => $commandOutput
+            ]);
         }
 
+        $logger->emergency(sprintf('Message sent via REST to %s FAILED' , $channel ?? $conversationId ), ['error' => $commandOutput] );
         return new JsonResponse([
-            'content' => $output->fetch()
-        ]);
+            'status' => 'ERROR',
+            'content' => $commandOutput
+        ], Response::HTTP_INTERNAL_SERVER_ERROR );
+    }
+
+    /**
+     * @param string $message
+     * @param int $statusCode
+     * @return JsonResponse
+     */
+    protected function errorResponse( string $message , int $statusCode ): JsonResponse
+    {
+        return new JsonResponse([
+            'status' => 'ERROR',
+            'message' => $message
+        ], $statusCode );
     }
 
 

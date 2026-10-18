@@ -44,7 +44,10 @@ class HermineMessageHandler
         if( $application->run($input, $output) === Command::SUCCESS ){
             $this->logger->info('Message Event processed' );
         } else {
-            $this->logger->emergency('Message Event failed' , ['error' => $output->fetch()]);
+            $error = $output->fetch();
+            $this->logger->error('Message Event failed' , ['error' => $error]);
+            // Exception -> Messenger versucht es erneut (retry_strategy) und legt die Nachricht danach im Failure-Transport ab
+            throw new \RuntimeException(sprintf('Sending queued message to %s failed: %s' , $message->getChannel() , trim( $error ) ));
         }
     }
 

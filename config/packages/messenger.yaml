@@ -1,13 +1,20 @@
 framework:
     messenger:
-        # Uncomment this (and the failed transport below) to send failed messages to this transport for later handling.
-        # failure_transport: failed
+        # Endgültig fehlgeschlagene Nachrichten landen in der Bot-DB (nicht in der gemeinsamen Queue-DB):
+        # anzeigen mit messenger:failed:show, erneut senden mit messenger:failed:retry
+        failure_transport: failed
 
         transports:
             # https://symfony.com/doc/current/messenger.html#transport-configuration
-            async: '%env(MESSENGER_TRANSPORT_DSN)%'
+            async:
+                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                # z. B. Hermine kurz nicht erreichbar: erneut nach 1, 2 und 4 Minuten (nächste Cron-Läufe)
+                retry_strategy:
+                    max_retries: 3
+                    delay: 60000
+                    multiplier: 2
 
-            # failed: 'doctrine://default?queue_name=failed'
+            failed: 'doctrine://default?queue_name=failed&auto_setup=0'
             # sync: 'sync://'
 
         default_bus: command.bus

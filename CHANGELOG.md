@@ -7,6 +7,13 @@ Alle wesentlichen Änderungen am Hermine-Bot. Format nach [Keep a Changelog](htt
 ### Behoben
 
 - Geplante Nachrichten werden nicht mehr doppelt verschickt, wenn ein Durchlauf länger als eine Minute dauert, und ein nicht antwortender Dienst hält den Versand nicht mehr unbegrenzt auf.
+- Nachrichten aus der Warteschlange gehen bei einem Fehler nicht mehr verloren: Der Bot versucht es nach 1, 2 und 4 Minuten erneut und bewahrt sie danach zur Nachbearbeitung auf.
+- Eine vom Messenger nicht angenommene Nachricht wird nicht mehr als erfolgreich verschickt gemeldet.
+- Die Schnittstelle zum Senden von Nachrichten antwortet bei fehlenden Angaben oder Fehlern mit einer verständlichen Fehlermeldung statt mit einer Fehlerseite.
+
+### Sicherheit
+
+- Bei einer fehlgeschlagenen Anmeldung an der Schnittstelle werden die gesendeten Daten nicht mehr in der Antwort zurückgegeben.
 
 ## [1.1.0] - 2026-10-18
 
