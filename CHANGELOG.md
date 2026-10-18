@@ -21,6 +21,10 @@ Alle wesentlichen Änderungen am Hermine-Bot. Format nach [Keep a Changelog](htt
 - Wiederkehrende Nachrichten, deren Versand fehlschlägt, gelten nicht mehr als übermittelt.
 - Nicht erlaubte Intervalle werden beim Speichern auch ohne Enddatum abgelehnt.
 
+### Sicherheit
+
+- Geplante Nachrichten werden nur noch an freigegebene Channels verschickt.
+
 ## [1.0.0] - 2026-10-17
 
 - Ausgangsstand der Versionierung: geplante Nachrichten an Channels und Unterhaltungen mit Wiederholung, Platzhalter aus externen Quellen und Kalender-Aufgaben, Empfang von Nachrichten per REST und Warteschlange, Protokoll.

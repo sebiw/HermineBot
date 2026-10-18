@@ -202,6 +202,11 @@ class Daemon extends Command
      */
     protected function prepareMessage( Event $event , StashcatMediator $stashcatMediator , Company $THWCompany ): array
     {
+        // Freigabeliste auch hier prüfen – Events können vor einer Einschränkung oder direkt in der DB angelegt worden sein
+        if( !in_array( $event->getChannelTarget() , $this->getAppService()->getAppConfig()->getAllowedChannelNames() ) ){
+            throw new \Exception(sprintf("Channel not allowed: %s" , $event->getChannelTarget() ));
+        }
+
         $eventText = $event->getText();
         $autoAppend = $this->getAppService()->getAppConfig()->getAutoAppendToMessages();
 
