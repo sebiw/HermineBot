@@ -7,6 +7,7 @@ use App\Stashcat\Responses\AuthCheckResponse;
 use App\Stashcat\Responses\ChannelInfosResponse;
 use App\Stashcat\Responses\ChannelMembersResponse;
 use App\Stashcat\Responses\ConversationResponse;
+use App\Stashcat\Responses\CreateConversationResponse;
 use App\Stashcat\Responses\MessageSeenUsersCountResponse;
 use App\Stashcat\Responses\MessageSeenUsersResponse;
 use App\Stashcat\Responses\UserInfoResponse;
@@ -19,6 +20,7 @@ use App\Stashcat\Responses\MessageContentResponse;
 use App\Stashcat\Responses\MessageConversationsResponse;
 use App\Stashcat\Responses\PrivateKeyResponse;
 use App\Stashcat\Responses\SendMessageResponse;
+use App\Stashcat\Responses\SigningKeyResponse;
 use App\Stashcat\Responses\SuccessResponse;
 use Exception;
 use Psr\Log\LoggerInterface;
@@ -116,6 +118,22 @@ class ApiClient {
         }
 
         return $pkr;
+    }
+
+    /**
+     * Privater Signaturschlüssel – nur als JWK gespeichert, verschlüsselt mit dem öffentlichen Hauptschlüssel
+     * @param string $client_key
+     * @return SigningKeyResponse
+     * @throws Exception
+     */
+    public function securityGetSigningKey( string $client_key ) : SigningKeyResponse {
+        $signingKeyResult = $this->getRestClient()->post( $this->getConfig()->getSecurityPrivateKeyURL() , [
+            "client_key" => $client_key,
+            "device_id" => $this->getConfig()->getDeviceId(),
+            "format" => "jwk",
+            "type" => "signing"
+        ]);
+        return new SigningKeyResponse( $signingKeyResult );
     }
 
     /**
@@ -431,6 +449,24 @@ class ApiClient {
             "message_id" => $message_id
         ]);
         return new MessageSeenUsersCountResponse( $countResult );
+    }
+
+    /**
+     * Neue Unterhaltung anlegen
+     * @param string $client_key
+     * @param array $members je Mitglied (inkl. sich selbst) [ 'id' , 'key' , 'signature' , 'expiry' , 'userVerified' ]
+     * @param string $unique_identifier 32 Zeichen, ist Teil der signierten Schlüssel
+     * @return CreateConversationResponse
+     * @throws Exception
+     */
+    public function createEncryptedConversation( string $client_key , array $members , string $unique_identifier ) : CreateConversationResponse {
+        $createResult = $this->getRestClient()->post( $this->getConfig()->getMessageCreateEncryptedConversationURL() , [
+            "client_key" => $client_key,
+            "device_id" => $this->getConfig()->getDeviceId(),
+            "members" => json_encode( array_values( $members ) ),
+            "unique_identifier" => $unique_identifier
+        ]);
+        return new CreateConversationResponse( $createResult );
     }
 
 }

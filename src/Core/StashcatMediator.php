@@ -165,6 +165,16 @@ class StashcatMediator
     }
 
     /**
+     * Privaten Signaturschlüssel laden (nötig zum Anlegen von Unterhaltungen), setzt decryptPrivateKey() voraus
+     * @return void
+     * @throws \Exception
+     */
+    public function decryptPrivateSigningKey(){
+        $signingKeyResponse = $this->getStashcatApiClient()->securityGetSigningKey( $this->getLoginResponse()->getClientKey() );
+        $this->getStashcatCryptoBox()->setPrivateSigningKeyFromResponse( $signingKeyResponse );
+    }
+
+    /**
      * @param Channel $channel
      * @return void
      * @throws \Exception
@@ -237,6 +247,71 @@ class StashcatMediator
     public function getLoadedConversations(): array
     {
         return $this->conversations;
+    }
+
+    /**
+     * Neue Unterhaltung mit den angegebenen Personen anlegen (eigener Account wird automatisch ergänzt).
+     * Ablauf wie im Web-Client: zufälliger Schlüssel, für jedes Mitglied verschlüsselt und signiert.
+     * Setzt login() und decryptPrivateKey() voraus; der Signaturschlüssel wird bei Bedarf nachgeladen.
+     * @param array $userIds
+     * @param int $validity Gültigkeit der Schlüssel-Signaturen für die anderen Mitglieder in Sekunden (Web-Client: 30 Tage)
+     * @param bool $allowUnverified auch an Personen, deren Schlüssel sich nicht prüfen lassen (Web-Client fragt „Trotzdem fortfahren?“)
+     * @return Conversation
+     * @throws \Exception
+     */
+    public function createConversation( array $userIds , int $validity = 2592000 , bool $allowUnverified = false ): Conversation
+    {
+        if( !$this->getStashcatCryptoBox()->hasPrivateSigningKey() ){
+            $this->decryptPrivateSigningKey();
+        }
+
+        $ownUserId = (string) $this->getLoginResponse()->getUserId();
+        $ownPublicKey = $this->getLoginResponse()->getUserPublicKey();
+
+        $userIds = array_values( array_unique( array_filter( array_map( 'strval' , $userIds ) , fn( $userId ) => $userId !== '' && $userId !== $ownUserId ) ) );
+        if( empty( $userIds ) ){
+            throw new \Exception('No members for the conversation!');
+        }
+
+        // Schlüssel der Mitglieder laden und prüfen
+        $users = [];
+        $unverified = [];
+        foreach( $userIds AS $userId ){
+            $user = $this->getUserInfo( $userId , true );
+            if( empty( $user->getPublicKey() ) ){
+                throw new \Exception( sprintf( 'User %s has no public key!' , $userId ) );
+            }
+            $verified = $this->getStashcatCryptoBox()->isUserKeyVerified( $user );
+            if( !$verified ){
+                $unverified[] = $userId;
+            }
+            $users[ $userId ] = [ 'publicKey' => $user->getPublicKey() , 'verified' => $verified ];
+        }
+        if( !empty( $unverified ) && !$allowUnverified ){
+            throw new \Exception( sprintf( 'Keys of users %s could not be verified!' , implode( ', ' , $unverified ) ) );
+        }
+
+        $conversationKey = $this->getStashcatCryptoBox()->getRandomConversationKey();
+        $uniqueIdentifier = Crypt::randomString( 32 );
+        $memberIds = array_merge( $userIds , [ $ownUserId ] );
+        $expiry = time() + $validity;
+
+        $members = [];
+        foreach( $users AS $userId => $user ){
+            $members[] = $this->getStashcatCryptoBox()->getConversationMemberKey( $conversationKey , $userId , $user['publicKey'] , $uniqueIdentifier , $memberIds , $expiry , $user['verified'] );
+        }
+        // Eigener Schlüssel ohne Ablaufdatum
+        $members[] = $this->getStashcatCryptoBox()->getConversationMemberKey( $conversationKey , $ownUserId , $ownPublicKey , $uniqueIdentifier , $memberIds , null , true );
+
+        $response = $this->getStashcatApiClient()->createEncryptedConversation( $this->getLoginResponse()->getClientKey() , $members , $uniqueIdentifier );
+        if( !$response->isValid() ){
+            throw new \Exception( sprintf( 'Conversation could not be created: %s' , $response->getErrorMessage() ) );
+        }
+
+        $conversation = $response->getConversation();
+        $this->getStashcatCryptoBox()->setConversationKey( $conversationKey , $conversation->getId() );
+        $this->conversations[] = $conversation;
+        return $conversation;
     }
 
     /**

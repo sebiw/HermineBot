@@ -16,5 +16,8 @@ return [
     'cipherAlgo' => "aes-256-cbc",
     'cipherAlgoPaddingBlockSize' => 16,
     'rsaOaepPadding' => OPENSSL_PKCS1_OAEP_PADDING,
-    'aesPadding' => OPENSSL_ZERO_PADDING | OPENSSL_RAW_DATA
+    'aesPadding' => OPENSSL_ZERO_PADDING | OPENSSL_RAW_DATA,
+
+    // Optional: öffentlicher Server-Schlüssel (PEM, aus dem Web-Client) zum Prüfen der Empfänger beim Anlegen von Unterhaltungen
+    'serverPublicKey' => ""
 ];

@@ -20,6 +20,8 @@ class Config {
     protected int $cipherAlgoPaddingBlockSize = 16;
     protected int $rsaOaepPadding = OPENSSL_PKCS1_OAEP_PADDING;
     protected int $aesPadding = OPENSSL_ZERO_PADDING | OPENSSL_RAW_DATA;
+    // Öffentlicher Server-Schlüssel (PEM, steht im Web-Client), prüft die Signaturschlüssel anderer Personen (optional)
+    protected string $serverPublicKey = "";
 
 
     // URL Path...
@@ -41,6 +43,8 @@ class Config {
     protected string $urlPath_message_conversation = 'message/conversation';
     protected string $urlPath_message_seen_users = 'message/list_message_seen_users';
     protected string $urlPath_message_seen_users_count = 'message/get_message_seen_users_count';
+    // Aus dem JavaScript des Web-Clients ermittelt (2026-10-18), schreibend
+    protected string $urlPath_message_create_encrypted_conversation = 'message/createEncryptedConversation';
 
 
     /**
@@ -206,6 +210,13 @@ class Config {
     /**
      * @return string
      */
+    public function getMessageCreateEncryptedConversationURL() : string {
+        return $this->addToBaseURL( $this->urlPath_message_create_encrypted_conversation );
+    }
+
+    /**
+     * @return string
+     */
     public function getBaseUrl(): string
     {
         return $this->baseUrl;
@@ -292,5 +303,13 @@ class Config {
         return $this->aesPadding;
     }
 
+    /**
+     * Leer = Prüfung der Signaturschlüssel durch den Server entfällt
+     * @return string
+     */
+    public function getServerPublicKey(): string
+    {
+        return $this->serverPublicKey;
+    }
 
 }
