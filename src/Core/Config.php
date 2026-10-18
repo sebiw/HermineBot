@@ -54,6 +54,15 @@ class Config extends ArrayDataCollection {
     }
 
     /**
+     * Channel für Tests und Prototypen (z. B. QueryController) – der Name gehört nicht in den Code
+     * @return string
+     * @throws \Exception
+     */
+    public function getTestChannelName() : string {
+        return $this->getResults('test_channel');
+    }
+
+    /**
      * @return array
      * @throws \Exception
      */

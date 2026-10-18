@@ -39,7 +39,7 @@ class QueryController extends AbstractController
 
         // Lade ID der zusetzt bekannten Nachricht, sowie das Datum => Beides nutzen! Nachricht könnte ja gelöscht sein?!
 
-        $THWChannel = $stashcatMediator->getChannelOfCompany( 'T_OWBH_TEST' , $THWCompany );
+        $THWChannel = $stashcatMediator->getChannelOfCompany( $app->getAppConfig()->getTestChannelName() , $THWCompany );
         $stashcatMediator->decryptChannelPrivateKey( $THWChannel );
 
         // Datenbank:

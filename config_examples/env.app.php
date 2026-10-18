@@ -6,6 +6,7 @@ return [
     "stashcat_event_company" => "MyCompany",
     "auto_append_to_messages" => "\r\n\r\n🤖 AUTOMATISCH ERZEUGTE NACHRICHT 🤖",
     "allowed_channel" => [ "ChannelName" ],
+    "test_channel" => "TestChannelName", // Einziger Channel für Tests und Prototypen (z. B. /query)
     "date_format" => "d.m.Y",
     "time_format" => "H:i",
     "base_url" => "http://localhost:8080/",
