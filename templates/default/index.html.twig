@@ -114,7 +114,7 @@
                     <td colspan="3"></td>
                 </tr>
                 {% for event in events  %}
-                    <tr class="{{ event.eventDone() ? 'event-done' : 'event' }}">
+                    <tr class="{{ event.eventFailed() ? 'event-failed' : (event.eventDone() ? 'event-done' : 'event') }}">
                         <td>
                             <div>
                                 <button type="submit" class="action-button" name="action" value="edit" data-id="{{ event.getId() ?? '' }}">Editieren</button>
@@ -136,7 +136,14 @@
                         <td><pre>{{ event.getText() }}</pre></td>
                         <td>{{ event.getDoneDateTime()|date(date_time_format) }}</td>
                         <td>{{ event.getDueDateTime()|date(date_time_format) }}</td>
-                        <td>{{ event.getTransmissionsCount() }}</td>
+                        <td>
+                            <div>{{ event.getTransmissionsCount() }}</div>
+                            {% if event.eventFailed() %}
+                                <div style="font-size: 0.7em;">Fehlgeschlagen – zum erneuten Versuch Event speichern</div>
+                            {% elseif event.getFailedAttempts() > 0 %}
+                                <div style="font-size: 0.7em;">Fehlversuche: {{ event.getFailedAttempts() }}</div>
+                            {% endif %}
+                        </td>
                     </tr>
                 {% endfor %}
                 </tbody>

@@ -9,6 +9,12 @@ use Doctrine\ORM\Mapping as ORM;
 class Event implements \JsonSerializable
 {
 
+    /**
+     * Nach so vielen Fehlversuchen in Folge wird ein wiederkehrendes Event beim nächsten Termin fortgesetzt,
+     * ein einmaliges (oder eines mit ungültigem Intervall) bis zum erneuten Speichern nicht mehr verarbeitet.
+     */
+    const MAX_FAILED_ATTEMPTS = 3;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -31,6 +37,9 @@ class Event implements \JsonSerializable
 
     #[ORM\Column(type : "integer",  nullable : false)]
     private int $transmissionsCount = 0;
+
+    #[ORM\Column(type : "integer",  nullable : false, options: [ 'default' => 0 ])]
+    private int $failedAttempts = 0;
 
     #[ORM\Column(type : "string",  nullable : false)]
     private string $channelTarget = "";
@@ -200,6 +209,62 @@ class Event implements \JsonSerializable
     public function increaseTransmissionsCount(): void
     {
         $this->transmissionsCount++;
+    }
+
+    /**
+     * @return int
+     */
+    public function getFailedAttempts(): int
+    {
+        return $this->failedAttempts;
+    }
+
+    /**
+     * @return void
+     */
+    public function increaseFailedAttempts(): void
+    {
+        $this->failedAttempts++;
+    }
+
+    /**
+     * @return void
+     */
+    public function resetFailedAttempts(): void
+    {
+        $this->failedAttempts = 0;
+    }
+
+    /**
+     * @return bool
+     */
+    public function eventFailed(): bool
+    {
+        return $this->failedAttempts >= self::MAX_FAILED_ATTEMPTS;
+    }
+
+    /**
+     * Nächste Fälligkeit nach dem Intervall, verpasste Intervalle werden übersprungen.
+     * @param \DateTime $now
+     * @return \DateTime|null null bei einmaligen Events
+     * @throws \Exception bei ungültigem Intervall
+     */
+    public function calculateNextDueDateTime( \DateTime $now ): ?\DateTime
+    {
+        if( empty( $this->getDateInterval() ) ){
+            return null;
+        }
+        $interval = new \DateInterval( $this->getDateInterval() );
+        $dueDate = clone $this->getDueDateTime();
+        while( $dueDate <= $now ){
+            $previousDueDate = clone $dueDate;
+            $dueDate->add( $interval );
+            // Schutz vor Endlosschleife bei Intervallen ohne Dauer (z. B. PT0S)
+            if( $dueDate <= $previousDueDate ){
+                throw new \Exception(sprintf('Interval "%s" does not advance the due date!' , $this->getDateInterval() ));
+            }
+        }
+        return $dueDate;
     }
 
     /**

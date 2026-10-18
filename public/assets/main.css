@@ -145,6 +145,10 @@ td, th {
     background-color: rgba(120, 120, 120, 0.70);
 }
 
+.event-failed {
+    background-color: rgba(200, 60, 60, 0.35);
+}
+
 .login-hint {
     text-align: right;
     font-size: 0.8rem;

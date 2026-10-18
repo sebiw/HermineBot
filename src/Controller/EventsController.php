@@ -140,17 +140,17 @@ class EventsController extends AbstractController
 
                     if( ( $interval = $request->get('interval') ) !== null && !empty( $interval ) ){
 
+                        if( !in_array( $interval , array_keys( $app->getAppConfig()->getAllowedIntervals() ) ) ){
+                            throw new \Exception('Interval not allowed!');
+                        }
+
                         if( ( $untilDate = $request->get('untilDate') ) !== null && !empty( $untilDate ) && ( $untilTime = $request->get('untilTime') ) !== null && !empty( $untilTime )  ){
                             $untilDate = \DateTime::createFromFormat( $app->getAppConfig()->getDateFormat() . '-' . $app->getAppConfig()->getTimeFormat() , $untilDate . '-' . $untilTime );
-                            if( !in_array( $interval , array_keys( $app->getAppConfig()->getAllowedIntervals() ) ) ){
-                                throw new \Exception('Interval not allowed!');
-                            }
                             $entity->setUntilDateTime( $untilDate );
                         } else {
                             $entity->setUntilDateTime( null );
                         }
-                        $interval = strval( $_POST['interval'] );
-                        $entity->setDateInterval( $interval );
+                        $entity->setDateInterval( strval( $interval ) );
 
                     } else {
                         $entity->setUntilDateTime( null );
@@ -160,6 +160,9 @@ class EventsController extends AbstractController
                             $entity->setDoneDateTime( null );
                         }
                     }
+
+                    // Erneutes Speichern gibt ein nach Fehlversuchen gesperrtes Event wieder frei
+                    $entity->resetFailedAttempts();
 
                     $logger->log( LogLevel::NOTICE , sprintf('%s Event' , strtoupper( $request->get('action') )) , [
                         'text' => $entity->getText() ,

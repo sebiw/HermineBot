@@ -5,10 +5,11 @@ namespace App\Command;
 
 use App\Core\DatabaseLogger;
 use App\Core\MessageDecorator;
+use App\Core\StashcatMediator;
 use App\Entity\Event;
 use App\Kernel;
 use App\Service\AppService;
-use DateInterval;
+use App\Stashcat\Entities\Company;
 use DateTime;
 use Doctrine\Persistence\ManagerRegistry;
 use Psr\Log\LogLevel;
@@ -120,7 +121,10 @@ class Daemon extends Command
             ->where('( entries.dueDateTime <= :now AND entries.doneDateTime IS NULL )')
             // ODER: das Fälligkeitsdatum liegt in der Vergangenheit, und das (Datum der letzten abarbeitung ist kleiner gleich des Enddatums oder das Enddatum ist NULL oder es wurde noch nie abgearbeitet)
             ->orWhere('( entries.dueDateTime <= :now AND ( entries.doneDateTime < entries.untilDateTime OR entries.untilDateTime IS NULL ) AND entries.dateInterval IS NOT NULL )')
+            // UND: das Event ist nicht nach zu vielen Fehlversuchen gesperrt
+            ->andWhere('entries.failedAttempts < :maxFailedAttempts')
             ->setParameter('now' , $now  ) // Und das Fälligkeitsdatum liegt in der vergangenheit
+            ->setParameter('maxFailedAttempts' , Event::MAX_FAILED_ATTEMPTS )
             ->getQuery()->getResult();
 
         $eventsProcessed = 0;
@@ -133,107 +137,46 @@ class Daemon extends Command
 
             $THWCompany = $stashcatMediator->getCompanyMembers()->getCompanyByName('THW');
 
-            $allowedIntervals = $this->getAppService()->getAppConfig()->getAllowedIntervals();
-
             foreach( $events AS $event ){
 
-                $eventText = $event->getText();
-                // Analyze Event -> Pull Requirements / Check Requirements => If all Requirements exist => Process!
-                // If not, skip processing this event, fire Events to get Requirements. => DateTime Check -> Request <-> Response | if to old, fire new Request
-
-                $result = $messageSentLogMessage = null;
-
-                // Conversation ???
-                if( $event->getChannelTarget() === $this->getAppService()->getAppConfig()->getConversationChannelPlaceholderName() ){
-
-                    $stashcatMediator->loadConversations();
-
-                    $channelPayload = $event->getChannelTargetPayload();
-                    if( isset( $channelPayload['conversationId'] ) ){
-
-                        if( ( $conversation = $stashcatMediator->getConversationById( $channelPayload['conversationId'] ) ) === null ){
-                            $this->getLogger()->log(LogLevel::CRITICAL , sprintf("Conversation not found by ID #%s" , $channelPayload['conversationId'] ) , [ 'text' => $eventText ]);
-                        }
-                        else
-                        {
-                            $stashcatMediator->decryptConversationPrivateKey( $conversation );
-
-                            // Decorator....
-                            $messageDecorator = new MessageDecorator( $this->getKernel()->getContainer() , [
-                                $THWCompany,
-                                $this->getAppService(),
-                                $event
-                            ]);
-
-                            $eventText = $messageDecorator->replace( $eventText );
-
-                            $memberNames = [];
-                            foreach( $conversation->getMembers() AS $member ){
-                                $memberNames[] = $member->getCompleteName();
-                            }
-
-                            $result = $stashcatMediator->sendMessageToConversation( $eventText . $this->getAppService()->getAppConfig()->getAutoAppendToMessages() , $conversation );
-
-                            $messageSentLogMessage = sprintf('Message sent to conversation %s, members: %s' , $conversation->getId() , implode(', ' , $memberNames ) );
-
-                        }
-                    }
-
-                }
-                // Channel-Message ???
-                else
-                {
-
-                    $stashcatMediator->loadChannelSubscripted( $THWCompany );
-
-                    $THWChannel = $stashcatMediator->getChannelOfCompany( $event->getChannelTarget() , $THWCompany );
-                    $stashcatMediator->decryptChannelPrivateKey( $THWChannel );
-
-                    // Decorator....
-                    $messageDecorator = new MessageDecorator( $this->getKernel()->getContainer() , [
-                        $THWCompany,
-                        $THWChannel,
-                        $this->getAppService(),
-                        $event
-                    ]);
-
-                    $eventText = $messageDecorator->replace( $eventText );
-
-                    $result = $stashcatMediator->sendMessageToChannel( $eventText . $this->getAppService()->getAppConfig()->getAutoAppendToMessages() , $THWChannel );
-                    $messageSentLogMessage = sprintf('Message sent to channel %s' , $event->getChannelTarget() );
-
+                // Alles, was scheitern kann, VOR dem Senden erledigen – sonst würde eine bereits gesendete Nachricht beim nächsten Tick erneut verschickt
+                try {
+                    $nextDueDateTime = $event->calculateNextDueDateTime( $now );
+                    $preparedMessage = $this->prepareMessage( $event , $stashcatMediator , $THWCompany );
+                } catch ( \Throwable $e ){
+                    $this->registerFailedAttempt( $event , $now , 'Preparing message failed' , [ 'error' => $e->getMessage() ] );
+                    continue;
                 }
 
-
-                // Update next due date time...
-                if( !empty( $event->getDateInterval() ) ){
-                    $interval = new DateInterval( $event->getDateInterval() );
-                    // If the process wasn't able to work on multiple intervals in the past - try to catch up.
-                    $dueDate = clone $event->getDueDateTime();
-                    while( $dueDate <= $now ){
-                        $dueDate->add( $interval );
-                    }
-                    $event->setDueDateTime( $dueDate );
+                try {
+                    $result = $preparedMessage['send']();
+                } catch ( \Throwable $e ){
+                    $this->registerFailedAttempt( $event , $now , 'Sending message failed' , [ 'error' => $e->getMessage() ] );
+                    continue;
                 }
 
+                if( $result?->_getStatusValue() != 'OK' ){
+                    $this->registerFailedAttempt( $event , $now , 'Sending message failed' , [ 'status' => $result?->_getStatusValue() ] );
+                    continue;
+                }
+
+                // Gesendet -> sofort festhalten
+                if( $nextDueDateTime !== null ){
+                    $event->setDueDateTime( $nextDueDateTime );
+                }
                 $event->increaseTransmissionsCount();
+                $event->resetFailedAttempts();
+                $event->setDoneDateTime( $now );
+                $entityManager->persist( $event );
+                $entityManager->flush();
+                $eventsProcessed++;
 
-                if( $result?->_getStatusValue() == 'OK' ){
+                $this->getLogger()->log(LogLevel::INFO , $preparedMessage['logMessage'] , [ 'text' => $preparedMessage['text'] ]);
 
-                    if( $messageSentLogMessage !== null ){
-                        $this->getLogger()->log(LogLevel::INFO , $messageSentLogMessage , [ 'text' => $eventText ]);
-                    }
-
-                    $event->setDoneDateTime( $now );
-                    $entityManager->persist( $event );
-                    $entityManager->flush();
-                    $eventsProcessed++;
-
+                try {
                     $stashcatMediator->likeMessage( $result->getMessage() );
-                }
-                else
-                {
-                    $this->getLogger()->log(LogLevel::CRITICAL , sprintf("Sending message failed for Event #%s" , $event->getId() ) , [ 'status' => $result?->_getStatusValue() ]);
+                } catch ( \Throwable $e ){
+                    $this->getLogger()->log(LogLevel::WARNING , sprintf('Liking message failed for Event #%s' , $event->getId() ) , [ 'error' => $e->getMessage() ]);
                 }
 
             }
@@ -247,6 +190,118 @@ class Daemon extends Command
 
         $output->writeln( json_encode( $jsonResult , JSON_PRETTY_PRINT ) );
         return Command::SUCCESS;
+    }
+
+    /**
+     * Lädt das Ziel (Channel oder Unterhaltung) und ersetzt die Platzhalter, ohne zu senden.
+     * @param Event $event
+     * @param StashcatMediator $stashcatMediator
+     * @param Company $THWCompany
+     * @return array [ 'text' => string, 'logMessage' => string, 'send' => callable ]
+     * @throws \Exception
+     */
+    protected function prepareMessage( Event $event , StashcatMediator $stashcatMediator , Company $THWCompany ): array
+    {
+        $eventText = $event->getText();
+        $autoAppend = $this->getAppService()->getAppConfig()->getAutoAppendToMessages();
+
+        // Conversation ???
+        if( $event->getChannelTarget() === $this->getAppService()->getAppConfig()->getConversationChannelPlaceholderName() ){
+
+            $stashcatMediator->loadConversations();
+
+            if( ( $conversationId = $event->getConversationIdFromPayload() ) === null ){
+                throw new \Exception('Conversation ID missing!');
+            }
+
+            if( ( $conversation = $stashcatMediator->getConversationById( $conversationId ) ) === null ){
+                throw new \Exception(sprintf("Conversation not found by ID #%s" , $conversationId ));
+            }
+
+            $stashcatMediator->decryptConversationPrivateKey( $conversation );
+
+            // Decorator....
+            $messageDecorator = new MessageDecorator( $this->getKernel()->getContainer() , [
+                $THWCompany,
+                $this->getAppService(),
+                $event
+            ]);
+
+            $eventText = $messageDecorator->replace( $eventText );
+
+            $memberNames = [];
+            foreach( $conversation->getMembers() AS $member ){
+                $memberNames[] = $member->getCompleteName();
+            }
+
+            return [
+                'text' => $eventText,
+                'logMessage' => sprintf('Message sent to conversation %s, members: %s' , $conversation->getId() , implode(', ' , $memberNames ) ),
+                'send' => fn() => $stashcatMediator->sendMessageToConversation( $eventText . $autoAppend , $conversation )
+            ];
+        }
+
+        // Channel-Message ???
+        $stashcatMediator->loadChannelSubscripted( $THWCompany );
+
+        if( ( $THWChannel = $stashcatMediator->getChannelOfCompany( $event->getChannelTarget() , $THWCompany ) ) === null ){
+            throw new \Exception(sprintf("Channel not found: %s" , $event->getChannelTarget() ));
+        }
+
+        $stashcatMediator->decryptChannelPrivateKey( $THWChannel );
+
+        // Decorator....
+        $messageDecorator = new MessageDecorator( $this->getKernel()->getContainer() , [
+            $THWCompany,
+            $THWChannel,
+            $this->getAppService(),
+            $event
+        ]);
+
+        $eventText = $messageDecorator->replace( $eventText );
+
+        return [
+            'text' => $eventText,
+            'logMessage' => sprintf('Message sent to channel %s' , $event->getChannelTarget() ),
+            'send' => fn() => $stashcatMediator->sendMessageToChannel( $eventText . $autoAppend , $THWChannel )
+        ];
+    }
+
+    /**
+     * Zählt einen Fehlversuch. Nach Event::MAX_FAILED_ATTEMPTS wird ein wiederkehrendes Event beim nächsten Termin fortgesetzt,
+     * ein einmaliges (oder eines mit ungültigem Intervall) bleibt bis zum erneuten Speichern gesperrt.
+     * @param Event $event
+     * @param DateTime $now
+     * @param string $reason
+     * @param array $context
+     * @return void
+     */
+    protected function registerFailedAttempt( Event $event , DateTime $now , string $reason , array $context = [] ): void
+    {
+        $event->increaseFailedAttempts();
+        $context['attempt'] = sprintf('%s/%s' , $event->getFailedAttempts() , Event::MAX_FAILED_ATTEMPTS );
+
+        if( !$event->eventFailed() ){
+            $this->getLogger()->log(LogLevel::ERROR , sprintf('%s for Event #%s, retrying with next tick' , $reason , $event->getId() ) , $context );
+        } else {
+            try {
+                $nextDueDateTime = $event->calculateNextDueDateTime( $now );
+            } catch ( \Throwable $e ){
+                $nextDueDateTime = null;
+            }
+
+            if( $nextDueDateTime !== null ){
+                $event->setDueDateTime( $nextDueDateTime );
+                $event->resetFailedAttempts();
+                $this->getLogger()->log(LogLevel::CRITICAL , sprintf('%s for Event #%s, skipped until next due date' , $reason , $event->getId() ) , $context );
+            } else {
+                $this->getLogger()->log(LogLevel::CRITICAL , sprintf('%s for Event #%s, event disabled until saved again' , $reason , $event->getId() ) , $context );
+            }
+        }
+
+        $entityManager = $this->getDoctrine()->getManagerForClass( Event::class );
+        $entityManager->persist( $event );
+        $entityManager->flush();
     }
 
     /**

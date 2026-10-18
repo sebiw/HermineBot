@@ -11,10 +11,15 @@ Alle wesentlichen Änderungen am Hermine-Bot. Format nach [Keep a Changelog](htt
 ### Geändert
 
 - Der Login-Hinweis mit dem Link zum Ausloggen steht jetzt oben rechts statt am Seitenende.
+- Schlägt das Versenden einer geplanten Nachricht fehl, versucht der Bot es bis zu dreimal; danach wird eine wiederkehrende Nachricht beim nächsten Termin fortgesetzt und eine einmalige rot als fehlgeschlagen markiert, bis sie erneut gespeichert wird.
 
 ### Behoben
 
 - Beim manuellen Starten des Event-Ausführers erscheinen keine technischen Warnhinweise mehr zum Einlesen von Kalender-Aufgaben.
+- Geplante Nachrichten werden nach einem Fehler nicht mehr jede Minute erneut verschickt.
+- Eine fehlerhafte geplante Nachricht hält die übrigen nicht mehr vom Versand ab.
+- Wiederkehrende Nachrichten, deren Versand fehlschlägt, gelten nicht mehr als übermittelt.
+- Nicht erlaubte Intervalle werden beim Speichern auch ohne Enddatum abgelehnt.
 
 ## [1.0.0] - 2026-10-17
 
