@@ -1,5 +1,6 @@
 {
   "StAN-Manager:open-messages" : {
+    "type" : "REST_JSON",
     "url" : "http://stan-manager.localhost/api/open-messages",
     "payload" : {
       "user" : "hermine-api",
@@ -7,6 +8,7 @@
     }
   },
   "StAN-Manager:open-files" : {
+    "type" : "REST_JSON",
     "url" : "http://stan-manager.localhost/api/open-files",
     "payload" : {
       "user" : "hermine-api",

@@ -14,11 +14,14 @@ Alle wesentlichen Änderungen am Hermine-Bot. Format nach [Keep a Changelog](htt
 - Nachrichten aus der Warteschlange gehen bei einem Fehler nicht mehr verloren: Der Bot versucht es nach 1, 2 und 4 Minuten erneut und bewahrt sie danach zur Nachbearbeitung auf.
 - Eine vom Messenger nicht angenommene Nachricht wird nicht mehr als erfolgreich verschickt gemeldet.
 - Die Schnittstelle zum Senden von Nachrichten antwortet bei fehlenden Angaben oder Fehlern mit einer verständlichen Fehlermeldung statt mit einer Fehlerseite.
+- Ein ungültiges Datum beim Speichern eines Events wird abgelehnt, statt einen Serverfehler auszulösen.
+- Platzhalter, die erst durch eingesetzte Inhalte aus externen Quellen in eine Nachricht gelangen, lösen keine weiteren Abrufe mehr aus.
 
 ### Sicherheit
 
 - Bei einer fehlgeschlagenen Anmeldung an der Schnittstelle werden die gesendeten Daten nicht mehr in der Antwort zurückgegeben.
 - Speichern, Löschen und Senden von Events, der Event-Ausführer, das Bereinigen der Logs und das Ausloggen lassen sich nicht mehr über Links oder Formulare fremder Webseiten auslösen.
+- Fehlermeldungen enthalten keine Inhalte aus Antworten des Messengers mehr, und die Schnittstelle gibt bei Fehlern keine technischen Details zum Programmablauf zurück.
 
 ## [1.1.0] - 2026-10-18
 

@@ -24,6 +24,7 @@ use Symfony\Component\Filesystem\Path;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
@@ -126,6 +127,9 @@ class EventsController extends AbstractController
 
                     $now = new \DateTime();
                     $date = \DateTime::createFromFormat( $app->getAppConfig()->getDateFormat() . '-' . $app->getAppConfig()->getTimeFormat() , $request->get('date') . '-' . $request->get('time') );
+                    if( $date === false ){
+                        throw new BadRequestHttpException('Startdatum oder -uhrzeit ungültig!');
+                    }
 
                     if( in_array( $request->get('channel') , $app->getAppConfig()->getAllowedChannelNames() ) ){
                         $entity->setChannelTarget( $request->get('channel') );
@@ -150,6 +154,9 @@ class EventsController extends AbstractController
 
                         if( ( $untilDate = $request->get('untilDate') ) !== null && !empty( $untilDate ) && ( $untilTime = $request->get('untilTime') ) !== null && !empty( $untilTime )  ){
                             $untilDate = \DateTime::createFromFormat( $app->getAppConfig()->getDateFormat() . '-' . $app->getAppConfig()->getTimeFormat() , $untilDate . '-' . $untilTime );
+                            if( $untilDate === false ){
+                                throw new BadRequestHttpException('Enddatum oder -uhrzeit ungültig!');
+                            }
                             $entity->setUntilDateTime( $untilDate );
                         } else {
                             $entity->setUntilDateTime( null );

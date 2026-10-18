@@ -72,12 +72,15 @@ class MessageDecorator {
      */
     public function replace( string $eventText ): array|string
     {
+        // Erst alle Ersetzungen für den Originaltext ermitteln, dann in einem Durchgang ersetzen:
+        // Platzhalter, die erst durch ein eingesetztes Ergebnis in den Text kommen (z. B. aus externen Quellen), werden nicht ausgewertet
+        $replacements = [];
         foreach( $this->replaceCallbacks AS $realKey => $callback ){
             if( str_contains( $eventText , $realKey ) && ( $callbackResult = $callback() ) !== null && is_scalar( $callbackResult ) ){
-                $eventText = str_replace( $realKey , $callbackResult , $eventText );
+                $replacements[ $realKey ] = (string) $callbackResult;
             }
         }
-        return $eventText;
+        return strtr( $eventText , $replacements );
     }
 
     /**

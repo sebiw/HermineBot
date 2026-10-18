@@ -78,9 +78,10 @@ class ApiController extends AbstractController
         }
 
         $logger->emergency(sprintf('Message sent via REST to %s FAILED' , $channel ?? $conversationId ), ['error' => $commandOutput] );
+        // Stacktrace nur ins Log, nicht an den Aufrufer
         return new JsonResponse([
             'status' => 'ERROR',
-            'content' => $commandOutput
+            'content' => trim( preg_replace( '/\n\s*Exception trace:.*$/s' , '' , $commandOutput ) )
         ], Response::HTTP_INTERNAL_SERVER_ERROR );
     }
 

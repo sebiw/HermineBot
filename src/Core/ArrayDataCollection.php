@@ -23,7 +23,8 @@ class ArrayDataCollection {
             if( isset( $current[ $key ] ) ){
                 $current = &$current[ $key ];
             } else {
-                throw new \Exception(sprintf('Key %s not found in: %s' , $key , json_encode( $this->results ) ));
+                // Nur die vorhandenen Schlüssel nennen, nicht die Werte (können Client-Key, Passwörter o. Ä. enthalten)
+                throw new \Exception(sprintf('Key %s not found, available keys: %s' , $key , is_array( $current ) ? implode(', ' , array_keys( $current ) ) : gettype( $current ) ));
             }
         }
         return $current;

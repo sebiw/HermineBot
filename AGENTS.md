@@ -16,10 +16,10 @@ Symfony-6.1-Anwendung (PHP ≥ 8.1), die automatisiert Nachrichten in Channels u
   - Fehlversuche (`registerFailedAttempt()`): Zähler `failedAttempts` erhöhen, beim nächsten Tick erneut versuchen. Beim dritten Fehlversuch wird ein Intervall-Event auf den nächsten Termin geschoben (Zähler zurück auf 0), ein einmaliges Event bzw. eines mit ungültigem Intervall bleibt gesperrt (rot in `/events`), bis es erneut gespeichert wird. Erfolg setzt den Zähler zurück.
   - Parallele Läufe sperrt `flock` auf `var/daemon-tick.lock` (gilt auch für `/events/execute`); ein zweiter Tick beendet sich sofort mit Status `LOCKED`. `Core/RestClient` bricht nach 10 s Verbindungsaufbau bzw. 30 s Gesamtdauer ab.
   - Restrisiko: Scheitert das Speichern direkt nach erfolgreichem Senden (DB weg) oder läuft das Senden in den Timeout, obwohl Hermine die Nachricht angenommen hat, wird beim nächsten Tick erneut gesendet.
-- **Platzhalter** (`Core/MessageDecorator`): Syntax `{{Name}}` für Platzhalter, `{%Name%}` für Befehle (externe Abrufe). Ersetzt werden nur Schlüssel, die im Text vorkommen; Callbacks, die `null` oder Nicht-Skalare liefern, bleiben stehen. Liste der verfügbaren Schlüssel steht im Events-Formular.
+- **Platzhalter** (`Core/MessageDecorator`): Syntax `{{Name}}` für Platzhalter, `{%Name%}` für Befehle (externe Abrufe). Ersetzt werden nur Schlüssel, die im Originaltext vorkommen, in einem Durchgang (eingesetzte Ergebnisse werden nicht erneut ausgewertet); Callbacks, die `null` oder Nicht-Skalare liefern, bleiben stehen. Liste der verfügbaren Schlüssel steht im Events-Formular.
   - Eingebaut: `{{CompanyActiveUser}}`, `{{CompanyCreatedUser}}`, `{{CompanyName}}`, `{{ChannelUserCount}}` (nur bei Channels), `{{CompanyGroupsStats}}`, `{{EventInterval}}` (Bezeichnung des Intervalls, nur bei Events).
   - `data/placeholder.json`: Schlüssel `<context>:<key>` → `{ message, message_datetime }`, geschrieben von `HerminePlaceholderHandler` aus `HermineBotCom\Placeholder`.
-  - `config/legacy/command_api_endpoints.json`: Schlüssel = Befehlsname, Pflichtfeld `type` (Einträge ohne `type` werden ignoriert – die Vorlage in `config_examples/` hat bei den StAN-Manager-Einträgen keinen):
+  - `config/legacy/command_api_endpoints.json`: Schlüssel = Befehlsname, Pflichtfeld `type` (Einträge ohne `type` werden ignoriert):
     - `REST_JSON`: `POST url` mit JSON-`payload` (z. B. `user`/`key` für die StAN-Manager-Reports `/api/open-messages`, `/api/open-files`), Ergebnis aus `content` oder `message`.
     - `ICAL_DOWNLOAD_VTODO`: lädt Aufgaben per CalDAV-Export (optional `authorization_basic`), Feld `events` steuert den Filter: `OPEN` (Standard, unerledigte), `COMPLETED` (erledigt in den letzten 4 Wochen), `COMPLETED_RECENTLY` (erledigt in den letzten ~12 Tagen); jeder andere Wert zeigt alle Aufgaben ungefiltert. Ausgabe sortiert nach Priorität, mit Status-Emojis.
 - **Eingänge von außen**:
@@ -76,7 +76,7 @@ Hosting-Anbieter, Hostnamen, Produktiv-URLs, Server-Pfade, Benutzer- und Kanalna
 - `src/Controller` – Events, Login, API, Changelog, Query (Prototyp)
 - `src/MessageHandler` – Handler für die `HermineBotCom`-Nachrichten
 - `src/Security` – `ApiKeyAuthenticator`; `src/Service/AppService` – zentraler Einstieg zu Config und Mediator
-- `src/Entity` – `Event`, `LogEntry`, `User`; `src/Repository/TestRepository` ist ein Überbleibsel (verweist auf nicht existierendes `App\Entity\Test`)
+- `src/Entity` – `Event`, `LogEntry`, `User`
 - `bootstrap.php` – definiert die Konstante `BASE_PATH` (Projektwurzel), von `public/index.php` und `bin/console` geladen; Pfade in `services.yaml` (`app.message_*`) sind relativ dazu
 - `submodule/HermineBotCom` – Git-Submodule (github.com/sebiw/HermineBotCom), Nachrichtenklassen (`AbstractMessage`, `Message`, `Placeholder`), die auch der StAN-Manager nutzt; per PSR-4 in `composer.json` eingebunden (siehe Projektverbund).
 - `config/legacy/` – echte Konfiguration (gitignored), Vorlagen in `config_examples/`
