@@ -121,14 +121,24 @@ Hosting-Anbieter, Hostnamen, Produktiv-URLs, Server-Pfade, Benutzer- und Kanalna
 ## Versionierung & Changelog
 
 - Version nach [SemVer](https://semver.org/lang/de/), einzige Quelle ist der Parameter `app.version` in `config/services.yaml`. Er wird als Twig-Global `app_version` oben rechts unter dem Login-Hinweis angezeigt (Block `topnav`) (`templates/base.html.twig`, Styles in `public/assets/main.css`); nach dem Login lädt ein Klick `/changelog` (`ChangelogController`, `Core/ChangelogRenderer`, ohne Login 403) per AJAX in einen jQuery-UI-Dialog (`public/assets/app.js`). jQuery und jQuery-UI werden dafür in `base.html.twig` auf allen Seiten geladen.
-- Änderungen stehen in `CHANGELOG.md` (Format „Keep a Changelog“, Deutsch). Gleiche Regeln wie im StAN-Manager:
+- Änderungen stehen in `CHANGELOG.md` (Format „Keep a Changelog“, Deutsch). Gleiche Regeln und gleiche Form wie im StAN-Manager.
 
 **Anweisung für Agenten – bei jeder Änderung automatisch beachten:**
 
-1. **Bei jedem Commit mit wesentlicher Änderung** einen Eintrag unter `## [Unreleased]` in `CHANGELOG.md` ergänzen – im selben Commit, ohne Rückfrage. Das Changelog richtet sich **nur an Endnutzer** und ist in der App sichtbar: neue Funktionen, behobene Fehler, geändertes Verhalten, Sicherheitsfixes. Nicht eintragen: Betrieb/Deployment, Refactorings ohne Verhaltensänderung, Formatierung, Kommentare, Entwickler-Doku, Tests, Tooling.
-2. **Rubriken** (nur verwenden, was vorkommt): `### Hinzugefügt`, `### Geändert`, `### Behoben`, `### Entfernt`, `### Sicherheit`.
-3. **Formulierung**: ein Satz pro Eintrag, auf Deutsch, aus Sicht der Anwender, ohne Klassennamen, Dateipfade oder Commit-Hashes. Kein Inline-Code mit Backticks (der Renderer unterstützt nur Überschriften, Listen, Absätze, Links und Fettschrift). **Repo ist öffentlich** – keine URLs, Hostnamen oder internen Details.
-4. **Release** nur auf ausdrücklichen Wunsch: Versionssprung aus `[Unreleased]` ableiten (MAJOR: inkompatibel, z. B. geänderte `/api/*` oder `HermineBotCom`-Nachrichten, manuelle Deployment-Schritte; MINOR: neue Funktionen; PATCH: Fehlerbehebungen), `## [Unreleased]` in `## [X.Y.Z] - JJJJ-MM-TT` umbenennen, neuen leeren `[Unreleased]`-Abschnitt anlegen, `app.version` anpassen, Commit `MOD Release vX.Y.Z` und annotierten Tag `vX.Y.Z`; pushen mit `git push origin main --follow-tags`, sofern gewünscht.
+1. **Bei jedem Commit mit wesentlicher Änderung** einen Eintrag unter `## [Unreleased]` in `CHANGELOG.md` ergänzen – im selben Commit, ohne Rückfrage.
+   - Das Changelog richtet sich **nur an Endnutzer** (Anwender der Software) und ist in der App sichtbar. Wesentlich = für Anwender spürbar: neue Funktionen, behobene Fehler, geändertes Verhalten, Sicherheitsfixes.
+   - Nicht eintragen: alles rund um Betrieb und Deployment (Konfiguration, Migrationen, Cronjobs, Server-Schritte – das gehört in Commit-Message bzw. `AGENTS.md`), reine Refactorings ohne Verhaltensänderung, Code-Formatierung, Kommentare, Entwickler-Doku, Tests, Tooling.
+2. **Rubriken** (nur verwenden, was vorkommt): `### Hinzugefügt`, `### Geändert`, `### Behoben`, `### Entfernt`, `### Sicherheit`. Die Liste steht direkt unter der Rubrik (ohne Leerzeile).
+3. **Formulierung**: ein Satz pro Eintrag, auf Deutsch, aus Sicht der Anwender („Geplante Nachrichten werden nicht mehr doppelt verschickt, wenn ein Durchlauf länger als eine Minute dauert.“), keine Fachbegriffe aus der Technik, keine Klassennamen, Dateipfade oder Commit-Hashes. Kein Inline-Code mit Backticks (der Changelog-Renderer unterstützt nur Überschriften, Listen, Absätze, Links und Fettschrift). **Repo ist öffentlich** – keine URLs, Hostnamen, Kanalnamen oder internen Details.
+4. **Release** nur auf ausdrücklichen Wunsch („Release machen“, „Version erhöhen“):
+   - Versionssprung aus den Einträgen unter `[Unreleased]` ableiten:
+     - **MAJOR**: Inkompatible Änderungen – entfernte Funktionen, geänderte API (`/api/*`) oder `HermineBotCom`-Nachrichten, oder ein Deployment, das manuelle Eingriffe erfordert (neuer Pflicht-Konfigurationswert, manuelle Datenmigration).
+     - **MINOR**: neue Funktionen, abwärtskompatibel.
+     - **PATCH**: nur Fehlerbehebungen und kleine Anpassungen.
+   - `## [Unreleased]` in `## [X.Y.Z] - JJJJ-MM-TT` umbenennen und darüber einen neuen, leeren `## [Unreleased]`-Abschnitt anlegen (leere Abschnitte blendet der Renderer in der App aus).
+   - `app.version` in `config/services.yaml` auf `X.Y.Z` setzen.
+   - Commit `MOD Release vX.Y.Z` und Git-Tag `vX.Y.Z` (annotiert) anlegen; Tag zusammen mit dem Commit pushen (`git push origin main --follow-tags`), sofern Pushen gewünscht ist.
+   - Den Vorschlag für die neue Versionsnummer vorher kurz nennen, wenn die Einordnung nicht eindeutig ist.
 
 ## Hinweise
 
