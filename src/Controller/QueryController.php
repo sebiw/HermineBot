@@ -34,7 +34,7 @@ class QueryController extends AbstractController
         $stashcatMediator->decryptPrivateKey();
         $stashcatMediator->loadCompanies();
 
-        $THWCompany = $stashcatMediator->getCompanyMembers()->getCompanyByName('THW');
+        $THWCompany = $stashcatMediator->getCompanyMembers()->getCompanyByName( $app->getAppConfig()->getStashcatEventCompany() );
         $stashcatMediator->loadChannelSubscripted( $THWCompany );
 
         // Lade ID der zusetzt bekannten Nachricht, sowie das Datum => Beides nutzen! Nachricht könnte ja gelöscht sein?!

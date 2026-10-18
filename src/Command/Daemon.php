@@ -168,7 +168,7 @@ class Daemon extends Command
             $stashcatMediator->decryptPrivateKey();
             $stashcatMediator->loadCompanies();
 
-            $THWCompany = $stashcatMediator->getCompanyMembers()->getCompanyByName('THW');
+            $THWCompany = $stashcatMediator->getCompanyMembers()->getCompanyByName( $this->getAppService()->getAppConfig()->getStashcatEventCompany() );
 
             foreach( $events AS $event ){
 

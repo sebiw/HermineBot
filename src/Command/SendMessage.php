@@ -137,7 +137,7 @@ class SendMessage extends Command
         $stashcatMediator->decryptPrivateKey();
         $stashcatMediator->loadCompanies();
 
-        $THWCompany = $stashcatMediator->getCompanyMembers()->getCompanyByName('THW');
+        $THWCompany = $stashcatMediator->getCompanyMembers()->getCompanyByName( $this->getAppService()->getAppConfig()->getStashcatEventCompany() );
 
         if( $channelTarget !== null ){
 
