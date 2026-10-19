@@ -74,6 +74,21 @@ class User extends DefaultEntity {
     }
 
     /**
+     * Name für Anzeigen – tolerant, gelöschte Accounts liefern z. B. keinen Vornamen
+     * @return string
+     */
+    public function getDisplayName(): string
+    {
+        $firstName = $this->resultKeyExist('first_name') ? strval( $this->getResults('first_name') ) : '';
+        $lastName = $this->resultKeyExist('last_name') ? strval( $this->getResults('last_name') ) : '';
+        $name = trim( $firstName . ' ' . $lastName );
+        if( $name === '' ){
+            return $this->resultKeyExist('deleted') && $this->getResults('deleted') ? '(gelöschter Account)' : '(ohne Namen)';
+        }
+        return $name;
+    }
+
+    /**
      * @return string
      */
     public function getCompleteName(): string

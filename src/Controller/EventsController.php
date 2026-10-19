@@ -125,15 +125,23 @@ class EventsController extends AbstractController
 
             $conversations = [];
             foreach( $stashcatMediator->getLoadedConversations() AS $conversation ){
+                // Eine fehlerhafte Unterhaltung soll nicht die ganze Liste verhindern
+                try {
+                    $label = $stashcatMediator->getConversationLabel( $conversation );
+                } catch( \Throwable $e ){
+                    $logger->warning('Conversation label failed' , [ 'id' => $conversation->getId() , 'error' => $e->getMessage() ] );
+                    $label = '(Mitglieder nicht lesbar)';
+                }
                 $conversations[] = [
                     'id' => strval( $conversation->getId() ),
-                    'label' => $stashcatMediator->getConversationLabel( $conversation )
+                    'label' => $label
                 ];
             }
             return $this->json( [ 'status' => 'OK' , 'conversations' => $conversations ] );
         } catch( \Throwable $e ){
             $logger->error('Loading conversations failed' , [ 'error' => $e->getMessage() ] );
-            return $this->json( [ 'status' => 'ERROR' ] , Response::HTTP_INTERNAL_SERVER_ERROR );
+            // Nur für Admins sichtbar; Meldungen nennen keine Werte aus Hermine-Antworten
+            return $this->json( [ 'status' => 'ERROR' , 'message' => $e->getMessage() ] , Response::HTTP_INTERNAL_SERVER_ERROR );
         }
     }
 

@@ -6,6 +6,30 @@ body {
     font-family: Arial, Helvetica, Verdana, Geneva, sans-serif;
 }
 
+/* Grundgerüst wie im StAN-Manager (dort führend: assets/styles/app.scss) */
+@media (max-width: 1024px){
+    body, html {
+        font-size: 1.5em;
+    }
+
+    input[type=checkbox]
+    {
+        transform: scale(3);
+    }
+}
+
+label {
+    display: block;
+}
+
+label.inline {
+    display: inline-block;
+}
+
+input[type=checkbox] + label {
+    display: inline-block;
+}
+
 header.primary {
     padding: 1rem;
     font-size: 3rem;
@@ -55,7 +79,7 @@ nav.secondary a:hover, nav.secondary a.active {
 }
 
 .wrapper {
-    margin: 1rem 1rem;
+    margin: 0.1rem 1rem 1rem;
 }
 
 a, a:link {
@@ -85,12 +109,24 @@ td, th {
     border: 1px solid black;
 }
 
+input, textarea, select, button {
+    font-size: 1.5rem;
+}
+
+/* Dichte Events-Tabelle: kleinere Felder als im übrigen Grundgerüst (1.5rem wie im StAN-Manager) */
+.events-table input,
+.events-table textarea,
+.events-table select,
+.events-table button {
+    font-size: 1rem;
+}
+
 .thw-datepicker {
-    width: 6rem;
+    width: 6.5em;
 }
 
 .thw-timepicker {
-    width: 4rem;
+    width: 4em;
 }
 
 .thw-textarea {
@@ -128,6 +164,10 @@ td, th {
     list-style: none;
 }
 
+.spacer {
+    padding: 0.2rem;
+}
+
 .text-center {
     text-align: center;
 }
@@ -162,6 +202,11 @@ td, th {
 .layout-compact {
     margin: 0px auto;
     max-width: 1200px;
+    overflow-x: auto;
+}
+
+.layout-complete {
+    overflow-x: auto;
 }
 
 .topnav {
@@ -211,11 +256,53 @@ span.app-version {
     margin: 0 auto;
 }
 
-.ui-autocomplete {
-    max-height: 20rem;
-    max-width: 32rem;
+.conversation-picker {
+    position: relative;
+}
+
+.conversation-panel {
+    position: fixed;
+    z-index: 100;
+    width: 24rem;
+    max-width: 90vw;
+    padding: 0.25rem;
+    text-align: left;
+    background: #fff;
+    border: 1px solid #999;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.conversation-filter {
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.conversation-list {
+    max-height: min(20rem, 50vh);
     overflow-y: auto;
-    overflow-x: hidden;
+    margin: 0.25rem 0 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.conversation-list li {
+    padding: 0.25rem 0.4rem;
+    font-size: 0.85em;
+}
+
+.conversation-option {
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+}
+
+.conversation-option:hover,
+.conversation-option.selected {
+    background: #dde6f4;
+}
+
+.conversation-hint {
+    font-style: italic;
+    color: #666;
 }
 
 @media print {

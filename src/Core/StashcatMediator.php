@@ -261,7 +261,7 @@ class StashcatMediator
         $names = [];
         foreach( $conversation->getMembers() AS $member ){
             if( strval( $member->getId() ) !== $ownUserId ){
-                $names[] = trim( $member->getCompleteName() );
+                $names[] = $member->getDisplayName();
             }
         }
         sort( $names , SORT_NATURAL | SORT_FLAG_CASE );

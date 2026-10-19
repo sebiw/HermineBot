@@ -9,7 +9,8 @@
         </form>
     </nav>
 
-    <table class="object-center layout-compact">
+    <div class="layout-compact">
+    <table class="object-center">
         <thead>
         <tr>
             <th>DateTime</th>
@@ -31,6 +32,7 @@
         {% endfor %}
         </tbody>
     </table>
+    </div>
     {% if maxPages > 1 %}
         <ul class="pagination">
             {# `«` arrow  #}

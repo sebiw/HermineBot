@@ -9,7 +9,7 @@ Symfony-6.1-Anwendung (PHP ≥ 8.1), die automatisiert Nachrichten in Channels u
 - **Events** (`Entity/Event`, Tabelle `events`, `EventsController`, `/events`): geplante Nachrichten mit Ziel (`channelTarget` = Channel-Name oder Unterhaltungs-Platzhalter, Unterhaltungs-ID in `channelTargetPayload.conversationId`), Text, Start (`startDateTime`), Fälligkeit (`dueDateTime`), optionalem Intervall (`dateInterval`, ISO 8601, erlaubte Werte in `allowed_intervals`), Enddatum (`untilDateTime`), `doneDateTime` und `transmissionsCount`.
   - Formular-Aktionen (`POST /events`, Feld `action`): `add`/`save`, `edit`, `delete`, `trigger` (sendet sofort über `hermine:send-message`, ändert die Fälligkeit nicht). Fälligkeit wird nur bei `resetDue=1` auf das Startdatum gesetzt.
   - Speichern nur für Channels aus `allowed_channel` (plus Unterhaltungs-Platzhalter); beim Platzhalter ist die Unterhaltungs-ID Pflicht.
-  - Unterhaltung wählen: Ist der Platzhalter gewählt, lädt das Formular per AJAX `GET /events/conversations` (nur lesend, JSON `{status, conversations: [{id, label}]}`, Label = Mitgliedernamen ohne eigenen Account über `StashcatMediator::getConversationLabel()`), nur offene Unterhaltungen (`message/conversations`, `archive=0`). Die Suche (jQuery-UI-Autocomplete) füllt nur das ID-Feld; gespeichert wird immer das ID-Feld, so bleiben IDs nicht gelisteter (z. B. archivierter) Unterhaltungen erhalten. Senden an archivierte Unterhaltungen scheitert derzeit, weil `daemon:tick`/`hermine:send-message` die Unterhaltung nur in dieser Liste suchen.
+  - Unterhaltung wählen: Ist der Platzhalter gewählt, lädt das Formular per AJAX `GET /events/conversations` (nur lesend, JSON `{status, conversations: [{id, label}]}`, Label = Mitgliedernamen ohne eigenen Account über `StashcatMediator::getConversationLabel()`), nur offene Unterhaltungen (`message/conversations`, `archive=0`). Ein Klick öffnet die Liste mit Filterfeld (eigenes Aufklappmenü, Mitgliedernamen tolerant über `User::getDisplayName()`, gelöschte Accounts ohne Namen); die Auswahl füllt nur das ID-Feld, bei Ladefehlern zeigt das Formular die Fehlermeldung; gespeichert wird immer das ID-Feld, so bleiben IDs nicht gelisteter (z. B. archivierter) Unterhaltungen erhalten. Senden an archivierte Unterhaltungen scheitert derzeit, weil `daemon:tick`/`hermine:send-message` die Unterhaltung nur in dieser Liste suchen.
 - **Unterhaltungen**: Ziel ist der Pseudo-Channel `conversation_channel_placeholder_name` (Standard `[[Konversation]]`, `Core/Config::DEFAULT_CHANNEL_CONVERSATION_PLACEHOLDER`). Er wird von `getAllowedChannelNames()` immer automatisch zugelassen; die eigentliche Unterhaltung kommt über die ID.
 - **Daemon** (`daemon:tick`, `Command/Daemon`): verarbeitet fällige Events – Platzhalter ersetzen, senden, nächste Fälligkeit berechnen (verpasste Intervalle werden übersprungen), eigene Nachricht liken. Liest vorher JSON-Dateien (`message`, `channel`, `context`) aus `MESSAGE_FILES_IN` (Altlast, Datei-Variante): gesendet → gelöscht, fehlerhaft oder fehlgeschlagen → in `*.json.failed` umbenannt (wird nicht erneut verarbeitet); Fehler dort brechen den Tick nicht ab.
   - Fällig: `dueDateTime <= jetzt` und entweder noch nie erledigt, oder mit Intervall und `doneDateTime < untilDateTime` bzw. ohne Enddatum – jeweils nur mit `failedAttempts < Event::MAX_FAILED_ATTEMPTS` (3).
@@ -70,6 +70,10 @@ Dieses Projekt ist Teil eines Verbunds aus drei Repositories, die zusammen betri
 
 Hosting-Anbieter, Hostnamen, Produktiv-URLs, Server-Pfade, Benutzer- und Kanalnamen, Zugangsdaten und Momentaufnahmen des Live-Stands gehören **nicht** in dieses Repo (auch nicht in Commits, Issues oder PRs). Sie werden außerhalb von Git in einer privaten Betriebsdoku gepflegt, die lokal über `CLAUDE.local.md` geladen wird. Ein lokaler Pre-commit-Hook prüft Commits auf solche Angaben.
 
+**Commit, Tag und Push**
+
+Agenten committen, taggen und pushen in keinem der drei Repos eigenständig – auch nicht bei Changelog-Einträgen oder Releases. Änderungen fertig vorbereiten, Aufteilung und Commit-Message vorschlagen und auf ausdrückliche Freigabe des Nutzers warten. Eine Freigabe gilt nur für den besprochenen Umfang; Push braucht eine eigene Freigabe.
+
 ## Struktur
 
 - `src/Stashcat` – Stashcat-API-Client, Krypto, Entities, Responses
@@ -118,7 +122,7 @@ Hosting-Anbieter, Hostnamen, Produktiv-URLs, Server-Pfade, Benutzer- und Kanalna
 - Läuft auch auf einfachem Webspace ohne dauerhafte Prozesse: zwei Cronjobs, jeweils jede Minute, `php <Projektverzeichnis>/bin/console messenger:consume -q` und `php <Projektverzeichnis>/bin/console daemon:tick`.
 - Bei jedem Update: `composer install`, `bin/console cache:clear`, `bin/console doctrine:migrations:migrate`; das Submodule `HermineBotCom` mit aktualisieren. Migrationen abwärtskompatibel halten – Cronjobs können zwischen Code-Update und Migration laufen.
 - Konkrete Umgebungen (Server, URLs, Pfade, Zugangsdaten, Bereitstellungsweg) gehören nicht in dieses öffentliche Repo.
-- Agenten pushen nur nach ausdrücklicher Freigabe und lösen keine Deployments aus.
+- Agenten committen, taggen und pushen nur nach ausdrücklicher Freigabe (siehe „Commit, Tag und Push“) und lösen keine Deployments aus.
 - Der Hinweis im `readme.md` auf `private/runner.php` ist veraltet.
 ## Versionierung & Changelog
 
@@ -127,7 +131,7 @@ Hosting-Anbieter, Hostnamen, Produktiv-URLs, Server-Pfade, Benutzer- und Kanalna
 
 **Anweisung für Agenten – bei jeder Änderung automatisch beachten:**
 
-1. **Bei jedem Commit mit wesentlicher Änderung** einen Eintrag unter `## [Unreleased]` in `CHANGELOG.md` ergänzen – im selben Commit, ohne Rückfrage.
+1. **Bei jedem Commit mit wesentlicher Änderung** einen Eintrag unter `## [Unreleased]` in `CHANGELOG.md` ergänzen – ohne Rückfrage; er gehört in denselben Commit wie die Änderung (committet wird nur nach Freigabe, siehe „Commit, Tag und Push“).
    - Das Changelog richtet sich **nur an Endnutzer** (Anwender der Software) und ist in der App sichtbar. Wesentlich = für Anwender spürbar: neue Funktionen, behobene Fehler, geändertes Verhalten, Sicherheitsfixes.
    - Nicht eintragen: alles rund um Betrieb und Deployment (Konfiguration, Migrationen, Cronjobs, Server-Schritte – das gehört in Commit-Message bzw. `AGENTS.md`), reine Refactorings ohne Verhaltensänderung, Code-Formatierung, Kommentare, Entwickler-Doku, Tests, Tooling.
 2. **Rubriken** (nur verwenden, was vorkommt, in dieser Reihenfolge): `### Hinzugefügt`, `### Geändert`, `### Entfernt`, `### Sicherheit`, `### Behoben`. Die Liste steht direkt unter der Rubrik (ohne Leerzeile).
@@ -139,7 +143,7 @@ Hosting-Anbieter, Hostnamen, Produktiv-URLs, Server-Pfade, Benutzer- und Kanalna
      - **PATCH**: nur Fehlerbehebungen und kleine Anpassungen.
    - `## [Unreleased]` in `## [X.Y.Z] - JJJJ-MM-TT` umbenennen und darüber einen neuen, leeren `## [Unreleased]`-Abschnitt anlegen (leere Abschnitte blendet der Renderer in der App aus).
    - `app.version` in `config/services.yaml` auf `X.Y.Z` setzen.
-   - Commit `MOD Release vX.Y.Z` und Git-Tag `vX.Y.Z` (annotiert) anlegen; Tag zusammen mit dem Commit pushen (`git push origin main --follow-tags`), sofern Pushen gewünscht ist.
+   - Commit `MOD Release vX.Y.Z` und Git-Tag `vX.Y.Z` (annotiert) vorschlagen und erst nach Freigabe anlegen; Tag zusammen mit dem Commit pushen (`git push origin main --follow-tags`), nur nach eigener Freigabe.
    - Den Vorschlag für die neue Versionsnummer vorher kurz nennen, wenn die Einordnung nicht eindeutig ist.
 
 ## Hinweise

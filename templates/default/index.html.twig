@@ -43,28 +43,81 @@
                 }
             }).change();
 
-            // Unterhaltungen: Die Suche füllt nur das ID-Feld, das ID-Feld selbst wird gespeichert.
+            // Unterhaltungen: Die Auswahl füllt nur das ID-Feld, das ID-Feld selbst wird gespeichert.
             // So bleibt eine gespeicherte ID erhalten, auch wenn die Unterhaltung nicht (mehr) in der Liste steht.
             let conversations = null;
             let conversationsState = 'idle';
+            let conversationsError = '';
             let conversationId = $('.conversation-id');
-            let conversationSearch = $('.conversation-search');
+            let conversationToggle = $('.conversation-toggle');
+            let conversationPanel = $('.conversation-panel');
+            let conversationFilter = $('.conversation-filter');
+            let conversationList = $('.conversation-list');
             let conversationInfo = $('.conversation-info');
+
+            function findConversation( id ){
+                return ( conversations || [] ).find(function( conversation ){ return conversation.id === id; });
+            }
 
             function updateConversationInfo(){
                 let id = $.trim( conversationId.val() );
                 if( conversationId.prop('disabled') ){
                     conversationInfo.text('');
                 } else if( conversationsState === 'error' ){
-                    conversationInfo.text('Unterhaltungen konnten nicht geladen werden – ID von Hand eintragen.');
+                    conversationInfo.text('Unterhaltungen konnten nicht geladen werden – ID von Hand eintragen. Fehler: ' + conversationsError );
                 } else if( conversations === null ){
                     conversationInfo.text('Lade Unterhaltungen …');
                 } else if( id === '' ){
                     conversationInfo.text('');
                 } else {
-                    let found = conversations.find( function( conversation ){ return conversation.id === id; } );
+                    let found = findConversation( id );
                     conversationInfo.text( found ? found.label : 'Unterhaltung nicht in der Liste der offenen Unterhaltungen (archiviert?) – die ID bleibt erhalten.' );
                 }
+            }
+
+            function renderConversationList(){
+                let terms = conversationFilter.val().toLowerCase().split(/\s+/).filter(function( term ){ return term !== ''; });
+                let current = $.trim( conversationId.val() );
+                conversationList.empty();
+                if( conversationsState === 'error' ){
+                    $('<li class="conversation-hint">').text('Fehler: ' + conversationsError ).appendTo( conversationList );
+                    return;
+                }
+                if( conversations === null ){
+                    $('<li class="conversation-hint">').text('Lade Unterhaltungen …').appendTo( conversationList );
+                    return;
+                }
+                let matches = conversations.filter(function( conversation ){
+                    let label = conversation.label.toLowerCase();
+                    return terms.every(function( term ){ return label.indexOf( term ) !== -1; });
+                });
+                if( matches.length === 0 ){
+                    $('<li class="conversation-hint">').text('Keine passende Unterhaltung.').appendTo( conversationList );
+                }
+                $.each( matches , function( index , conversation ){
+                    $('<li class="conversation-option">')
+                        .toggleClass('selected' , conversation.id === current )
+                        .attr('data-id' , conversation.id )
+                        .text( conversation.label )
+                        .appendTo( conversationList );
+                });
+            }
+
+            function openConversationPanel(){
+                conversationPanel.prop('hidden' , false );
+                // Am Fenster ausrichten (position: fixed), sonst schneidet der scrollbare Tabellen-Container das Menü ab
+                let rect = conversationToggle[0].getBoundingClientRect();
+                conversationPanel.css({
+                    top: rect.bottom,
+                    left: Math.max( 8 , Math.min( rect.left , window.innerWidth - conversationPanel.outerWidth() - 8 ) )
+                });
+                conversationFilter.val('');
+                renderConversationList();
+                conversationFilter.trigger('focus');
+            }
+
+            function closeConversationPanel(){
+                conversationPanel.prop('hidden' , true );
             }
 
             function loadConversations(){
@@ -77,34 +130,46 @@
                         conversations = result.conversations || [];
                         conversationsState = 'loaded';
                     })
-                    .fail(function(){
+                    .fail(function( xhr , textStatus ){
                         conversationsState = 'error';
+                        conversationsError = ( xhr.responseJSON && xhr.responseJSON.message ) ? xhr.responseJSON.message : ( xhr.status + ' ' + textStatus );
                     })
-                    .always( updateConversationInfo );
+                    .always(function(){
+                        updateConversationInfo();
+                        if( !conversationPanel.prop('hidden') ){
+                            renderConversationList();
+                        }
+                    });
             }
 
-            conversationSearch.autocomplete({
-                minLength: 0,
-                source: function( request , response ){
-                    let terms = request.term.toLowerCase().split(/\s+/).filter(function( term ){ return term !== ''; });
-                    response( ( conversations || [] ).filter(function( conversation ){
-                        let label = conversation.label.toLowerCase();
-                        return terms.every(function( term ){ return label.indexOf( term ) !== -1; });
-                    }).map(function( conversation ){
-                        return { label: conversation.label , value: conversation.id };
-                    }) );
-                },
-                focus: function(){
-                    return false;
-                },
-                select: function( event , ui ){
-                    conversationId.val( ui.item.value );
-                    conversationSearch.val('');
-                    updateConversationInfo();
-                    return false;
+            conversationToggle.on('click' , function(){
+                conversationPanel.prop('hidden') ? openConversationPanel() : closeConversationPanel();
+            });
+
+            conversationFilter.on('input' , renderConversationList ).on('keydown' , function( event ){
+                if( event.key === 'Enter' ){
+                    // Formular nicht absenden, sondern den ersten Treffer übernehmen
+                    event.preventDefault();
+                    conversationList.find('.conversation-option').first().trigger('click');
+                } else if( event.key === 'Escape' ){
+                    closeConversationPanel();
+                    conversationToggle.trigger('focus');
                 }
-            }).on('focus' , function(){
-                $(this).autocomplete('search' , $(this).val() );
+            });
+
+            conversationList.on('click' , '.conversation-option' , function(){
+                conversationId.val( $(this).attr('data-id') );
+                closeConversationPanel();
+                updateConversationInfo();
+            });
+
+            $(window).on('resize scroll' , closeConversationPanel );
+            $('.layout-complete').on('scroll' , closeConversationPanel );
+
+            $(document).on('click' , function( event ){
+                if( $(event.target).closest('.conversation-picker').length === 0 ){
+                    closeConversationPanel();
+                }
             });
 
             conversationId.on('input' , updateConversationInfo );
@@ -112,9 +177,13 @@
             $('.channel').change(function(){
                 let self = $(this);
                 let isConversation = self.val() === conversation_channel_placeholder_name;
-                self.parents('tr').find('.conversation-id, .conversation-search').prop('disabled' , !isConversation );
+                self.parents('tr').find('.conversation-id, .conversation-toggle').prop('disabled' , !isConversation );
                 if( isConversation ){
                     loadConversations();
+                } else {
+                    // Bei einem Channel als Ziel gibt es keine Unterhaltung – alte ID nicht stehen lassen
+                    conversationId.val('');
+                    closeConversationPanel();
                 }
                 updateConversationInfo();
             }).change();
@@ -128,7 +197,8 @@
             <input type="hidden" name="_token" value="{{ csrf_token('events') }}">
             <p class="text-center">Verfügbare Platzhalter: {{ replacementKeys|join(', ') }}</p>
 
-            <table class="object-center">
+            <div class="layout-complete">
+            <table class="object-center events-table">
                 <thead>
                 <tr>
                     <th>Aktionen</th>
@@ -176,8 +246,12 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div>
-                            <input type="text" class="conversation-search" placeholder="Unterhaltung suchen …">
+                        <div class="conversation-picker">
+                            <button type="button" class="conversation-toggle">Unterhaltung wählen …</button>
+                            <div class="conversation-panel" hidden>
+                                <input type="search" class="conversation-filter" placeholder="Nach Namen filtern …" autocomplete="off">
+                                <ul class="conversation-list"></ul>
+                            </div>
                         </div>
                         <div>
                             <input type="text" class="conversation-id" name="channel_payload_conversation_id" placeholder="ID der Konversation" value="{{ current_entry.getConversationIdFromPayload() }}">
@@ -224,6 +298,7 @@
                 {% endfor %}
                 </tbody>
             </table>
+            </div>
         </form>
 
 {% endblock %}
