@@ -250,6 +250,25 @@ class StashcatMediator
     }
 
     /**
+     * Anzeigename einer Unterhaltung: Namen der Mitglieder ohne den eigenen Account, alphabetisch sortiert
+     * @param Conversation $conversation
+     * @return string
+     * @throws \Exception
+     */
+    public function getConversationLabel( Conversation $conversation ): string
+    {
+        $ownUserId = strval( $this->getLoginResponse()?->getUserId() );
+        $names = [];
+        foreach( $conversation->getMembers() AS $member ){
+            if( strval( $member->getId() ) !== $ownUserId ){
+                $names[] = trim( $member->getCompleteName() );
+            }
+        }
+        sort( $names , SORT_NATURAL | SORT_FLAG_CASE );
+        return empty( $names ) ? '(nur eigener Account)' : implode( '; ' , $names );
+    }
+
+    /**
      * Neue Unterhaltung mit den angegebenen Personen anlegen (eigener Account wird automatisch ergänzt).
      * Ablauf wie im Web-Client: zufälliger Schlüssel, für jedes Mitglied verschlüsselt und signiert.
      * Setzt login() und decryptPrivateKey() voraus; der Signaturschlüssel wird bei Bedarf nachgeladen.

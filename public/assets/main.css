@@ -204,6 +204,20 @@ span.app-version {
     padding-left: 1.25rem;
 }
 
+/* Auswahl einer Unterhaltung im Events-Formular */
+.conversation-info {
+    font-size: 0.7em;
+    max-width: 16rem;
+    margin: 0 auto;
+}
+
+.ui-autocomplete {
+    max-height: 20rem;
+    max-width: 32rem;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
 @media print {
     .app-version-line {
         display: none;

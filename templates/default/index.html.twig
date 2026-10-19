@@ -43,9 +43,80 @@
                 }
             }).change();
 
+            // Unterhaltungen: Die Suche füllt nur das ID-Feld, das ID-Feld selbst wird gespeichert.
+            // So bleibt eine gespeicherte ID erhalten, auch wenn die Unterhaltung nicht (mehr) in der Liste steht.
+            let conversations = null;
+            let conversationsState = 'idle';
+            let conversationId = $('.conversation-id');
+            let conversationSearch = $('.conversation-search');
+            let conversationInfo = $('.conversation-info');
+
+            function updateConversationInfo(){
+                let id = $.trim( conversationId.val() );
+                if( conversationId.prop('disabled') ){
+                    conversationInfo.text('');
+                } else if( conversationsState === 'error' ){
+                    conversationInfo.text('Unterhaltungen konnten nicht geladen werden – ID von Hand eintragen.');
+                } else if( conversations === null ){
+                    conversationInfo.text('Lade Unterhaltungen …');
+                } else if( id === '' ){
+                    conversationInfo.text('');
+                } else {
+                    let found = conversations.find( function( conversation ){ return conversation.id === id; } );
+                    conversationInfo.text( found ? found.label : 'Unterhaltung nicht in der Liste der offenen Unterhaltungen (archiviert?) – die ID bleibt erhalten.' );
+                }
+            }
+
+            function loadConversations(){
+                if( conversationsState !== 'idle' ){
+                    return;
+                }
+                conversationsState = 'loading';
+                $.getJSON( '{{ path('events_conversations') }}' )
+                    .done(function( result ){
+                        conversations = result.conversations || [];
+                        conversationsState = 'loaded';
+                    })
+                    .fail(function(){
+                        conversationsState = 'error';
+                    })
+                    .always( updateConversationInfo );
+            }
+
+            conversationSearch.autocomplete({
+                minLength: 0,
+                source: function( request , response ){
+                    let terms = request.term.toLowerCase().split(/\s+/).filter(function( term ){ return term !== ''; });
+                    response( ( conversations || [] ).filter(function( conversation ){
+                        let label = conversation.label.toLowerCase();
+                        return terms.every(function( term ){ return label.indexOf( term ) !== -1; });
+                    }).map(function( conversation ){
+                        return { label: conversation.label , value: conversation.id };
+                    }) );
+                },
+                focus: function(){
+                    return false;
+                },
+                select: function( event , ui ){
+                    conversationId.val( ui.item.value );
+                    conversationSearch.val('');
+                    updateConversationInfo();
+                    return false;
+                }
+            }).on('focus' , function(){
+                $(this).autocomplete('search' , $(this).val() );
+            });
+
+            conversationId.on('input' , updateConversationInfo );
+
             $('.channel').change(function(){
                 let self = $(this);
-                self.parents('tr').find('.conversation-id').prop('disabled' , !( self.val() === conversation_channel_placeholder_name ) );
+                let isConversation = self.val() === conversation_channel_placeholder_name;
+                self.parents('tr').find('.conversation-id, .conversation-search').prop('disabled' , !isConversation );
+                if( isConversation ){
+                    loadConversations();
+                }
+                updateConversationInfo();
             }).change();
         } );
     </script>
@@ -106,8 +177,12 @@
                             </select>
                         </div>
                         <div>
+                            <input type="text" class="conversation-search" placeholder="Unterhaltung suchen …">
+                        </div>
+                        <div>
                             <input type="text" class="conversation-id" name="channel_payload_conversation_id" placeholder="ID der Konversation" value="{{ current_entry.getConversationIdFromPayload() }}">
                         </div>
+                        <div class="conversation-info"></div>
                     </td>
                     <td>
                         <textarea name="text" class="thw-textarea">{{ current_entry.text ?? '' }}</textarea>

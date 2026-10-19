@@ -21,6 +21,7 @@ use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Filesystem\Path;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -108,6 +109,34 @@ class EventsController extends AbstractController
         return $this->redirectToRoute('events_log');
     }
 
+    /**
+     * Offene (nicht archivierte) Unterhaltungen für die Auswahl im Formular – wird per AJAX geladen,
+     * damit /events auch ohne Erreichbarkeit von Hermine funktioniert. Nur lesend.
+     */
+    #[Route('/events/conversations', name: 'events_conversations', methods: [ 'GET' ])]
+    public function conversations( AppService $app , DatabaseLogger $logger ): JsonResponse
+    {
+        try {
+            $stashcatMediator = $app->getMediator();
+            if( !$stashcatMediator->login() ){
+                throw new \Exception('Login failed!');
+            }
+            $stashcatMediator->loadConversations();
+
+            $conversations = [];
+            foreach( $stashcatMediator->getLoadedConversations() AS $conversation ){
+                $conversations[] = [
+                    'id' => strval( $conversation->getId() ),
+                    'label' => $stashcatMediator->getConversationLabel( $conversation )
+                ];
+            }
+            return $this->json( [ 'status' => 'OK' , 'conversations' => $conversations ] );
+        } catch( \Throwable $e ){
+            $logger->error('Loading conversations failed' , [ 'error' => $e->getMessage() ] );
+            return $this->json( [ 'status' => 'ERROR' ] , Response::HTTP_INTERNAL_SERVER_ERROR );
+        }
+    }
+
     #[Route('/events', name: 'save_event', methods: [ 'POST' ] )]
     public function saveEvent( Request $request , ManagerRegistry $doctrine , AppService $app, DatabaseLogger $logger, #[CurrentUser] ?User $user , Kernel $kernel ): RedirectResponse
     {
@@ -137,7 +166,11 @@ class EventsController extends AbstractController
                         throw new \Exception('Channel-Name not allowed!');
                     }
 
-                    $entity->setConversationIdToPayload( $request->get('channel_payload_conversation_id') );
+                    $conversationId = trim( strval( $request->get('channel_payload_conversation_id') ) );
+                    if( $entity->getChannelTarget() === $app->getAppConfig()->getConversationChannelPlaceholderName() && $conversationId === '' ){
+                        throw new BadRequestHttpException('Bitte eine Unterhaltung auswählen oder eine ID eintragen!');
+                    }
+                    $entity->setConversationIdToPayload( $conversationId === '' ? null : $conversationId );
                     $entity->setStartDateTime( $date );
 
                     if( $request->get('resetDue' ) == 1 ){
