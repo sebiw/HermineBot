@@ -4,6 +4,8 @@ Alle wesentlichen Änderungen am Hermine-Bot werden in dieser Datei festgehalten
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-19
+
 ### Hinzugefügt
 - Beim Planen einer Nachricht an eine Unterhaltung lässt sich die Unterhaltung über die Namen der Teilnehmer suchen und auswählen; die Nummer der Unterhaltung kann weiterhin von Hand eingetragen werden und bleibt auch bei archivierten Unterhaltungen erhalten.
 
