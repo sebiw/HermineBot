@@ -9,9 +9,9 @@
 {% endblock %}
 
 {% block nav %}
-    <a href="{{ path('events') }}" class="{{ app.request.get('_route') == 'events' ? 'active' }}">Events Admin</a>
-    <a href="{{ path('execute_events') }}" class="{{ app.request.get('_route') == 'execute_events' ? 'active' }}">Starte Event-Ausführer manuell</a>
-    <a href="{{ path('events_log') }}" class="{{ app.request.get('_route') == 'events_log' ? 'active' }}">Logs</a>
+    <a href="{{ path('events') }}" class="{{ app.current_route == 'events' ? 'active' }}">Events Admin</a>
+    <a href="{{ path('execute_events') }}" class="{{ app.current_route == 'execute_events' ? 'active' }}">Starte Event-Ausführer manuell</a>
+    <a href="{{ path('events_log') }}" class="{{ app.current_route == 'events_log' ? 'active' }}">Logs</a>
     {{ parent() }}
 {% endblock %}
 

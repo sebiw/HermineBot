@@ -4,6 +4,7 @@ namespace App\Twig;
 
 use App\Service\AppService;
 use Twig\Environment;
+use Twig\Extension\CoreExtension;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFilter;
 
@@ -32,7 +33,7 @@ class AppExtension extends AbstractExtension {
             if( $format === null ){
                 $format = $this->appService->getAppConfig()->getDateFormat() . ' - ' . $this->appService->getAppConfig()->getTimeFormat();
             }
-            return twig_date_format_filter( $this->twig , $date , $format , $timezone );
+            return $this->twig->getExtension( CoreExtension::class )->formatDate( $date , $format , $timezone );
         }
         return "";
     }

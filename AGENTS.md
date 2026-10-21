@@ -1,6 +1,6 @@
 # Hermine-Bot
 
-Symfony-6.1-Anwendung (PHP ≥ 8.1), die automatisiert Nachrichten in Channels und Unterhaltungen des Messengers Stashcat/Hermine (THW) verschickt – über einen normalen Benutzer-Account. Hobby-Projekt ohne Bezug zur stashcat GmbH.
+Symfony-7.4-LTS-Anwendung (PHP 8.5, Abhängigkeiten kompatibel ab PHP 8.2), die automatisiert Nachrichten in Channels und Unterhaltungen des Messengers Stashcat/Hermine (THW) verschickt – über einen normalen Benutzer-Account. Hobby-Projekt ohne Bezug zur stashcat GmbH.
 
 **Das Repo ist öffentlich** – keine Zugangsdaten, Produktiv-URLs, Hostnamen, Server-Pfade, Channel-Inhalte oder personenbezogenen Daten committen.
 
@@ -101,26 +101,27 @@ Agenten committen, taggen und pushen in keinem der drei Repos eigenständig – 
 
 ## Lokale Entwicklung
 
-- Benötigt PHP 8.1 mit Webserver (Document-Root `public/`) und MySQL/MariaDB mit den Datenbanken `hermine_bot` und `messages` (Queue, ggf. gemeinsam mit dem StAN-Manager). Einrichtung siehe `readme.md`.
+- Benötigt PHP 8.5 (mindestens 8.2) mit Webserver (Document-Root `public/`) und MySQL/MariaDB mit den Datenbanken `hermine_bot` und `messages` (Queue, ggf. gemeinsam mit dem StAN-Manager). Einrichtung siehe `readme.md`.
 - Seiten: `/` Login, `/events` geplante Nachrichten, `/events/log` Log.
 - Konsole:
   ```
-  php bin/console daemon:tick           # fällige Events verarbeiten
-  php bin/console messenger:consume -q  # Nachrichten aus der Queue verarbeiten
-  php bin/console hermine:send-message -c <Channel> -m "<Text>"
+  php8.5 bin/console daemon:tick           # fällige Events verarbeiten
+  php8.5 bin/console messenger:consume -q  # Nachrichten aus der Queue verarbeiten
+  php8.5 bin/console hermine:send-message -c <Channel> -m "<Text>"
   ```
 - **Achtung – lokal gibt es kein Test-Postfach wie Mailpit:** Stehen in `config/legacy/env.api.php` echte Zugangsdaten, verschicken `daemon:tick`, `/events/execute`, der „Trigger“-Button in `/events`, `messenger:consume`, `hermine:send-message` und `/api/send-message` **echte Nachrichten in echte Hermine-Channels** über den persönlichen Account. Auch `/query` meldet sich bei Hermine an und liest echte Nachrichten.
   - **Einzig der in der privaten Betriebsdoku genannte Test-Channel (lokal in `test_channel` hinterlegt) darf ohne Rückfrage beschrieben werden.** Kanalnamen gehören in die Konfiguration, nicht in Code oder Repo. Alle anderen Channels, Gruppen und Unterhaltungen sind echt – niemals dorthin senden, auch nicht zum Testen.
   - Lokal `allowed_channel` auf diesen Test-Channel einschränken und vor jedem Lauf prüfen, dass keine fälligen Events bzw. Queue-Nachrichten oder Dateien in `MESSAGE_FILES_IN` für andere Ziele anstehen (`daemon:tick` und `messenger:consume` verarbeiten *alles*, was fällig ist). Achtung: Unterhaltungen sind über den Platzhalter immer erlaubt.
   - Agenten führen sendende Befehle nur nach ausdrücklicher Freigabe aus.
-  - Gefahrlos ohne Hermine-Zugriff: `php bin/console lint:twig templates`, `lint:container`, `debug:router`, `doctrine:schema:validate`, `php -l`.
+  - Gefahrlos ohne Hermine-Zugriff: `php8.5 bin/console lint:twig templates`, `lint:container`, `debug:router`, `doctrine:schema:validate`, `debug:container --deprecations`, `php8.5 -l`.
+  - Lokal sind PHP 8.1 und 8.5 installiert; `php` kann noch auf 8.1 zeigen – deshalb `php8.5` ausdrücklich aufrufen.
 - Dateien sind im Repo mit LF gespeichert.
-- Migrationen: `php bin/console doctrine:migrations:migrate`
+- Migrationen: `php8.5 bin/console doctrine:migrations:migrate`
 
 ## Betrieb
 
 - Läuft auch auf einfachem Webspace ohne dauerhafte Prozesse: zwei Cronjobs, jeweils jede Minute, `php <Projektverzeichnis>/bin/console messenger:consume -q` und `php <Projektverzeichnis>/bin/console daemon:tick`.
-- Bei jedem Update: `composer install`, `bin/console cache:clear`, `bin/console doctrine:migrations:migrate`; das Submodule `HermineBotCom` mit aktualisieren. Migrationen abwärtskompatibel halten – Cronjobs können zwischen Code-Update und Migration laufen.
+- Bei jedem Update: `composer install`, `bin/console cache:clear`, (alles mit dem PHP-8.5-Binary; beim Sprung von Symfony 6.1 auf 7.4 vorher `var/cache/prod` löschen, weil der alte kompilierte Container mit 7.4 nicht mehr lädt), `bin/console doctrine:migrations:migrate`; das Submodule `HermineBotCom` mit aktualisieren. Migrationen abwärtskompatibel halten – Cronjobs können zwischen Code-Update und Migration laufen.
 - Konkrete Umgebungen (Server, URLs, Pfade, Zugangsdaten, Bereitstellungsweg) gehören nicht in dieses öffentliche Repo.
 - Agenten committen, taggen und pushen nur nach ausdrücklicher Freigabe (siehe „Commit, Tag und Push“) und lösen keine Deployments aus.
 - Der Hinweis im `readme.md` auf `private/runner.php` ist veraltet.
@@ -148,7 +149,7 @@ Agenten committen, taggen und pushen in keinem der drei Repos eigenständig – 
 
 ## Hinweise
 
-- Technik-Stand: Symfony 6.1, PHP 8.1, `sensio/framework-extra-bundle` für `#[IsGranted]`, Doctrine-Attribute – Updates gemeinsam mit dem Verbund planen (StAN-Manager-Issue #8).
+- Technik-Stand: Symfony 7.4 LTS, PHP 8.5, Doctrine ORM 3 / DBAL 4, `#[IsGranted]` von Symfony (Security-Attribut), Doctrine-Attribute. Request-Parameter über `$request->query`/`request`/`attributes` lesen (`$request->get()` ist abgekündigt), Sortierung mit `\SortDirection`. Ziel: keine Deprecations. Updates gemeinsam mit dem Verbund planen.
 - Code-Stil: Leerzeichen innerhalb von Klammern (`foo( $a , $b )`), Getter/Setter mit PHPDoc, Konstruktor-Injection mit `#[Autowire(service: 'logger.…')]` für die DB-Logger. Konsolenbefehle werden aus Controllern/Handlern über `new Application( $kernel )` + `ArrayInput` aufgerufen.
 - Commit-Messages bisher im Muster `* ADD …`, `* MOD …`; künftig wie im StAN-Manager `ADD …`, `FIX …`, `MOD …`.
 - Sprache der UI und Kommentare: Deutsch.

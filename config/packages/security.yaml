@@ -16,7 +16,7 @@ security:
             logout:
                 path: app_logout
                 # Logout nur mit Token (logout_path() im Template hängt es an)
-                csrf_token_generator: security.csrf.token_manager
+                enable_csrf: true
             form_login:
                 enable_csrf: true
                 login_path: app_login

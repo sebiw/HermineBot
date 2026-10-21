@@ -41,7 +41,7 @@ class Daemon extends Command
      * @param Kernel $kernel
      * @param string|null $name
      */
-    public function __construct(  AppService $app , ManagerRegistry $doctrine , #[Autowire(service: 'logger.events')] DatabaseLogger $logger, Kernel $kernel , string $name = null)
+    public function __construct(  AppService $app , ManagerRegistry $doctrine , #[Autowire(service: 'logger.events')] DatabaseLogger $logger, Kernel $kernel , ?string $name = null)
     {
         parent::__construct($name);
         $this->doctrine = $doctrine;
@@ -53,7 +53,7 @@ class Daemon extends Command
     /**
      * @return void
      */
-    protected function configure()
+    protected function configure(): void
     {
         parent::configure();
         $this->addOption('context' , '-x' , InputOption::VALUE_OPTIONAL , 'Context of this Call' , 'Console' );

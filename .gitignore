@@ -17,4 +17,8 @@
 .phpunit.result.cache
 ###< phpunit/phpunit ###
 
-!/**/.gitkeep
+!/**/.gitkeep/.phpunit.cache/
+
+###> symfony/framework-bundle (config reference) ###
+/config/reference.php
+###< symfony/framework-bundle (config reference) ###

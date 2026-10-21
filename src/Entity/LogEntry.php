@@ -23,7 +23,7 @@ class LogEntry
     #[ORM\Column(type : Types::TEXT,  nullable : false)]
     private string $message;
 
-    #[ORM\Column(type : Types::ARRAY,  nullable : true)]
+    #[ORM\Column(type : Types::JSON,  nullable : true)]
     private array $context;
 
     #[ORM\Column(type : Types::DATETIME_IMMUTABLE , nullable: false )]

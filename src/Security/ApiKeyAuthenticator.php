@@ -23,12 +23,12 @@ class ApiKeyAuthenticator extends AbstractAuthenticator
      */
     public function supports(Request $request): ?bool
     {
-        return str_starts_with( (string) $request->get('_route') , 'api_');
+        return str_starts_with( (string) $request->attributes->get('_route') , 'api_');
     }
 
     public function authenticate(Request $request): Passport
     {
-        $jsonRequest = (string) $request->getContentType();
+        $jsonRequest = (string) $request->getContentTypeFormat();
         if (!str_contains( $jsonRequest , 'json')) {
             throw new CustomUserMessageAuthenticationException(sprintf('No API token provided: Content-Type "%s" not supported!' , $jsonRequest ));
         }

@@ -34,7 +34,7 @@ class SendMessage extends Command
      * @param Kernel $kernel
      * @param string|null $name
      */
-    public function __construct(  AppService $app , ManagerRegistry $doctrine , #[Autowire(service: 'logger.events')] DatabaseLogger $logger , Kernel $kernel , string $name = null)
+    public function __construct(  AppService $app , ManagerRegistry $doctrine , #[Autowire(service: 'logger.events')] DatabaseLogger $logger , Kernel $kernel , ?string $name = null)
     {
         $this->doctrine = $doctrine;
         $this->logger = $logger;
@@ -43,7 +43,7 @@ class SendMessage extends Command
         parent::__construct($name);
     }
 
-    protected function configure()
+    protected function configure(): void
     {
         parent::configure();
         $this->addOption('context' , '-x' , InputOption::VALUE_OPTIONAL , 'Context of this Call' , 'Console' );

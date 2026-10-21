@@ -13,7 +13,7 @@ use App\Service\AppService;
 use Doctrine\ORM\Tools\Pagination\Paginator;
 use Doctrine\Persistence\ManagerRegistry;
 use Psr\Log\LogLevel;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Command\Command;
@@ -41,10 +41,10 @@ class EventsController extends AbstractController
         $events = $manager->getRepository(Event::class )
             ->createQueryBuilder('entries')
             ->select('entries')
-            ->orderBy('entries.dueDateTime' , 'ASC')
+            ->orderBy('entries.dueDateTime' , \SortDirection::Ascending)
             ->getQuery()->getResult();
 
-        if( ( $id = $request->get('id') ) === null ){
+        if( ( $id = $request->query->get('id') ) === null ){
             $entity = new Event();
         } else if( ( $entity = $manager->getRepository( Event::class )->find( $id ) ) === null ){
             throw new \Exception('Entity not found!');
@@ -72,13 +72,13 @@ class EventsController extends AbstractController
         $manager = $doctrine->getManagerForClass( LogEntry::class );
 
         $itemsPerPage = 100;
-        $currentPage = intval( $request->get('page' , 1 ) ) ;
+        $currentPage = intval( $request->query->get('page' , 1 ) ) ;
         $offset = ( $currentPage - 1 ) * $itemsPerPage;
 
         $logsQueryBuilder = $manager->getRepository(LogEntry::class )
             ->createQueryBuilder('log')
             ->select('log')
-            ->orderBy('log.createdDateTime' , 'DESC')
+            ->orderBy('log.createdDateTime' , \SortDirection::Descending)
             ->setFirstResult($offset)
             ->setMaxResults($itemsPerPage);
 
@@ -152,48 +152,48 @@ class EventsController extends AbstractController
 
         $manager = $doctrine->getManagerForClass( Event::class );
 
-        switch( $request->get('action') ){
+        switch( $request->request->get('action') ){
             case 'save':
             case 'add' :
 
-                    if( ( $id = $request->get('id') )  == null ){
+                    if( ( $id = $request->request->get('id') )  == null ){
                         $entity = new Event();
                     } else if( ( $entity = $manager->getRepository( Event::class )->find( $id ) ) === null ){
                         throw new \Exception('Entity not found!');
                     }
 
                     $now = new \DateTime();
-                    $date = \DateTime::createFromFormat( $app->getAppConfig()->getDateFormat() . '-' . $app->getAppConfig()->getTimeFormat() , $request->get('date') . '-' . $request->get('time') );
+                    $date = \DateTime::createFromFormat( $app->getAppConfig()->getDateFormat() . '-' . $app->getAppConfig()->getTimeFormat() , $request->request->get('date') . '-' . $request->request->get('time') );
                     if( $date === false ){
                         throw new BadRequestHttpException('Startdatum oder -uhrzeit ungültig!');
                     }
 
-                    if( in_array( $request->get('channel') , $app->getAppConfig()->getAllowedChannelNames() ) ){
-                        $entity->setChannelTarget( $request->get('channel') );
+                    if( in_array( $request->request->get('channel') , $app->getAppConfig()->getAllowedChannelNames() ) ){
+                        $entity->setChannelTarget( $request->request->get('channel') );
                     } else {
                         throw new \Exception('Channel-Name not allowed!');
                     }
 
-                    $conversationId = trim( strval( $request->get('channel_payload_conversation_id') ) );
+                    $conversationId = trim( strval( $request->request->get('channel_payload_conversation_id') ) );
                     if( $entity->getChannelTarget() === $app->getAppConfig()->getConversationChannelPlaceholderName() && $conversationId === '' ){
                         throw new BadRequestHttpException('Bitte eine Unterhaltung auswählen oder eine ID eintragen!');
                     }
                     $entity->setConversationIdToPayload( $conversationId === '' ? null : $conversationId );
                     $entity->setStartDateTime( $date );
 
-                    if( $request->get('resetDue' ) == 1 ){
+                    if( $request->request->get('resetDue' ) == 1 ){
                         $entity->setDueDateTime( $date );
                     }
 
-                    $entity->setText( $request->get('text') );
+                    $entity->setText( $request->request->get('text') );
 
-                    if( ( $interval = $request->get('interval') ) !== null && !empty( $interval ) ){
+                    if( ( $interval = $request->request->get('interval') ) !== null && !empty( $interval ) ){
 
                         if( !in_array( $interval , array_keys( $app->getAppConfig()->getAllowedIntervals() ) ) ){
                             throw new \Exception('Interval not allowed!');
                         }
 
-                        if( ( $untilDate = $request->get('untilDate') ) !== null && !empty( $untilDate ) && ( $untilTime = $request->get('untilTime') ) !== null && !empty( $untilTime )  ){
+                        if( ( $untilDate = $request->request->get('untilDate') ) !== null && !empty( $untilDate ) && ( $untilTime = $request->request->get('untilTime') ) !== null && !empty( $untilTime )  ){
                             $untilDate = \DateTime::createFromFormat( $app->getAppConfig()->getDateFormat() . '-' . $app->getAppConfig()->getTimeFormat() , $untilDate . '-' . $untilTime );
                             if( $untilDate === false ){
                                 throw new BadRequestHttpException('Enddatum oder -uhrzeit ungültig!');
@@ -216,7 +216,7 @@ class EventsController extends AbstractController
                     // Erneutes Speichern gibt ein nach Fehlversuchen gesperrtes Event wieder frei
                     $entity->resetFailedAttempts();
 
-                    $logger->log( LogLevel::NOTICE , sprintf('%s Event' , strtoupper( $request->get('action') )) , [
+                    $logger->log( LogLevel::NOTICE , sprintf('%s Event' , strtoupper( $request->request->get('action') )) , [
                         'text' => $entity->getText() ,
                         'interval' => $entity->getDateInterval() ,
                         'startDate' => $entity->getStartDateTime() ,
@@ -227,19 +227,19 @@ class EventsController extends AbstractController
                     $manager->flush();
                 break;
             case 'delete' :
-                if( ( $id = $request->get('id') )  !== null && ( $entity = $manager->getRepository( Event::class )->find( $id ) ) !== null ){
+                if( ( $id = $request->request->get('id') )  !== null && ( $entity = $manager->getRepository( Event::class )->find( $id ) ) !== null ){
                     $manager->remove( $entity );
                     $manager->flush();
                 }
                 break;
             case 'edit' :
-                if( ( $id = $request->get('id') ) !== null ){
+                if( ( $id = $request->request->get('id') ) !== null ){
                     return $this->redirectToRoute('events' , ['id' => $id ] );
                 }
                 break;
             case 'trigger' :
                 /* @var $entity Event */
-                if( ( $id = $request->get('id') )  !== null && ( $entity = $manager->getRepository( Event::class )->find( $id ) ) !== null ){
+                if( ( $id = $request->request->get('id') )  !== null && ( $entity = $manager->getRepository( Event::class )->find( $id ) ) !== null ){
 
                     $application = new Application( $kernel );
                     $application->setAutoExit(false);

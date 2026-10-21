@@ -5,7 +5,7 @@ namespace App\Controller;
 use App\Core\DatabaseLogger;
 use App\Entity\User;
 use Doctrine\Persistence\ManagerRegistry;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Console\Command\Command;
@@ -32,9 +32,9 @@ class ApiController extends AbstractController
 
         $content = json_decode( $request->getContent() , true );
 
-        $channel = $request->get('channel') ?? $content['channel'] ?? null;
-        $conversationId = $request->get('conversationId') ?? $content['conversationId'] ?? null;
-        $message = $request->get('message') ?? $content['message'] ?? null;
+        $channel = $request->query->get('channel') ?? $request->request->get('channel') ?? $content['channel'] ?? null;
+        $conversationId = $request->query->get('conversationId') ?? $request->request->get('conversationId') ?? $content['conversationId'] ?? null;
+        $message = $request->query->get('message') ?? $request->request->get('message') ?? $content['message'] ?? null;
 
         if( empty( $message ) ){
             return $this->errorResponse('Message missing!' , Response::HTTP_BAD_REQUEST );
