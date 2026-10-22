@@ -10,7 +10,7 @@ Nebst dem üblichen `composer install`
 * `DATABASE_URL` an die eigene Datenbank anpassen
 * Kopiere Konfigurationsdateien aus `/config_examples` in `/config/legacy` kopieren und den eigenen Bedürfnissen anpassen.
 * Führe `doctrine:migrations:migrate` aus
-* Cron-Jobs einrichten (jeweils jede Minute): `php bin/console daemon:tick` und `php bin/console messenger:consume -q` (siehe unten).
+* Cron-Jobs einrichten (jeweils jede Minute): `php bin/console daemon:tick` und `php bin/console messenger:consume async -q` (siehe unten).
 
 ## Installation für Einsteiger
 Die Installation wird in diesem Beispiel auf einem Debian 12 und eigener MySQL-DB durchgeführt.
@@ -125,7 +125,7 @@ Die Installation wird in diesem Beispiel auf einem Debian 12 und eigener MySQL-D
 ## Cron-Jobs einrichten
 Ohne Cron-Jobs verschickt der Bot keine geplanten Nachrichten. `messenger:consume` beendet sich automatisch, sobald die Warteschlange leer ist. Als Webserver-Benutzer einrichten (`sudo crontab -u www-data -e`):\
 `* * * * * php /opt/HermineBot/bin/console daemon:tick`\
-`* * * * * php /opt/HermineBot/bin/console messenger:consume -q`
+`* * * * * php /opt/HermineBot/bin/console messenger:consume async -q`
 
 ## Web-Benutzer anlegen
 ### Passwort-Hash erstellen

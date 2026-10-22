@@ -106,7 +106,7 @@ Agenten committen, taggen und pushen in keinem der drei Repos eigenständig – 
 - Konsole:
   ```
   php8.5 bin/console daemon:tick           # fällige Events verarbeiten
-  php8.5 bin/console messenger:consume -q  # Nachrichten aus der Queue verarbeiten
+  php8.5 bin/console messenger:consume async -q  # Nachrichten aus der Queue verarbeiten
   php8.5 bin/console hermine:send-message -c <Channel> -m "<Text>"
   ```
 - **Achtung – lokal gibt es kein Test-Postfach wie Mailpit:** Stehen in `config/legacy/env.api.php` echte Zugangsdaten, verschicken `daemon:tick`, `/events/execute`, der „Trigger“-Button in `/events`, `messenger:consume`, `hermine:send-message` und `/api/send-message` **echte Nachrichten in echte Hermine-Channels** über den persönlichen Account. Auch `/query` meldet sich bei Hermine an und liest echte Nachrichten.
@@ -120,7 +120,7 @@ Agenten committen, taggen und pushen in keinem der drei Repos eigenständig – 
 
 ## Betrieb
 
-- Läuft auch auf einfachem Webspace ohne dauerhafte Prozesse: zwei Cronjobs, jeweils jede Minute, `php <Projektverzeichnis>/bin/console messenger:consume -q` und `php <Projektverzeichnis>/bin/console daemon:tick`.
+- Läuft auch auf einfachem Webspace ohne dauerhafte Prozesse: zwei Cronjobs, jeweils jede Minute, `php <Projektverzeichnis>/bin/console messenger:consume async -q` (Transport `async` angeben – es gibt zusätzlich `failed`, ohne Angabe bricht der Befehl mit `-q` ab) und `php <Projektverzeichnis>/bin/console daemon:tick`.
 - Bei jedem Update: `composer install`, `bin/console cache:clear`, (alles mit dem PHP-8.5-Binary; beim Sprung von Symfony 6.1 auf 7.4 vorher `var/cache/prod` löschen, weil der alte kompilierte Container mit 7.4 nicht mehr lädt), `bin/console doctrine:migrations:migrate`; das Submodule `HermineBotCom` mit aktualisieren. Migrationen abwärtskompatibel halten – Cronjobs können zwischen Code-Update und Migration laufen.
 - Konkrete Umgebungen (Server, URLs, Pfade, Zugangsdaten, Bereitstellungsweg) gehören nicht in dieses öffentliche Repo.
 - Agenten committen, taggen und pushen nur nach ausdrücklicher Freigabe (siehe „Commit, Tag und Push“) und lösen keine Deployments aus.
