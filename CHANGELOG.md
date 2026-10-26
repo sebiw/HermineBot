@@ -4,6 +4,8 @@ Alle wesentlichen Änderungen am Hermine-Bot werden in dieser Datei festgehalten
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-10-26
+
 ### Hinzugefügt
 - Neue Seite „Benutzer“: Administratoren und API-Zugänge lassen sich in der Oberfläche anlegen, bearbeiten und löschen; der Schlüssel eines API-Zugangs wird beim Anlegen erzeugt, einmal zum Kopieren angezeigt und lässt sich jederzeit neu erzeugen.
 
