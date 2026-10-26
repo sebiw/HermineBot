@@ -15,9 +15,10 @@
 ###> phpunit/phpunit ###
 /phpunit.xml
 .phpunit.result.cache
+/.phpunit.cache/
 ###< phpunit/phpunit ###
 
-!/**/.gitkeep/.phpunit.cache/
+!/**/.gitkeep
 
 ###> symfony/framework-bundle (config reference) ###
 /config/reference.php

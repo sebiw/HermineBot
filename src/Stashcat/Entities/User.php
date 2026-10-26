@@ -74,6 +74,22 @@ class User extends DefaultEntity {
     }
 
     /**
+     * Vorname, Nachname ohne Dienststelle und Dienststelle (aus „Nachname (Dienststelle)“) – tolerant wie getDisplayName()
+     * @return array{first_name: string, last_name: string, department: string|null}
+     */
+    public function getNameParts(): array
+    {
+        $firstName = $this->resultKeyExist('first_name') ? trim( strval( $this->getResults('first_name') ) ) : '';
+        $lastName = $this->resultKeyExist('last_name') ? trim( strval( $this->getResults('last_name') ) ) : '';
+        $parts = THWStashcatConventions::extractNameParts( $lastName );
+        return [
+            'first_name' => $firstName,
+            'last_name' => trim( $parts['last_name'] ?? $lastName ),
+            'department' => isset( $parts['department'] ) && trim( $parts['department'] ) !== '' ? trim( $parts['department'] ) : null
+        ];
+    }
+
+    /**
      * Name für Anzeigen – tolerant, gelöschte Accounts liefern z. B. keinen Vornamen
      * @return string
      */

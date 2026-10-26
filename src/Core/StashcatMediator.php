@@ -129,6 +129,15 @@ class StashcatMediator
     }
 
     /**
+     * ID of the own (bot) account, after login
+     */
+    public function getOwnUserId(): ?string
+    {
+        $id = $this->loginResponse?->getUserId();
+        return $id === null ? null : strval( $id );
+    }
+
+    /**
      * @return bool
      * @throws \Exception
      */
