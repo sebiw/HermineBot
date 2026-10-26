@@ -1,24 +1,30 @@
 <!DOCTYPE html>
-<html>
+<html lang="de">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}{{ title }} - {{ ov }}{% endblock %}</title>
+    <link rel="icon" href="/favicon.ico">
     {% block stylesheets %}
-        <link rel="stylesheet" type="text/css" href="/assets/main.css" media="screen">
         <link rel="stylesheet" href="/assets/npm-asset/jquery-ui/dist/themes/base/jquery-ui.min.css">
-        {{ encore_entry_link_tags('app') }}
+        <link rel="stylesheet" type="text/css" href="/assets/main.css">
     {% endblock %}
 
     {% block javascripts %}
         <script type="application/javascript" src="/assets/npm-asset/jquery/dist/jquery.min.js"></script>
         <script type="application/javascript" src="/assets/npm-asset/jquery-ui/dist/jquery-ui.min.js"></script>
         <script type="application/javascript" src="/assets/app.js"></script>
-        {{ encore_entry_script_tags('app') }}
     {% endblock %}
 </head>
 <body>
+    {# Navigation einmal rendern: ohne Einträge (Login) gibt es weder Leiste noch Menü-Knopf #}
+    {% set navigation %}{% block nav %}{% endblock %}{% endset %}
+    {% set navigation = navigation|trim %}
     <header class="primary">
-        {{ title }} - {{ ov }}
+        {% if navigation is not empty %}
+            <button type="button" class="nav-toggle no-print" aria-label="Menü" aria-controls="main-nav" aria-expanded="false">☰</button>
+        {% endif %}
+        <span class="header-title">{{ title }} - {{ ov }}</span>
     </header>
     <div class="wrapper">
 
@@ -33,11 +39,18 @@
             </div>
         </div>
 
-        <nav class="primary">
-            {% block nav %}{% endblock %}
-        </nav>
+        {% if navigation is not empty %}
+            <nav class="primary no-print" id="main-nav">
+                {{ navigation|raw }}
+            </nav>
+        {% endif %}
 
         <main class="primary">
+            {% for type, messages in app.flashes([ 'success' , 'warning' , 'error' ]) %}
+                {% for message in messages %}
+                    <div class="flash flash-{{ type }}" role="{{ type == 'error' ? 'alert' : 'status' }}">{{ message }}</div>
+                {% endfor %}
+            {% endfor %}
             {% block body %}{% endblock %}
         </main>
 

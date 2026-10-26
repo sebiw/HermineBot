@@ -2,12 +2,16 @@
 
 {% block body %}
 
-    <nav class="secondary">
-        <form method="post" action="{{ path('events_log_truncate') }}" class="inline-form">
+    <div class="form-page">
+        <div class="report-header">
+            <h2>Logs</h2>
+            <span class="report-subtitle">neueste zuerst</span>
+        </div>
+        <form method="post" action="{{ path('events_log_truncate') }}" class="page-actions">
             <input type="hidden" name="_token" value="{{ csrf_token('events_log_truncate') }}">
-            <button type="submit">Logs bereinigen</button>
+            <button type="submit" class="button-danger" onclick="return confirm('Alle Log-Einträge löschen, die älter als eine Woche sind?');">Logs bereinigen</button>
         </form>
-    </nav>
+    </div>
 
     <div class="layout-compact">
     <table class="object-center">

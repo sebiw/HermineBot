@@ -1,21 +1,19 @@
 {% extends 'base.html.twig' %}
 
-{% block stylesheets %}
-    {{ parent() }}
-{% endblock %}
-
-{% block javascripts %}
-    {{ parent() }}
-{% endblock %}
-
 {% block nav %}
-    <a href="{{ path('events') }}" class="{{ app.current_route == 'events' ? 'active' }}">Events Admin</a>
-    <a href="{{ path('execute_events') }}" class="{{ app.current_route == 'execute_events' ? 'active' }}">Starte Event-Ausführer manuell</a>
+    {% set eventsActive = app.current_route in [ 'events' , 'execute_events' , 'execute_events_run' ] %}
+    <a href="{{ path('events') }}" class="{{ eventsActive ? 'active' }}">Events</a>
     <a href="{{ path('events_log') }}" class="{{ app.current_route == 'events_log' ? 'active' }}">Logs</a>
-    {{ parent() }}
-{% endblock %}
-
-{% block body %}
+    {% if is_granted('ROLE_ADMIN') %}
+        <a href="{{ path('users') }}" class="{{ app.current_route starts with 'user' ? 'active' }}">Benutzer</a>
+    {% endif %}
+    {# Unterpunkte des aktiven Bereichs hinter den Reitern (eigene Zeile; am Handy per CSS unter den aktiven Reiter) #}
+    {% if eventsActive %}
+        <nav class="secondary">
+            <a href="{{ path('events') }}" class="{{ app.current_route == 'events' ? 'active' }}">Übersicht</a>
+            <a href="{{ path('execute_events') }}" class="{{ app.current_route starts with 'execute_events' ? 'active' }}">Event-Ausführer starten</a>
+        </nav>
+    {% endif %}
     {{ parent() }}
 {% endblock %}
 

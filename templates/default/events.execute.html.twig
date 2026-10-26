@@ -1,16 +1,29 @@
 {% extends 'base.loggedin.html.twig' %}
 
-{% block stylesheets %}
-    {{ parent() }}
-{% endblock %}
-
 {% block body %}
-    <form method="post" action="{{ path('execute_events_run') }}" class="text-center">
-        <input type="hidden" name="_token" value="{{ csrf_token('execute_events') }}">
-        <p>Verarbeitet alle fälligen geplanten Nachrichten sofort – wie der regelmäßige automatische Durchlauf.</p>
-        <button type="submit">Event-Ausführer jetzt starten</button>
-    </form>
-    {% if response is not null %}
-        <pre>{{ response }}</pre>
-    {% endif %}
+    <div class="wrapper layout-compact">
+        <div class="form-page">
+            <div class="report-header">
+                <h2>Event-Ausführer</h2>
+                <span class="report-subtitle">fällige Nachrichten sofort senden</span>
+            </div>
+            <form method="post" action="{{ path('execute_events_run') }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('execute_events') }}">
+                <fieldset class="form-section">
+                    <legend>Jetzt ausführen</legend>
+                    <p class="form-hint">Verarbeitet alle fälligen geplanten Nachrichten sofort – wie der regelmäßige automatische Durchlauf.</p>
+                </fieldset>
+                <div class="action-bar">
+                    <span></span>
+                    <button type="submit" class="button-primary">Event-Ausführer jetzt starten</button>
+                </div>
+            </form>
+            {% if response is not null %}
+                <fieldset class="form-section">
+                    <legend>Ausgabe</legend>
+                    <pre class="text-overflow-wrap-anywhere">{{ response }}</pre>
+                </fieldset>
+            {% endif %}
+        </div>
+    </div>
 {% endblock %}

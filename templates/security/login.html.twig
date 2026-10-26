@@ -2,7 +2,12 @@
 
 {% block title %}{{ title }} - {{ ov }} - Log in!{% endblock %}
 
+{% block stylesheets %}
+    {{ parent() }}
+{% endblock %}
+
 {% block body %}
+    {{ parent() }}
     <div class="text-center">
         <form method="post" action="{{ path('app_login') }}">
             {% if error %}
@@ -23,7 +28,7 @@
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
                 <input type="hidden" name="_target_path" value="{{ path('events') }}"/>
 
-                <button class="btn btn-lg btn-primary" type="submit">
+                <button class="button-primary" type="submit">
                     Sign in
                 </button>
             </div>

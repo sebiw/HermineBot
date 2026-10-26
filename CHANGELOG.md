@@ -4,6 +4,12 @@ Alle wesentlichen Änderungen am Hermine-Bot werden in dieser Datei festgehalten
 
 ## [Unreleased]
 
+### Hinzugefügt
+- Neue Seite „Benutzer“: Administratoren und API-Zugänge lassen sich in der Oberfläche anlegen, bearbeiten und löschen; der Schlüssel eines API-Zugangs wird beim Anlegen erzeugt, einmal zum Kopieren angezeigt und lässt sich jederzeit neu erzeugen.
+
+### Geändert
+- Die Oberfläche hat das neue Design des StAN-Managers: Reiter mit Unterpunkten, Menü-Knopf am Handy, Formulare in Abschnitten, einheitliche Knöpfe und Tabellen, die am Handy als Karten erscheinen; Löschen fragt vorher nach.
+
 ## [2.0.0] - 2026-10-22
 
 ### Sicherheit

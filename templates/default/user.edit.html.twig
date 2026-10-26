@@ -1,0 +1,73 @@
+{% extends 'base.loggedin.html.twig' %}
+
+{% block body %}
+    <div class="wrapper layout-compact">
+        <div class="form-page">
+            <div class="report-header">
+                <h2>{{ user.getUserIdentifier() }}</h2>
+                <span class="report-subtitle">{{ kinds[kind] }}{% if isSelf %} – dein Konto{% endif %}</span>
+            </div>
+            <p class="form-hint"><a href="{{ path('users') }}">Alle Benutzer</a></p>
+
+            {% for key in newKeys %}
+                <fieldset class="form-section">
+                    <legend>Schlüssel – nur jetzt sichtbar</legend>
+                    <p class="form-hint">Beim Aufrufer zusammen mit dem Benutzernamen eintragen (beim StAN-Manager z. B. als API-Key des Hermine-Bots). Nach dem Verlassen der Seite lässt er sich nicht mehr anzeigen, nur neu erzeugen.</p>
+                    <div class="form-grid">
+                        <div class="form-field span-all">
+                            <label for="new-key-{{ loop.index }}">Schlüssel</label>
+                            <div class="copy-field">
+                                <input type="text" class="field secret-value" id="new-key-{{ loop.index }}" value="{{ key }}" readonly>
+                                <button type="button" data-copy="#new-key-{{ loop.index }}">Kopieren</button>
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+            {% endfor %}
+
+            <form method="post" action="{{ path('user_save' , { id : user.getId() }) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('user-' ~ user.getId()) }}">
+                <fieldset class="form-section">
+                    <legend>Benutzer</legend>
+                    <div class="form-grid">
+                        <div class="form-field span-2">
+                            <label for="user-name">Benutzername</label>
+                            <input type="text" class="field" id="user-name" name="username" value="{{ user.getUserIdentifier() }}" maxlength="180" required>
+                        </div>
+                        <div class="form-field span-2">
+                            <label for="user-kind">Art</label>
+                            <select class="field" id="user-kind" name="kind">
+                                {% for value, label in kinds %}<option value="{{ value }}"{% if value == kind %} selected{% endif %}>{{ label }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        {% if kind == 'admin' %}
+                            <div class="form-field span-2">
+                                <label for="user-password">Neues Passwort <small>(leer = unverändert, mindestens {{ passwordMinLength }} Zeichen)</small></label>
+                                <input type="password" class="field" id="user-password" name="password" autocomplete="new-password">
+                            </div>
+                        {% endif %}
+                    </div>
+                </fieldset>
+                <div class="action-bar">
+                    <span><a href="{{ path('users') }}" class="button-secondary">Zurück</a></span>
+                    <button type="submit" class="button-primary">Speichern</button>
+                </div>
+            </form>
+
+            {# Schlüssel und Löschen in einem eigenen Formular – ungespeicherte Änderungen oben werden nicht mitgeschickt #}
+            <form method="post" action="{{ path('user_save' , { id : user.getId() }) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('user-' ~ user.getId()) }}">
+                <div class="action-bar">
+                    <span>
+                        {% if not isSelf %}
+                            <button type="submit" name="delete" value="1" class="button-danger" onclick="return confirm('Benutzer „{{ user.getUserIdentifier()|e('js') }}“ löschen?');">Löschen</button>
+                        {% endif %}
+                    </span>
+                    {% if kind == 'api' %}
+                        <button type="submit" name="renewKey" value="1" class="button-secondary" onclick="return confirm('Neuen Schlüssel erzeugen? Der alte gilt sofort nicht mehr.');">Neuen Schlüssel erzeugen</button>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}

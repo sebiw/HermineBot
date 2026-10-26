@@ -192,13 +192,19 @@
 {% endblock %}
 
 {% block body %}
+        <div class="form-page">
+            <div class="report-header">
+                <h2>Events</h2>
+                <span class="report-subtitle">geplante und wiederkehrende Nachrichten an Channels und Unterhaltungen</span>
+            </div>
+            <p class="form-hint">Verfügbare Platzhalter: {{ replacementKeys|join(', ') }}</p>
+        </div>
         <form method="post" id="action" action="{{ path('save_event') }}">
             <input type="hidden" name="id" id="actionButtonId" value="{{ current_entry.getId() ?? '' }}">
             <input type="hidden" name="_token" value="{{ csrf_token('events') }}">
-            <p class="text-center">Verfügbare Platzhalter: {{ replacementKeys|join(', ') }}</p>
 
             <div class="layout-complete">
-            <table class="object-center events-table">
+            <table class="object-center events-table table-keep">
                 <thead>
                 <tr>
                     <th>Aktionen</th>
@@ -216,10 +222,10 @@
                 <tr>
                     <td class="text-center">
                         {% if current_entry.getId() is null %}
-                            <button type="submit" name="action" value="add">Hinzufügen</button>
+                            <button type="submit" name="action" value="add" class="button-primary">Hinzufügen</button>
                             <input type="hidden" name="resetDue" value="1">
                         {% else %}
-                            <button type="submit" name="action" value="save">Speichern</button>
+                            <button type="submit" name="action" value="save" class="button-primary">Speichern</button>
                             <button type="submit" name="action" value="">Abbrechen</button>
                             <div style="font-size: 0.6rem">
                                 <label for="resetDue">Übermittlung zurücksetzen</label><input type="checkbox" id="resetDue" name="resetDue" value="1">
@@ -268,7 +274,7 @@
                         <td>
                             <div>
                                 <button type="submit" class="action-button" name="action" value="edit" data-id="{{ event.getId() ?? '' }}">Editieren</button>
-                                <button type="submit" class="action-button" name="action" value="delete" data-id="{{ event.getId() ?? '' }}">Löschen</button>
+                                <button type="submit" class="action-button button-danger" name="action" value="delete" data-id="{{ event.getId() ?? '' }}" onclick="return confirm('Event löschen?');">Löschen</button>
                             </div>
                             <div class="text-center" style="padding: 1rem;">
                                 <button type="submit" class="action-button" name="action" value="trigger" data-id="{{ event.getId() ?? '' }}">Manuell senden</button>
