@@ -131,9 +131,10 @@ class ApiController extends AbstractController
     }
 
     /**
-     * Persönliche Nachricht (z. B. PIN für die Dienst-Abfragen des StAN-Managers) in die bestehende 1:1-Unterhaltung mit
-     * einem Mitglied eines freigegebenen Channels. Nie an den eigenen Account, legt keine Unterhaltung an. Der Text
-     * kommt nicht ins Log (kann eine PIN enthalten). Antwort: status, conversationId.
+     * Persönliche Nachricht (z. B. PIN für die Dienst-Abfragen des StAN-Managers) in die 1:1-Unterhaltung mit einem
+     * Mitglied eines freigegebenen Channels. Nie an den eigenen Account. Gibt es noch keine Unterhaltung, wird nur mit
+     * "createConversation": true eine angelegt (StashcatMediator::createConversation(), noch nicht mit Hermine erprobt),
+     * sonst 404. Der Text kommt nicht ins Log (kann eine PIN enthalten). Antwort: status, conversationId, created.
      */
     #[Route('/api/direct-message', name: 'api_direct_message', methods: ['POST'])]
     public function apiDirectMessage( Request $request , AppService $app , #[Autowire(service: 'logger.events')] DatabaseLogger $logger ): Response
@@ -143,6 +144,8 @@ class ApiController extends AbstractController
         $userId = trim( strval( $content['userId'] ?? '' ) );
         $channelName = trim( strval( $content['channel'] ?? '' ) );
         $message = trim( strval( $content['message'] ?? '' ) );
+        // Only on explicit request: without an existing 1:1 conversation a new one is created (not yet tried against Hermine)
+        $createConversation = ( $content['createConversation'] ?? false ) === true;
         if( $userId === '' || $channelName === '' || $message === '' ){
             return $this->errorResponse('userId, channel or message missing!' , Response::HTTP_BAD_REQUEST );
         }
@@ -170,10 +173,24 @@ class ApiController extends AbstractController
             if( !in_array( $userId , $memberIds , true ) ){
                 return $this->errorResponse('User is not a member of the channel!' , Response::HTTP_FORBIDDEN );
             }
+            $created = false;
             if( ( $conversation = $mediator->findDirectConversation( $userId ) ) === null ){
-                return $this->errorResponse('No conversation with this user yet – please start one by hand once.' , Response::HTTP_NOT_FOUND );
+                if( !$createConversation ){
+                    return $this->errorResponse('No conversation with this user yet – please start one by hand once or allow creating one.' , Response::HTTP_NOT_FOUND );
+                }
+                try {
+                    $conversation = $mediator->createConversation( [ $userId ] );
+                    $created = true;
+                } catch( \Throwable $e ){
+                    // The reason helps with the first attempts (e.g. keys that cannot be verified) – it contains no message text
+                    $logger->error( sprintf('Creating a conversation via REST failed (user %s)' , $userId ) , [ 'error' => $e->getMessage() ] );
+                    return $this->errorResponse( 'Creating the conversation failed: ' . $e->getMessage() , Response::HTTP_BAD_GATEWAY );
+                }
+                $logger->info( sprintf('Conversation created via REST (user %s, conversation %s)' , $userId , $conversation->getId() ) );
             }
-            $mediator->decryptConversationPrivateKey( $conversation );
+            if( !$created ){
+                $mediator->decryptConversationPrivateKey( $conversation );
+            }
             $result = $mediator->sendMessageToConversation( $message . $config->getAutoAppendToMessages() , $conversation );
             if( $result->_getStatusValue() != 'OK' ){
                 throw new \Exception( sprintf('Sending message failed, status: %s' , $result->_getStatusValue() ) );
@@ -186,7 +203,8 @@ class ApiController extends AbstractController
         $logger->info( sprintf('Direct message sent via REST (user %s, conversation %s)' , $userId , $conversation->getId() ) );
         return new JsonResponse([
             'status' => 'OK',
-            'conversationId' => strval( $conversation->getId() )
+            'conversationId' => strval( $conversation->getId() ),
+            'created' => $created
         ]);
     }
 
