@@ -243,16 +243,17 @@ class ApiClient {
 
     /**
      * @param string $client_key
+     * @param bool $archived true = archivierte statt offener Unterhaltungen
      * @return MessageConversationsResponse
      * @throws Exception
      */
-    public function messageConversations( string $client_key ) : MessageConversationsResponse {
+    public function messageConversations( string $client_key , bool $archived = false ) : MessageConversationsResponse {
         $conversations = $this->getRestClient()->post( $this->getConfig()->getMessageConversations() , [
             "client_key" => $client_key,
             "device_id" => $this->getConfig()->getDeviceId(),
             "limit" => -1,
             "offset" => 0,
-            "archive" => 0,
+            "archive" => $archived ? 1 : 0,
             "sorting" => json_encode( ["favorite_desc","last_action_desc"] )
         ]);
         return new MessageConversationsResponse( $conversations );

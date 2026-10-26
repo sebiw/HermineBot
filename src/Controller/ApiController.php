@@ -131,6 +131,66 @@ class ApiController extends AbstractController
     }
 
     /**
+     * Persönliche Nachricht (z. B. PIN für die Dienst-Abfragen des StAN-Managers) in die bestehende 1:1-Unterhaltung mit
+     * einem Mitglied eines freigegebenen Channels. Nie an den eigenen Account, legt keine Unterhaltung an. Der Text
+     * kommt nicht ins Log (kann eine PIN enthalten). Antwort: status, conversationId.
+     */
+    #[Route('/api/direct-message', name: 'api_direct_message', methods: ['POST'])]
+    public function apiDirectMessage( Request $request , AppService $app , #[Autowire(service: 'logger.events')] DatabaseLogger $logger ): Response
+    {
+        $content = json_decode( $request->getContent() , true );
+        $content = is_array( $content ) ? $content : [];
+        $userId = trim( strval( $content['userId'] ?? '' ) );
+        $channelName = trim( strval( $content['channel'] ?? '' ) );
+        $message = trim( strval( $content['message'] ?? '' ) );
+        if( $userId === '' || $channelName === '' || $message === '' ){
+            return $this->errorResponse('userId, channel or message missing!' , Response::HTTP_BAD_REQUEST );
+        }
+        $config = $app->getAppConfig();
+        if( $channelName === $config->getConversationChannelPlaceholderName() || !in_array( $channelName , $config->getAllowedChannelNames() , true ) ){
+            return $this->errorResponse('Channel not allowed!' , Response::HTTP_FORBIDDEN );
+        }
+
+        try {
+            $mediator = $app->getMediator();
+            if( !$mediator->login() ){
+                throw new \Exception('Login failed!');
+            }
+            if( $userId === $mediator->getOwnUserId() ){
+                return $this->errorResponse('Not to the own account!' , Response::HTTP_FORBIDDEN );
+            }
+            $mediator->decryptPrivateKey();
+            $mediator->loadCompanies();
+            $company = $mediator->getCompanyMembers()->getCompanyByName( $config->getStashcatEventCompany() );
+            $mediator->loadChannelSubscripted( $company );
+            if( ( $channel = $mediator->getChannelOfCompany( $channelName , $company ) ) === null ){
+                return $this->errorResponse('Channel not found!' , Response::HTTP_NOT_FOUND );
+            }
+            $memberIds = array_map( fn( StashcatUser $member ) => strval( $member->getId() ) , $mediator->getChannelMembers( $channel ) );
+            if( !in_array( $userId , $memberIds , true ) ){
+                return $this->errorResponse('User is not a member of the channel!' , Response::HTTP_FORBIDDEN );
+            }
+            if( ( $conversation = $mediator->findDirectConversation( $userId ) ) === null ){
+                return $this->errorResponse('No conversation with this user yet – please start one by hand once.' , Response::HTTP_NOT_FOUND );
+            }
+            $mediator->decryptConversationPrivateKey( $conversation );
+            $result = $mediator->sendMessageToConversation( $message . $config->getAutoAppendToMessages() , $conversation );
+            if( $result->_getStatusValue() != 'OK' ){
+                throw new \Exception( sprintf('Sending message failed, status: %s' , $result->_getStatusValue() ) );
+            }
+        } catch( \Throwable $e ){
+            $logger->error( sprintf('Direct message via REST failed (user %s)' , $userId ) , [ 'error' => $e->getMessage() ] );
+            return $this->errorResponse('Sending the direct message failed!' , Response::HTTP_INTERNAL_SERVER_ERROR );
+        }
+
+        $logger->info( sprintf('Direct message sent via REST (user %s, conversation %s)' , $userId , $conversation->getId() ) );
+        return new JsonResponse([
+            'status' => 'OK',
+            'conversationId' => strval( $conversation->getId() )
+        ]);
+    }
+
+    /**
      * @return array{id: string, first_name: string, last_name: string, department: string|null, display_name: string}
      */
     public static function memberData( StashcatUser $user ): array

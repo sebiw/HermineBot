@@ -259,6 +259,38 @@ class StashcatMediator
     }
 
     /**
+     * Bestehende 1:1-Unterhaltung mit genau dieser Person – erst unter den offenen, dann unter den archivierten
+     * (diese wird einzeln nachgeladen, damit der Schlüssel sicher dabei ist). Legt nichts an.
+     * @param string $userId
+     * @return Conversation|null null = keine Unterhaltung nur mit dieser Person
+     * @throws \Exception
+     */
+    public function findDirectConversation( string $userId ): ?Conversation
+    {
+        $ownUserId = $this->getOwnUserId();
+        foreach( [ false , true ] AS $archived ){
+            foreach( $this->getStashcatApiClient()->messageConversations( $this->getLoginResponse()->getClientKey() , $archived )->getConversations() AS $conversation ){
+                if( self::isDirectConversation( $conversation , $ownUserId , $userId ) ){
+                    return $archived ? $this->loadConversation( strval( $conversation->getId() ) ) : $conversation;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Genau zwei Mitglieder: der eigene Account und die Person
+     */
+    public static function isDirectConversation( Conversation $conversation , ?string $ownUserId , string $userId ): bool
+    {
+        $memberIds = array_map( fn( $member ) => strval( $member->getId() ) , $conversation->getMembers() );
+        sort( $memberIds );
+        $expected = [ strval( $ownUserId ) , $userId ];
+        sort( $expected );
+        return $ownUserId !== null && $ownUserId !== $userId && $memberIds === $expected;
+    }
+
+    /**
      * Anzeigename einer Unterhaltung: Namen der Mitglieder ohne den eigenen Account, alphabetisch sortiert
      * @param Conversation $conversation
      * @return string
