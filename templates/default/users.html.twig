@@ -16,6 +16,7 @@
                         <tr>
                             <th>Benutzername</th>
                             <th>Art</th>
+                            <th title="Administratoren: letzte Anfrage in der Oberfläche; API-Benutzer: letzter Aufruf mit gültigem Schlüssel – auf die Minute genau">Zuletzt aktiv</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -24,6 +25,7 @@
                             <tr>
                                 <td>{{ user.getUserIdentifier() }}{% if user is same as(app.user) %} <span class="text-small">(du)</span>{% endif %}</td>
                                 <td>{{ 'ROLE_ADMIN' in user.getRoles() ? kinds.admin : kinds.api }}</td>
+                                <td class="text-no-wrap">{{ user.getLastSeenAt() ? user.getLastSeenAt()|date('d.m.Y H:i') : 'noch nie' }}</td>
                                 <td><a href="{{ path('user_edit' , { id : user.getId() }) }}">Bearbeiten</a></td>
                             </tr>
                         {% endfor %}

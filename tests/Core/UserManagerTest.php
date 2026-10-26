@@ -18,6 +18,17 @@ class UserManagerTest extends TestCase
         $this->assertNotSame( $key , UserManager::generateKey() );
     }
 
+    public function testActivityIsStoredAtMostOncePerMinute(): void
+    {
+        $user = new User();
+        $now = new \DateTimeImmutable( '2026-10-26 22:00:00' );
+        $this->assertTrue( $user->isSeenDue( $now ) );
+
+        ( new \ReflectionProperty( User::class , 'lastSeenAt' ) )->setValue( $user , $now );
+        $this->assertFalse( $user->isSeenDue( $now->modify( '+59 seconds' ) ) );
+        $this->assertTrue( $user->isSeenDue( $now->modify( '+60 seconds' ) ) );
+    }
+
     public function testKindAndRoles(): void
     {
         $this->assertSame( [ 'ROLE_ADMIN' ] , UserManager::rolesOf( UserManager::KIND_ADMIN ) );

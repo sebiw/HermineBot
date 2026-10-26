@@ -4,6 +4,9 @@ Alle wesentlichen Änderungen am Hermine-Bot werden in dieser Datei festgehalten
 
 ## [Unreleased]
 
+### Hinzugefügt
+- Auf der Seite „Benutzer“ steht, wann ein Administrator oder API-Zugang zuletzt aktiv war – so fallen ungenutzte Zugänge auf.
+
 ## [2.1.0] - 2026-10-26
 
 ### Hinzugefügt

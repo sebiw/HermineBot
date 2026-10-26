@@ -27,6 +27,15 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private ?string $password = null;
 
+    /**
+     * Zuletzt aktiv: jede Anfrage nach erfolgreicher Anmeldung (Oberfläche) bzw. jeder REST-Aufruf mit gültigem Schlüssel,
+     * höchstens einmal pro Minute gespeichert (UserActivityListener)
+     */
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $lastSeenAt = null;
+
+    const SEEN_INTERVAL_SECONDS = 60;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -86,6 +95,19 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->password = $password;
 
         return $this;
+    }
+
+    public function getLastSeenAt(): ?\DateTimeImmutable
+    {
+        return $this->lastSeenAt;
+    }
+
+    /**
+     * Whether a request at $now should store the activity (never seen, or the last time is older than the interval)
+     */
+    public function isSeenDue( \DateTimeImmutable $now ): bool
+    {
+        return $this->lastSeenAt === null || $now->getTimestamp() - $this->lastSeenAt->getTimestamp() >= self::SEEN_INTERVAL_SECONDS;
     }
 
     /**
