@@ -5,7 +5,7 @@
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
     # Software-Version nach SemVer – bei jedem Release zusammen mit CHANGELOG.md anpassen
-    app.version: '2.2.1'
+    app.version: '2.2.2'
     app.message_files_in: '%env(MESSAGE_FILES_IN)% '
     app.message_placeholder: '/data/placeholder.json'
     app.message_command_api_endpoints: '/config/legacy/command_api_endpoints.json'

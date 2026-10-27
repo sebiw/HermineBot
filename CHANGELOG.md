@@ -4,6 +4,8 @@ Alle wesentlichen Änderungen am Hermine-Bot werden in dieser Datei festgehalten
 
 ## [Unreleased]
 
+## [2.2.2] - 2026-10-27
+
 ### Geändert
 - Der Bot setzt unter seine eigenen Nachrichten kein automatisches Daumen-hoch mehr.
 
