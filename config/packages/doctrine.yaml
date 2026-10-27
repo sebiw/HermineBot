@@ -14,6 +14,9 @@ doctrine:
         enable_native_lazy_objects: true
         naming_strategy: doctrine.orm.naming_strategy.underscore_number_aware
         auto_mapping: true
+        # Kein Laden von Entities aus Routenparametern – die Controller holen sie selbst (keine Deprecation in DoctrineBundle 2.x)
+        controller_resolver:
+            auto_mapping: false
         mappings:
             App:
                 is_bundle: false
