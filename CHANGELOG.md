@@ -4,6 +4,8 @@ Alle wesentlichen Änderungen am Hermine-Bot werden in dieser Datei festgehalten
 
 ## [Unreleased]
 
+## [2.2.1] - 2026-10-27
+
 ### Behoben
 - Persönliche Nachrichten aus dem StAN-Manager (z. B. die PIN für Dienst-Abfragen) gehen wieder in die bestehende Unterhaltung mit der Person und lassen sich dort lesen, statt „Inhalt konnte nicht entschlüsselt werden“ anzuzeigen.
 
