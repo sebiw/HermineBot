@@ -206,12 +206,6 @@ class Daemon extends Command
 
                 $this->getLogger()->log(LogLevel::INFO , $preparedMessage['logMessage'] , [ 'text' => $preparedMessage['text'] ]);
 
-                try {
-                    $stashcatMediator->likeMessage( $result->getMessage() );
-                } catch ( \Throwable $e ){
-                    $this->getLogger()->log(LogLevel::WARNING , sprintf('Liking message failed for Event #%s' , $event->getId() ) , [ 'error' => $e->getMessage() ]);
-                }
-
             }
         }
 

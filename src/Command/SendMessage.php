@@ -207,13 +207,6 @@ class SendMessage extends Command
             throw new \Exception(sprintf('Sending message failed, status: %s' , $result->_getStatusValue() ));
         }
 
-        // Ab hier ist die Nachricht gesendet – ein Fehler beim Liken darf kein erneutes Senden auslösen
-        try {
-            $stashcatMediator->likeMessage( $result->getMessage() );
-        } catch ( \Throwable $e ){
-            $this->getLogger()->log(LogLevel::WARNING , 'Liking message failed' , [ 'error' => $e->getMessage() ]);
-        }
-
         $jsonResult['status'] = 'OK';
         $jsonResult['events'] = [
             'processed' => 1,
