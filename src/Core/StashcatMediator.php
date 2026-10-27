@@ -279,15 +279,17 @@ class StashcatMediator
     }
 
     /**
-     * Genau zwei Mitglieder: der eigene Account und die Person
+     * Genau zwei Mitglieder: der eigene Account und die Person. message/conversations listet den eigenen Account
+     * nicht unter members (geprüft 2026-10-27, user_count zählt ihn mit) – deshalb ohne ihn vergleichen.
      */
     public static function isDirectConversation( Conversation $conversation , ?string $ownUserId , string $userId ): bool
     {
-        $memberIds = array_map( fn( $member ) => strval( $member->getId() ) , $conversation->getMembers() );
-        sort( $memberIds );
-        $expected = [ strval( $ownUserId ) , $userId ];
-        sort( $expected );
-        return $ownUserId !== null && $ownUserId !== $userId && $memberIds === $expected;
+        if( $ownUserId === null || $ownUserId === $userId ){
+            return false;
+        }
+        $otherIds = array_values( array_unique( array_filter( array_map( fn( $member ) => strval( $member->getId() ) , $conversation->getMembers() ) , fn( string $id ) => $id !== $ownUserId ) ) );
+        $userCount = $conversation->getUserCountOrNull();
+        return $otherIds === [ $userId ] && ( $userCount === null || $userCount === 2 );
     }
 
     /**
@@ -369,7 +371,13 @@ class StashcatMediator
         }
 
         $conversation = $response->getConversation();
-        $this->getStashcatCryptoBox()->setConversationKey( $conversationKey , $conversation->getId() );
+        // Gibt es die Unterhaltung schon, liefert Hermine die bestehende mit ihrem alten Schlüssel zurück (2026-10-27) –
+        // dann gilt deren Schlüssel, nicht der eben erzeugte (sonst kann niemand die Nachricht entschlüsseln)
+        if( $conversation->hasKey() ){
+            $this->decryptConversationPrivateKey( $conversation );
+        } else {
+            $this->getStashcatCryptoBox()->setConversationKey( $conversationKey , $conversation->getId() );
+        }
         $this->conversations[] = $conversation;
         return $conversation;
     }

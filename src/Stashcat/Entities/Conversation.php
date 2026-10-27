@@ -33,4 +33,20 @@ class Conversation extends DefaultEntity {
         return $this->getResults('user_count');
     }
 
+    /**
+     * Anzahl der Mitglieder inkl. eigenem Account, null = nicht geliefert
+     */
+    public function getUserCountOrNull(): ?int
+    {
+        return $this->resultKeyExist('user_count') ? (int) $this->getResults('user_count') : null;
+    }
+
+    /**
+     * Für den eigenen Account verschlüsselter Schlüssel vorhanden
+     */
+    public function hasKey(): bool
+    {
+        return $this->resultKeyExist('key') && $this->getResults('key') !== '';
+    }
+
 }
