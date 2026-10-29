@@ -4,6 +4,8 @@ Alle wesentlichen Änderungen am Hermine-Bot werden in dieser Datei festgehalten
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-10-29
+
 ### Hinzugefügt
 - Der StAN-Manager kann beim Bot abfragen, welche Hermine-Channels für Dienst-Abfragen zur Auswahl stehen.
 
