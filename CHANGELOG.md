@@ -4,6 +4,8 @@ Alle wesentlichen Änderungen am Hermine-Bot werden in dieser Datei festgehalten
 
 ## [Unreleased]
 
+## [2.3.1] - 2026-10-29
+
 ### Geändert
 - Die Navigationsleiste mit den Unterpunkten reicht jetzt von Rand zu Rand des Fensters.
 
