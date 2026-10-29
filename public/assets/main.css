@@ -55,6 +55,8 @@ nav.primary, nav.secondary {
 }
 
 nav.primary {
+  /* Über den Rand des Inhalts (.wrapper) hinaus bis an den Fensterrand – die Login-Zeile darüber behält ihren Abstand */
+  margin: 0 -1rem;
   padding: 0.3rem 0 0;
   border-bottom: 2px solid #003399;
 }
