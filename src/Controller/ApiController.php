@@ -88,6 +88,24 @@ class ApiController extends AbstractController
     }
 
     /**
+     * Channels, die der StAN-Manager nutzen darf (nur lesend): vorerst nur die feste Liste allowed_channel, ohne den
+     * Unterhaltungs-Platzhalter. Ohne Anmeldung bei Hermine. Antwort: status, channels (Namen).
+     */
+    #[Route('/api/channels', name: 'api_channels', methods: ['POST'])]
+    public function apiChannels( AppService $app , #[Autowire(service: 'logger.events')] DatabaseLogger $logger ): Response
+    {
+        $config = $app->getAppConfig();
+        $placeholder = $config->getConversationChannelPlaceholderName();
+        $channels = array_values( array_unique( array_filter( array_map( 'strval' , $config->getAllowedChannelNames() ) , fn( string $name ) => $name !== '' && $name !== $placeholder ) ) );
+
+        $logger->info( sprintf('Channel list sent via REST (%d)' , count( $channels ) ) );
+        return new JsonResponse([
+            'status' => 'OK',
+            'channels' => $channels
+        ]);
+    }
+
+    /**
      * Mitglieder eines Channels (nur lesend) – z. B. für Abfragen im StAN-Manager. Nur Channels aus allowed_channel,
      * nicht der Unterhaltungs-Platzhalter. Antwort: status, channel (id, name), ownUserId (der Account des Bots), members.
      */
