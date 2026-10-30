@@ -4,6 +4,8 @@ Alle wesentlichen Änderungen am Hermine-Bot werden in dieser Datei festgehalten
 
 ## [Unreleased]
 
+## [2.3.2] - 2026-10-30
+
 ### Geändert
 - Unerwartete Fehler der Weboberfläche und der Schnittstelle stehen jetzt im Log, mit Seite und Benutzer.
 
