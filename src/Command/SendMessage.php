@@ -202,7 +202,7 @@ class SendMessage extends Command
             throw new \Exception('Message-Target (Channel or Conversation) is invalid!');
         }
 
-        // Nicht angenommen -> Fehler melden (Queue versucht es erneut), statt Erfolg vorzutäuschen
+        // Nicht angenommen -> Fehler melden, statt Erfolg vorzutäuschen (Wiederholen ist Sache des Aufrufers)
         if( $result->_getStatusValue() != 'OK' ){
             throw new \Exception(sprintf('Sending message failed, status: %s' , $result->_getStatusValue() ));
         }

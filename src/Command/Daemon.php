@@ -22,7 +22,6 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
-use Symfony\Component\Messenger\MessageBusInterface;
 
 // the name of the command is what users type after "php bin/console"
 #[AsCommand(name: 'daemon:tick', description: 'One Tick for the Background Daemon')]

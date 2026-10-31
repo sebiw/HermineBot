@@ -130,17 +130,6 @@ class MessageDecorator {
         /* @var $allowedIntervals array|null */
         $allowedIntervals = $appService?->getAppConfig()?->getAllowedIntervals();
 
-        // Placeholder-file...
-        $placeholderFile = Path::normalize( BASE_PATH . trim( $this->container->getParameter('app.message_placeholder') ) );
-        if( $filesystem->exists( $placeholderFile ) ){
-            $placeholderData = json_decode( file_get_contents( $placeholderFile ) , true );
-            if( is_array( $placeholderData ) ){
-                foreach( $placeholderData AS $key => $data ){
-                    $this->addPlaceholderDecoration( $key , fn() => ( isset( $data['message'] ) && is_string( $data['message'] ) ) ? $data['message'] : null );
-                }
-            }
-        }
-
         // Commands...
         $commandContentFile = Path::normalize( BASE_PATH . trim( $this->container->getParameter('app.message_command_api_endpoints') ) );
         if( $filesystem->exists( $commandContentFile ) ){

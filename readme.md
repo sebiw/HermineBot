@@ -10,7 +10,7 @@ Nebst dem üblichen `composer install`
 * `DATABASE_URL` an die eigene Datenbank anpassen
 * Kopiere Konfigurationsdateien aus `/config_examples` in `/config/legacy` kopieren und den eigenen Bedürfnissen anpassen.
 * Führe `doctrine:migrations:migrate` aus
-* Cron-Jobs einrichten (jeweils jede Minute): `php bin/console daemon:tick` und `php bin/console messenger:consume async -q` (siehe unten).
+* Cron-Job einrichten (jede Minute): `php bin/console daemon:tick` (siehe unten).
 
 ## Installation für Einsteiger
 Die Installation wird in diesem Beispiel auf einem Debian 12 und eigener MySQL-DB durchgeführt.
@@ -46,7 +46,7 @@ Die Installation wird in diesem Beispiel auf einem Debian 12 und eigener MySQL-D
 
 ### Download des HermineBots
 * `cd /opt/`
-* `sudo git clone --recurse-submodules https://github.com/sebiw/HermineBot.git`
+* `sudo git clone https://github.com/sebiw/HermineBot.git`
 * `cd HermineBot/`
 
 ### HermineBot Configs kopieren und anpassen
@@ -105,7 +105,6 @@ Die Installation wird in diesem Beispiel auf einem Debian 12 und eigener MySQL-D
 > Zugangsdaten nie in die eingecheckte `.env` eintragen, sondern nur in `.env.local` (wird von Git ignoriert).
 * Config bearbeiten:\
 `DATABASE_URL="mysql://<DB-Benutzernamen>:<Passwort>@127.0.0.1:3306/hermine_bot?charset=utf8mb4"` #DB-Benutzername und Passwort eintragen und die server_Version rausnehmen\
-`DATABASE_MESSAGE_URL="mysql://<DB-Usernamen>:<Passwort>@127.0.0.1:3306/messages?charset=utf8mb4"` #DB-Benutzername und Passwort eintragen und die server_Version rausnehmen
 
 ### Composer erforderliche Pakete installieren lassen
 `composer install`
@@ -116,16 +115,12 @@ Die Installation wird in diesem Beispiel auf einem Debian 12 und eigener MySQL-D
 ### DB-Grundstruktur importieren
 `php bin/console doctrine:migrations:migrate`
 
-### Tabelle für die Nachrichten-Warteschlange anlegen
-`php bin/console messenger:setup-transports`
-
 ### Berechtigung an Webserver übergeben
 `sudo chown www-data:www-data -R /opt/HermineBot/`
 
-## Cron-Jobs einrichten
-Ohne Cron-Jobs verschickt der Bot keine geplanten Nachrichten. `messenger:consume` beendet sich automatisch, sobald die Warteschlange leer ist. Als Webserver-Benutzer einrichten (`sudo crontab -u www-data -e`):\
-`* * * * * php /opt/HermineBot/bin/console daemon:tick`\
-`* * * * * php /opt/HermineBot/bin/console messenger:consume async -q`
+## Cron-Job einrichten
+Ohne Cron-Job verschickt der Bot keine geplanten Nachrichten. Als Webserver-Benutzer einrichten (`sudo crontab -u www-data -e`):\
+`* * * * * php /opt/HermineBot/bin/console daemon:tick`
 
 ## Web-Benutzer anlegen
 ### Passwort-Hash erstellen
