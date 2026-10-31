@@ -44,12 +44,12 @@
                             </div>
                             <div class="form-field">
                                 <label for="job-interval-{{ job.getName() }}">Takt <small>(Minuten, Standard {{ job.getDefaultIntervalMinutes() }})</small></label>
-                                <input type="number" class="field" id="job-interval-{{ job.getName() }}" name="interval" value="{{ row.interval }}" min="{{ minInterval }}" max="{{ maxInterval }}" required>
+                                <input type="number" class="field" style="margin-top: auto" id="job-interval-{{ job.getName() }}" name="interval" value="{{ row.interval }}" min="{{ minInterval }}" max="{{ maxInterval }}" required>
                             </div>
                             {% if row.setting %}
                                 <div class="form-field">
                                     <label for="job-setting-{{ job.getName() }}">{{ row.setting.label }} <small>(Standard {{ row.setting.default }})</small></label>
-                                    <input type="number" class="field" id="job-setting-{{ job.getName() }}" name="setting" value="{{ row.settingValue }}" min="{{ row.setting.min }}" max="{{ row.setting.max }}" required>
+                                    <input type="number" class="field" style="margin-top: auto" id="job-setting-{{ job.getName() }}" name="setting" value="{{ row.settingValue }}" min="{{ row.setting.min }}" max="{{ row.setting.max }}" required>
                                 </div>
                             {% endif %}
                         </div>
