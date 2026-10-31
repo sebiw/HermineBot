@@ -4,6 +4,9 @@ Alle wesentlichen Änderungen am Hermine-Bot werden in dieser Datei festgehalten
 
 ## [Unreleased]
 
+### Hinzugefügt
+- Alte Log-Einträge werden automatisch gelöscht; auf der neuen Seite „Hintergrundaufgaben“ lassen sich Takt und Aufbewahrung einstellen.
+
 ## [2.3.2] - 2026-10-30
 
 ### Geändert

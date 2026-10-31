@@ -33,6 +33,8 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 #[IsGranted('ROLE_ADMIN')]
 class EventsController extends AbstractController
 {
+    use CsrfTokenCheck;
+
     #[Route('/events', name: 'events', methods: [ 'GET' ])]
     public function main( AppService $app , Kernel $kernel , ManagerRegistry $doctrine , Request $request, #[CurrentUser] ?User $user ): Response
     {
@@ -297,7 +299,8 @@ class EventsController extends AbstractController
 
         $input = new ArrayInput([
             'command' => 'daemon:tick',
-            '--context' => 'Manual'
+            '--context' => 'Manual',
+            '--without-jobs' => true,
         ]);
 
         // You can use NullOutput() if you don't need the output
@@ -309,17 +312,6 @@ class EventsController extends AbstractController
         ]);
     }
 
-    /**
-     * @param string $tokenId
-     * @param Request $request
-     * @return void
-     */
-    protected function denyAccessUnlessCsrfTokenValid( string $tokenId , Request $request ): void
-    {
-        if( !$this->isCsrfTokenValid( $tokenId , (string) $request->request->get('_token') ) ){
-            throw $this->createAccessDeniedException('Ungültiges Formular-Token – bitte Seite neu laden.');
-        }
-    }
 
     // @TODO: Mail to Hermine?
     // Materialanforderungen / Materialeingang automatisch in Hermine Posten?

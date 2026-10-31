@@ -19,6 +19,8 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_ADMIN')]
 class UserController extends AbstractController
 {
+    use CsrfTokenCheck;
+
     #[Route('/users', name: 'users', methods: [ 'GET' ])]
     public function list( UserManager $userManager ): Response
     {
@@ -85,10 +87,4 @@ class UserController extends AbstractController
         return $this->redirectToRoute('user_edit' , [ 'id' => $id ] );
     }
 
-    private function denyAccessUnlessCsrfTokenValid( string $id , Request $request ): void
-    {
-        if( !$this->isCsrfTokenValid( $id , $request->request->getString('_token') ) ){
-            throw $this->createAccessDeniedException( 'Ungültiges CSRF-Token' );
-        }
-    }
 }

@@ -4,6 +4,8 @@
 namespace App\Command;
 
 use App\Core\DatabaseLogger;
+use App\Core\FileLock;
+use App\Core\Job\JobScheduler;
 use App\Core\MessageDecorator;
 use App\Core\StashcatMediator;
 use App\Entity\Event;
@@ -32,21 +34,24 @@ class Daemon extends Command
     private DatabaseLogger $logger;
     private Kernel $kernel;
     private AppService $appService;
+    private JobScheduler $jobScheduler;
 
     /**
      * @param AppService $app
+     * @param JobScheduler $jobScheduler
      * @param ManagerRegistry $doctrine
      * @param DatabaseLogger $logger
      * @param Kernel $kernel
      * @param string|null $name
      */
-    public function __construct(  AppService $app , ManagerRegistry $doctrine , #[Autowire(service: 'logger.events')] DatabaseLogger $logger, Kernel $kernel , ?string $name = null)
+    public function __construct(  AppService $app , JobScheduler $jobScheduler , ManagerRegistry $doctrine , #[Autowire(service: 'logger.events')] DatabaseLogger $logger, Kernel $kernel , ?string $name = null)
     {
         parent::__construct($name);
         $this->doctrine = $doctrine;
         $this->logger = $logger;
         $this->kernel = $kernel;
         $this->appService = $app;
+        $this->jobScheduler = $jobScheduler;
     }
 
     /**
@@ -56,6 +61,7 @@ class Daemon extends Command
     {
         parent::configure();
         $this->addOption('context' , '-x' , InputOption::VALUE_OPTIONAL , 'Context of this Call' , 'Console' );
+        $this->addOption('without-jobs' , null , InputOption::VALUE_NONE , 'Only send due events, no background jobs' );
     }
 
     /**
@@ -105,25 +111,31 @@ class Daemon extends Command
         }
 
         // Sperre gegen parallele Läufe (Cron jede Minute, manueller Start) – sonst würden fällige Events doppelt gesendet.
-        // flock wird beim Prozessende automatisch freigegeben, auch nach einem Absturz.
-        $lockFile = $this->getKernel()->getProjectDir() . '/var/daemon-tick.lock';
-        ( new Filesystem() )->mkdir( dirname( $lockFile ) );
-        if( ( $lockHandle = fopen( $lockFile , 'c' ) ) === false ){
-            throw new \Exception(sprintf('Lock file could not be opened: %s' , $lockFile ));
-        }
-
-        if( !flock( $lockHandle , LOCK_EX | LOCK_NB ) ){
-            fclose( $lockHandle );
+        $lock = FileLock::acquire( $this->getKernel()->getProjectDir() . '/var/daemon-tick.lock' );
+        if( $lock === null ){
             $this->getLogger()->log(LogLevel::WARNING , sprintf('%s: Event handler already running, skipped' , $context ) );
             $output->writeln( json_encode( [ 'status' => 'LOCKED' ] , JSON_PRETTY_PRINT ) );
+            $this->runJobs( $input );
             return Command::SUCCESS;
         }
 
         try {
             return $this->tick( $context , $input , $output );
         } finally {
-            flock( $lockHandle , LOCK_UN );
-            fclose( $lockHandle );
+            $lock->release();
+            // Nach dem Freigeben und auch, wenn das Senden scheitert: Eine lange Aufgabe darf den nächsten Takt nicht aufhalten, ein
+            // Ausfall von Hermine nicht die Aufgaben
+            $this->runJobs( $input );
+        }
+    }
+
+    /**
+     * Hintergrundaufgaben – beim Takt per Cron, nicht beim Auslösen aus der Oberfläche (--without-jobs)
+     */
+    private function runJobs( InputInterface $input ): void
+    {
+        if( !$input->getOption('without-jobs') ){
+            $this->jobScheduler->tick();
         }
     }
 

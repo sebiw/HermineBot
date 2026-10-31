@@ -6,6 +6,7 @@
     <a href="{{ path('events_log') }}" class="{{ app.current_route == 'events_log' ? 'active' }}">Logs</a>
     {% if is_granted('ROLE_ADMIN') %}
         <a href="{{ path('users') }}" class="{{ app.current_route starts with 'user' ? 'active' }}">Benutzer</a>
+        <a href="{{ path('jobs') }}" class="{{ app.current_route starts with 'jobs' ? 'active' }}">Hintergrundaufgaben</a>
     {% endif %}
     {# Unterpunkte des aktiven Bereichs hinter den Reitern (eigene Zeile; am Handy per CSS unter den aktiven Reiter) #}
     {% if eventsActive %}

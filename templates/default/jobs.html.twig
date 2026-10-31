@@ -1,0 +1,82 @@
+{% extends 'base.loggedin.html.twig' %}
+
+{% block body %}
+    <div class="wrapper layout-compact">
+        <div class="form-page">
+            <div class="report-header">
+                <h2>Hintergrundaufgaben</h2>
+                <span class="report-subtitle">Was der Bot ohne Zutun erledigt</span>
+            </div>
+            <p class="form-hint">
+                Der Server ruft jede Minute den Takt auf (Cron „daemon:tick“). Bei jedem Takt laufen die eingeschalteten Aufgaben, deren eigener Takt fällig ist.
+                „Jetzt ausführen“ startet eine Aufgabe sofort, auch wenn sie aus ist. Das Senden geplanter Events läuft immer mit jedem Takt.
+            </p>
+            <p class="form-hint">
+                <strong>Takt zuletzt:</strong> {{ lastTick ? lastTick|date('d.m.Y H:i:s') : 'noch nie' }}
+                {% if tickLate %} – der Cron scheint nicht zu laufen; ohne ihn läuft keine Aufgabe von selbst.{% endif %}
+            </p>
+
+            {% for row in jobs %}
+                {% set job = row.job %}
+                {% set state = row.state %}
+                <form method="post" action="{{ path('jobs_configure', { name: job.getName() }) }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('job-' ~ job.getName()) }}">
+                    <fieldset class="form-section">
+                        <legend>{{ job.getLabel() }}</legend>
+                        <p class="form-hint">{{ job.getDescription() }}</p>
+                        <p class="text-small">
+                            {% if not row.enabled %}
+                                <strong>Aus</strong> – läuft nicht von selbst.<br>
+                            {% elseif row.nextRunAt %}
+                                <strong>Nächster Lauf:</strong> ab {{ row.nextRunAt|date('d.m.Y H:i') }}<br>
+                            {% endif %}
+                            <strong>Zuletzt:</strong>
+                            {% if state and state.getLastStartedAt() %}
+                                {{ state.getLastStartedAt()|date('d.m.Y H:i:s') }}{% if state.getLastStatus() %} – {{ statusLabels[ state.getLastStatus() ] }}{% if state.getLastMessage() %}: {{ state.getLastMessage() }}{% endif %} ({{ state.getLastDurationMs() }} ms){% elseif row.running %} – läuft{% else %} – abgebrochen{% endif %}
+                            {% else %}
+                                noch nie
+                            {% endif %}
+                        </p>
+                        <div class="form-grid">
+                            <div class="form-field">
+                                <label>&nbsp;</label>
+                                <label><input type="checkbox" name="enabled" value="1"{% if row.enabled %} checked{% endif %}> eingeschaltet</label>
+                            </div>
+                            <div class="form-field">
+                                <label for="job-interval-{{ job.getName() }}">Takt <small>(Minuten, Standard {{ job.getDefaultIntervalMinutes() }})</small></label>
+                                <input type="number" class="field" id="job-interval-{{ job.getName() }}" name="interval" value="{{ row.interval }}" min="{{ minInterval }}" max="{{ maxInterval }}" required>
+                            </div>
+                            {% if row.setting %}
+                                <div class="form-field">
+                                    <label for="job-setting-{{ job.getName() }}">{{ row.setting.label }} <small>(Standard {{ row.setting.default }})</small></label>
+                                    <input type="number" class="field" id="job-setting-{{ job.getName() }}" name="setting" value="{{ row.settingValue }}" min="{{ row.setting.min }}" max="{{ row.setting.max }}" required>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="action-bar">
+                            <span></span>
+                            <span>
+                                {# Eigenes Formular: läuft immer mit den gespeicherten Werten; nach einer Änderung erst speichern #}
+                                <button type="submit" class="button-secondary" form="job-run-{{ job.getName() }}" data-job-run onclick="return confirm('„{{ job.getLabel()|e('js') }}“ jetzt ausführen{% if row.setting %} ({{ row.setting.label|e('js') }}: {{ row.settingValue }}){% endif %}?');">Jetzt ausführen</button>
+                                <input type="submit" class="button-primary" value="Speichern">
+                            </span>
+                        </div>
+                    </fieldset>
+                </form>
+                <form method="post" id="job-run-{{ job.getName() }}" action="{{ path('jobs_run', { name: job.getName() }) }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('job-' ~ job.getName()) }}">
+                </form>
+            {% endfor %}
+        </div>
+    </div>
+    <script>
+        document.querySelectorAll( '[data-job-run]' ).forEach( function( button ){
+            function lock(){
+                button.disabled = true;
+                button.title = 'Änderungen erst speichern';
+            }
+            button.closest( 'form' ).addEventListener( 'input' , lock );
+            button.closest( 'form' ).addEventListener( 'change' , lock );
+        } );
+    </script>
+{% endblock %}
