@@ -25,18 +25,16 @@
             <button type="button" class="nav-toggle no-print" aria-label="Menü" aria-controls="main-nav" aria-expanded="false">☰</button>
         {% endif %}
         <span class="header-title">{{ title }} - {{ ov }}</span>
+        {% if is_granted('ROLE_USER') %}
+            <a href="#" class="app-version no-print" title="Changelog anzeigen" data-changelog-url="{{ path('changelog') }}">v{{ app_version }}</a>
+        {% else %}
+            <span class="app-version no-print">v{{ app_version }}</span>
+        {% endif %}
     </header>
     <div class="wrapper">
 
         <div class="topnav">
             {% block topnav %}{% endblock %}
-            <div class="app-version-line no-print">
-                {% if is_granted('ROLE_USER') %}
-                    <a href="#" class="app-version" title="Changelog anzeigen" data-changelog-url="{{ path('changelog') }}">v{{ app_version }}</a>
-                {% else %}
-                    <span class="app-version">v{{ app_version }}</span>
-                {% endif %}
-            </div>
         </div>
 
         {% if navigation is not empty %}

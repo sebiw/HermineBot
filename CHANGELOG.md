@@ -4,6 +4,9 @@ Alle wesentlichen Änderungen am Hermine-Bot werden in dieser Datei festgehalten
 
 ## [Unreleased]
 
+### Geändert
+- Die Versionsnummer steht jetzt unten rechts in der blauen Kopfleiste, die Anmeldezeile am Rechner auf Höhe der Navigation; so bleibt mehr Platz für den Inhalt.
+
 ## [3.0.0] - 2026-10-31
 
 ### Hinzugefügt
