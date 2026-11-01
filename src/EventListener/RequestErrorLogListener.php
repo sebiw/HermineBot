@@ -2,6 +2,7 @@
 
 namespace App\EventListener;
 
+use App\Core\Logging\LogChannels;
 use Doctrine\DBAL\Connection;
 use Psr\Log\LogLevel;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -41,7 +42,7 @@ final class RequestErrorLogListener
             'exception' => $exception::class,
             'at' => sprintf( '%s:%d' , str_replace( dirname( __DIR__ , 2 ) . '/' , '' , $exception->getFile() ) , $exception->getLine() ),
         ];
-        $this->write( $message , $context );
+        $this->write( LogChannels::forRoute( $event->getRequest()->attributes->get( '_route' ) ) , $message , $context );
     }
 
     /**
@@ -70,13 +71,13 @@ final class RequestErrorLogListener
     /**
      * @param array<string, mixed> $context
      */
-    private function write( string $message , array $context ): void
+    private function write( string $channel , string $message , array $context ): void
     {
         $json = (string) json_encode( $context , JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE );
         $now = ( new \DateTimeImmutable() )->format( 'Y-m-d H:i:s' );
         try {
             $this->connection->insert( 'log' , [
-                'channel' => 'app',
+                'channel' => $channel,
                 'level' => LogLevel::ERROR,
                 'message' => mb_substr( $message , 0 , 2000 ),
                 'context' => $json,

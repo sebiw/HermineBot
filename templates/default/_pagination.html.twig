@@ -1,0 +1,13 @@
+{# Blättern in einer gefilterten Liste: route, query, currentPage, maxPages. Am Rand gibt es keinen Link, nur den ausgegrauten Knopf #}
+{% macro step( url , label , content , enabled ) %}
+    {% if enabled %}<a class="button-secondary" href="{{ url }}" aria-label="{{ label }}">{{ content|raw }}</a>{% else %}<span class="button-secondary pagination-off" aria-hidden="true">{{ content|raw }}</span>{% endif %}
+{% endmacro %}
+{% if maxPages > 1 %}
+    <nav class="pagination" aria-label="Seiten">
+        {{ _self.step( path(route, query|merge({ page: 1 })) , 'Erste Seite' , '«' , currentPage > 1 ) }}
+        {{ _self.step( path(route, query|merge({ page: currentPage - 1 })) , 'Vorherige Seite' , '‹ <span>Zurück</span>' , currentPage > 1 ) }}
+        <span class="pagination-where">Seite <strong>{{ currentPage }}</strong> von {{ maxPages }}</span>
+        {{ _self.step( path(route, query|merge({ page: currentPage + 1 })) , 'Nächste Seite' , '<span>Weiter</span> ›' , currentPage < maxPages ) }}
+        {{ _self.step( path(route, query|merge({ page: maxPages })) , 'Letzte Seite' , '»' , currentPage < maxPages ) }}
+    </nav>
+{% endif %}

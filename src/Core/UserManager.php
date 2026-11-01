@@ -9,7 +9,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
- * Benutzer des Bots: Administratoren (Oberfläche) und API-Benutzer (REST, z. B. für den StAN-Manager). Bei API-Benutzern
+ * Nutzer des Bots: Administratoren (Oberfläche) und API-Nutzer (REST, z. B. für den StAN-Manager). Bei API-Nutzern
  * ist der „Key“ das Passwort; er wird erzeugt und nur einmal angezeigt. Gespeichert wird immer nur der Hash.
  * Schutz: niemand löscht sich selbst oder nimmt sich die Administration, mindestens ein Administrator bleibt.
  */
@@ -20,7 +20,7 @@ class UserManager
 
     public const KINDS = [
         self::KIND_ADMIN => 'Administrator (Oberfläche)',
-        self::KIND_API => 'API-Benutzer (REST)',
+        self::KIND_API => 'API-Nutzer (REST)',
     ];
 
     public const PASSWORD_MIN_LENGTH = 10;
@@ -29,7 +29,7 @@ class UserManager
         private readonly EntityManagerInterface $entityManager ,
         private readonly UserRepository $userRepository ,
         private readonly UserPasswordHasherInterface $passwordHasher ,
-        #[Autowire(service: 'logger.app')] private readonly DatabaseLogger $logger
+        #[Autowire(service: 'logger.nutzer')] private readonly DatabaseLogger $logger
     )
     {
     }
@@ -66,7 +66,7 @@ class UserManager
         $user->setPassword( $this->passwordHasher->hashPassword( $user , $password ) );
         $this->entityManager->persist( $user );
         $this->entityManager->flush();
-        $this->logger->info( sprintf( 'Benutzer „%s“ angelegt (%s)' , $username , self::KINDS[ $kind ] ) , [ 'by' => $by ] );
+        $this->logger->info( sprintf( 'Nutzer „%s“ angelegt (%s)' , $username , self::KINDS[ $kind ] ) , [ 'by' => $by ] );
         return [ $user , $key ];
     }
 
@@ -89,7 +89,7 @@ class UserManager
             $user->setPassword( $this->passwordHasher->hashPassword( $user , self::checkPassword( (string) $password ) ) );
         }
         $this->entityManager->flush();
-        $this->logger->info( sprintf( 'Benutzer „%s“ gespeichert (%s)' , $username , self::KINDS[ $kind ] ) , [ 'by' => $current->getUserIdentifier() ] );
+        $this->logger->info( sprintf( 'Nutzer „%s“ gespeichert (%s)' , $username , self::KINDS[ $kind ] ) , [ 'by' => $current->getUserIdentifier() ] );
     }
 
     /**
@@ -98,12 +98,12 @@ class UserManager
     public function renewKey( User $user , string $by ): string
     {
         if( self::kindOf( $user ) !== self::KIND_API ){
-            throw new \InvalidArgumentException( 'Nur API-Benutzer haben einen Schlüssel.' );
+            throw new \InvalidArgumentException( 'Nur API-Nutzer haben einen Schlüssel.' );
         }
         $key = self::generateKey();
         $user->setPassword( $this->passwordHasher->hashPassword( $user , $key ) );
         $this->entityManager->flush();
-        $this->logger->info( sprintf( 'Neuer Schlüssel für API-Benutzer „%s“' , $user->getUserIdentifier() ) , [ 'by' => $by ] );
+        $this->logger->info( sprintf( 'Neuer Schlüssel für API-Nutzer „%s“' , $user->getUserIdentifier() ) , [ 'by' => $by ] );
         return $key;
     }
 
@@ -121,7 +121,7 @@ class UserManager
         $name = $user->getUserIdentifier();
         $this->entityManager->remove( $user );
         $this->entityManager->flush();
-        $this->logger->info( sprintf( 'Benutzer „%s“ gelöscht' , $name ) , [ 'by' => $current->getUserIdentifier() ] );
+        $this->logger->info( sprintf( 'Nutzer „%s“ gelöscht' , $name ) , [ 'by' => $current->getUserIdentifier() ] );
     }
 
     /**
@@ -143,7 +143,7 @@ class UserManager
     public static function checkKind( string $kind ): string
     {
         if( !isset( self::KINDS[ $kind ] ) ){
-            throw new \InvalidArgumentException( 'Bitte die Art des Benutzers wählen.' );
+            throw new \InvalidArgumentException( 'Bitte die Art des Nutzers wählen.' );
         }
         return $kind;
     }
@@ -160,11 +160,11 @@ class UserManager
     {
         $username = trim( $username );
         if( preg_match( '/^[A-Za-z0-9._@-]{3,180}$/' , $username ) !== 1 ){
-            throw new \InvalidArgumentException( 'Der Benutzername braucht 3 bis 180 Zeichen: Buchstaben ohne Umlaute, Ziffern, Punkt, Bindestrich, Unterstrich oder @.' );
+            throw new \InvalidArgumentException( 'Der Nutzername braucht 3 bis 180 Zeichen: Buchstaben ohne Umlaute, Ziffern, Punkt, Bindestrich, Unterstrich oder @.' );
         }
         $existing = $this->userRepository->findOneBy( [ 'username' => $username ] );
         if( $existing !== null && $existing !== $self ){
-            throw new \InvalidArgumentException( sprintf( 'Den Benutzer „%s“ gibt es schon.' , $username ) );
+            throw new \InvalidArgumentException( sprintf( 'Den Nutzer „%s“ gibt es schon.' , $username ) );
         }
         return $username;
     }

@@ -4,13 +4,14 @@ namespace App\Controller;
 
 use App\Command\SendMessage;
 use App\Core\DatabaseLogger;
+use App\Core\Logging\LogChannels;
+use App\Core\Logging\LogFilter;
+use App\Core\Logging\LogSearch;
 use App\Core\MessageDecorator;
 use App\Entity\Event;
-use App\Entity\LogEntry;
 use App\Entity\User;
 use App\Kernel;
 use App\Service\AppService;
-use Doctrine\ORM\Tools\Pagination\Paginator;
 use Doctrine\Persistence\ManagerRegistry;
 use Psr\Log\LogLevel;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -69,46 +70,23 @@ class EventsController extends AbstractController
     }
 
     #[Route('/events/log', name: 'events_log', methods: [ 'GET' ])]
-    public function eventsLog( AppService $app , ManagerRegistry $doctrine , Request $request, #[CurrentUser] ?User $user ): Response
+    public function eventsLog( AppService $app , Request $request , LogSearch $search ): Response
     {
-        $manager = $doctrine->getManagerForClass( LogEntry::class );
-
-        $itemsPerPage = 100;
-        $currentPage = intval( $request->query->get('page' , 1 ) ) ;
-        $offset = ( $currentPage - 1 ) * $itemsPerPage;
-
-        $logsQueryBuilder = $manager->getRepository(LogEntry::class )
-            ->createQueryBuilder('log')
-            ->select('log')
-            ->orderBy('log.createdDateTime' , \SortDirection::Descending)
-            ->setFirstResult($offset)
-            ->setMaxResults($itemsPerPage);
-
-        $paginator = new Paginator( $logsQueryBuilder );
-        $maxPages = ceil($paginator->count() / $itemsPerPage );
+        $filter = LogFilter::fromQuery( $request->query );
+        $result = $search->search( $filter );
+        // Bekannte Bereiche in fester Reihenfolge, dazu was sonst noch im Log steht
+        $channels = array_unique( array_merge( array_keys( LogChannels::LABELS ) , $search->channels() , $filter->channel === '' ? [] : [ $filter->channel ] ) );
         return $this->render('default/logs.html.twig' , [
-            'logs' => $paginator,
-            'currentPage' => $currentPage,
-            'maxPages' => $maxPages,
+            'logs' => $result['rows'],
+            'total' => $result['total'],
+            'currentPage' => $result['page'],
+            'maxPages' => $result['pages'],
+            'filter' => $filter,
+            'query' => $filter->toQuery(),
+            'channels' => array_combine( $channels , array_map( [ LogChannels::class , 'label' ] , $channels ) ),
+            'levels' => LogFilter::LEVEL_LABELS,
             'date_time_format' => $app->getAppConfig()->getDateFormat() . " - " . $app->getAppConfig()->getTimeFormat()
         ]);
-    }
-
-    #[Route('/events/log/truncate', name: 'events_log_truncate', methods: [ 'POST' ])]
-    public function truncateLogs( Request $request , AppService $app, ManagerRegistry $doctrine ,DatabaseLogger $logger, #[CurrentUser] ?User $user ){
-        $this->denyAccessUnlessCsrfTokenValid( 'events_log_truncate' , $request );
-
-        $manager = $doctrine->getManagerForClass( LogEntry::class );
-        $deleteFromDateTime = (new \DateTime())->modify('-1 weeks');
-        $manager->getRepository(LogEntry::class )
-            ->createQueryBuilder('log')
-            ->delete(LogEntry::class , 'log')
-            ->where('log.createdDateTime < :deleteFrom')
-            ->setParameter('deleteFrom' , $deleteFromDateTime )
-            ->getQuery()->getResult();
-
-        $logger->info(sprintf(/** @lang text */ 'Delete log entries starting from %s' , $deleteFromDateTime->format($app->getAppConfig()->getDateFormat() . " - " . $app->getAppConfig()->getTimeFormat())));
-        return $this->redirectToRoute('events_log');
     }
 
     /**

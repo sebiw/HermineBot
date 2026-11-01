@@ -1,11 +1,12 @@
 {% extends 'base.html.twig' %}
 
 {% block nav %}
+    {% set usersActive = app.current_route starts with 'user' %}
     {% set eventsActive = app.current_route in [ 'events' , 'execute_events' , 'execute_events_run' ] %}
     <a href="{{ path('events') }}" class="{{ eventsActive ? 'active' }}">Events</a>
     <a href="{{ path('events_log') }}" class="{{ app.current_route == 'events_log' ? 'active' }}">Logs</a>
     {% if is_granted('ROLE_ADMIN') %}
-        <a href="{{ path('users') }}" class="{{ app.current_route starts with 'user' ? 'active' }}">Benutzer</a>
+        <a href="{{ path('users') }}" class="{{ usersActive ? 'active' }}">Nutzer</a>
         <a href="{{ path('jobs') }}" class="{{ app.current_route starts with 'jobs' ? 'active' }}">Hintergrundaufgaben</a>
     {% endif %}
     {# Unterpunkte des aktiven Bereichs hinter den Reitern (eigene Zeile; am Handy per CSS unter den aktiven Reiter) #}
@@ -13,6 +14,12 @@
         <nav class="secondary">
             <a href="{{ path('events') }}" class="{{ app.current_route == 'events' ? 'active' }}">Übersicht</a>
             <a href="{{ path('execute_events') }}" class="{{ app.current_route starts with 'execute_events' ? 'active' }}">Event-Ausführer starten</a>
+        </nav>
+    {% endif %}
+    {% if usersActive and is_granted('ROLE_ADMIN') %}
+        <nav class="secondary">
+            <a href="{{ path('users') }}" class="{{ app.current_route in [ 'users' , 'user_edit' , 'user_save' ] ? 'active' }}">Übersicht</a>
+            <a href="{{ path('users_new') }}" class="{{ app.current_route in [ 'users_new' , 'users_create' ] ? 'active' }}">Neuer Nutzer</a>
         </nav>
     {% endif %}
     {{ parent() }}

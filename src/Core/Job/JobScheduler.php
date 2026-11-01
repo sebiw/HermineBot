@@ -32,7 +32,7 @@ class JobScheduler
     public function __construct(
         #[AutowireIterator( BackgroundJob::TAG )] iterable $jobs ,
         private readonly ManagerRegistry $doctrine ,
-        #[Autowire(service: 'logger.events')] private readonly DatabaseLogger $logger ,
+        #[Autowire(service: 'logger.jobs')] private readonly DatabaseLogger $logger ,
         #[Autowire('%kernel.project_dir%')] private readonly string $projectDir ,
     )
     {

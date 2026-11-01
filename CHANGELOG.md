@@ -5,6 +5,10 @@ Alle wesentlichen Änderungen am Hermine-Bot werden in dieser Datei festgehalten
 ## [Unreleased]
 
 ### Geändert
+- Die Nutzer-Seite ist aufgeräumt: Die Übersicht zeigt nur noch die Liste, neue Nutzer legt man unter „Neuer Nutzer“ an, und auf der Bearbeiten-Seite stehen Schlüssel und Löschen in eigenen Abschnitten.
+- Die Logs lassen sich nach Zeitraum, Bereich und Art filtern und frei durchsuchen; einzelne Aufrufe an Hermine sind als Routine ausgeblendet, der Knopf „Logs bereinigen“ entfällt, alte Einträge werden weiter automatisch gelöscht.
+- Alle Tabellen sehen jetzt aus wie im StAN-Manager: weiße Fläche mit weichem Rand und feinen Zeilenlinien.
+- In den Logs blättert man jetzt mit klaren Knöpfen für Zurück und Weiter, erste und letzte Seite statt mit vielen einzelnen Seitenzahlen.
 - Die Versionsnummer steht jetzt unten rechts in der blauen Kopfleiste, die Anmeldezeile am Rechner auf Höhe der Navigation; so bleibt mehr Platz für den Inhalt.
 
 ## [3.0.0] - 2026-10-31

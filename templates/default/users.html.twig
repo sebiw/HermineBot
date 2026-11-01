@@ -4,61 +4,32 @@
     <div class="wrapper layout-compact">
         <div class="form-page">
             <div class="report-header">
-                <h2>Benutzer</h2>
+                <h2>Nutzer</h2>
                 <span class="report-subtitle">Zugänge zur Oberfläche und für REST-Aufrufe</span>
             </div>
-            <p class="form-hint">Administratoren melden sich an der Oberfläche an. API-Benutzer sind technische Zugänge für REST-Aufrufe (z. B. vom StAN-Manager): Benutzername und Schlüssel stehen beim Aufrufer, der Schlüssel wird beim Anlegen erzeugt und nur einmal angezeigt.</p>
 
-            <fieldset class="form-section">
-                <legend>{{ users|length }} Benutzer</legend>
-                <table class="object-center">
-                    <thead>
+            <table class="object-center user-list">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Art</th>
+                        <th title="Administratoren: letzte Anfrage in der Oberfläche; API-Nutzer: letzter Aufruf mit gültigem Schlüssel – auf die Minute genau">Zuletzt aktiv</th>
+                        <th>Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                        {% set isAdmin = 'ROLE_ADMIN' in user.getRoles() %}
                         <tr>
-                            <th>Benutzername</th>
-                            <th>Art</th>
-                            <th title="Administratoren: letzte Anfrage in der Oberfläche; API-Benutzer: letzter Aufruf mit gültigem Schlüssel – auf die Minute genau">Zuletzt aktiv</th>
-                            <th></th>
+                            <td class="text-no-wrap"><a href="{{ path('user_edit' , { id : user.getId() }) }}"><strong>{{ user.getUserIdentifier() }}</strong></a>{% if user is same as(app.user) %} <span class="text-small">(du)</span>{% endif %}</td>
+                            <td><span class="user-role{{ isAdmin ? ' user-role-admin' }}">{{ isAdmin ? kinds.admin : kinds.api }}</span></td>
+                            <td class="text-no-wrap">{{ user.getLastSeenAt() ? user.getLastSeenAt()|date('d.m.Y H:i') : 'noch nie' }}</td>
+                            <td><div class="user-actions"><a href="{{ path('user_edit' , { id : user.getId() }) }}" class="button-secondary">Bearbeiten</a></div></td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        {% for user in users %}
-                            <tr>
-                                <td>{{ user.getUserIdentifier() }}{% if user is same as(app.user) %} <span class="text-small">(du)</span>{% endif %}</td>
-                                <td>{{ 'ROLE_ADMIN' in user.getRoles() ? kinds.admin : kinds.api }}</td>
-                                <td class="text-no-wrap">{{ user.getLastSeenAt() ? user.getLastSeenAt()|date('d.m.Y H:i') : 'noch nie' }}</td>
-                                <td><a href="{{ path('user_edit' , { id : user.getId() }) }}">Bearbeiten</a></td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </fieldset>
-
-            <form method="post" action="{{ path('users_create') }}">
-                <input type="hidden" name="_token" value="{{ csrf_token('users') }}">
-                <fieldset class="form-section">
-                    <legend>Neuer Benutzer</legend>
-                    <div class="form-grid">
-                        <div class="form-field span-2">
-                            <label for="user-name">Benutzername</label>
-                            <input type="text" class="field" id="user-name" name="username" maxlength="180" autocomplete="off" required>
-                        </div>
-                        <div class="form-field span-2">
-                            <label for="user-kind">Art</label>
-                            <select class="field" id="user-kind" name="kind">
-                                {% for value, label in kinds %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
-                            </select>
-                        </div>
-                        <div class="form-field span-2">
-                            <label for="user-password">Passwort <small>(nur Administratoren, mindestens {{ passwordMinLength }} Zeichen)</small></label>
-                            <input type="password" class="field" id="user-password" name="password" autocomplete="new-password">
-                        </div>
-                    </div>
-                </fieldset>
-                <div class="action-bar">
-                    <span></span>
-                    <button type="submit" class="button-primary">Anlegen</button>
-                </div>
-            </form>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <p class="text-small text-center">{{ users|length }} Nutzer</p>
         </div>
     </div>
 {% endblock %}

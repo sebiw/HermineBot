@@ -149,7 +149,7 @@ class Daemon extends Command
     protected function tick( string $context , InputInterface $input, OutputInterface $output ): int
     {
 
-        $this->getLogger()->log(LogLevel::INFO , sprintf('%s: Started event handler' , $context ) );
+        $this->getLogger()->log(LogLevel::DEBUG , sprintf('%s: Started event handler' , $context ) );
 
         $jsonResult = [];
         $now = new DateTime();

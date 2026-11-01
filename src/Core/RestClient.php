@@ -177,9 +177,8 @@ class RestClient {
             $this->getLogger()?->error( sprintf('%s %s failed' , $method , $url ) , [ 'error' => $curlError ] );
         }
 
-        $this->getLogger()?->info( sprintf('%s %s' , $method , $url ) , [ 'status' => $httpStatus ] );
-
-        $this->getLogger()?->debug( sprintf('%s %s' , $method , $url ) , [ 'additionalHeader' => $additionalHeader , 'data' => $data , 'result' => $result ] );
+        // Nur Adresse und Status: Anfragen und Antworten enthalten Schlüssel und Nachrichten
+        $this->getLogger()?->debug( sprintf('%s %s' , $method , $url ) , [ 'status' => $httpStatus ] );
 
         return $result;
     }

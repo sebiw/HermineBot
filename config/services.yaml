@@ -24,6 +24,7 @@ services:
             - '../src/Entity/'
             - '../src/Kernel.php'
 
+    # Log-Channels = Bereiche des Bots, siehe App\Core\Logging\LogChannels
     logger.events:
         class: App\Core\DatabaseLogger
         arguments:
@@ -33,7 +34,21 @@ services:
         class: App\Core\DatabaseLogger
         arguments:
             $channel: 'stashcat'
-            $ignoreLevel: [ 'debug' ]
+
+    logger.api:
+        class: App\Core\DatabaseLogger
+        arguments:
+            $channel: 'api'
+
+    logger.jobs:
+        class: App\Core\DatabaseLogger
+        arguments:
+            $channel: 'jobs'
+
+    logger.nutzer:
+        class: App\Core\DatabaseLogger
+        arguments:
+            $channel: 'nutzer'
 
     logger.app:
         class: App\Core\DatabaseLogger

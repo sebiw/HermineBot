@@ -13,8 +13,8 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 /**
- * Benutzer des Bots verwalten: Administratoren der Oberfläche und API-Benutzer für REST (z. B. StAN-Manager).
- * Der Schlüssel eines API-Benutzers wird nur einmal angezeigt (Flash „key“), gespeichert ist nur der Hash.
+ * Nutzer des Bots verwalten: Administratoren der Oberfläche und API-Nutzer für REST (z. B. StAN-Manager).
+ * Der Schlüssel eines API-Nutzers wird nur einmal angezeigt (Flash „key“), gespeichert ist nur der Hash.
  */
 #[IsGranted('ROLE_ADMIN')]
 class UserController extends AbstractController
@@ -27,6 +27,23 @@ class UserController extends AbstractController
         return $this->render('default/users.html.twig' , [
             'users' => $userManager->all(),
             'kinds' => UserManager::KINDS,
+        ]);
+    }
+
+    #[Route('/users/new', name: 'users_new', methods: [ 'GET' ])]
+    public function new(): Response
+    {
+        return $this->renderNew( [ 'username' => '' , 'kind' => UserManager::KIND_API ] );
+    }
+
+    /**
+     * @param array{username: string, kind: string} $form
+     */
+    private function renderNew( array $form ): Response
+    {
+        return $this->render('default/user.new.html.twig' , [
+            'form' => $form,
+            'kinds' => UserManager::KINDS,
             'passwordMinLength' => UserManager::PASSWORD_MIN_LENGTH,
         ]);
     }
@@ -35,13 +52,15 @@ class UserController extends AbstractController
     public function create( Request $request , UserManager $userManager , #[CurrentUser] User $current ): Response
     {
         $this->denyAccessUnlessCsrfTokenValid( 'users' , $request );
+        $form = [ 'username' => $request->request->getString('username') , 'kind' => $request->request->getString('kind') ];
         try {
             [ $user , $key ] = $userManager->create( $request->request->getString('username') , $request->request->getString('kind') , $request->request->getString('password') , $current->getUserIdentifier() );
         } catch( \InvalidArgumentException $exception ){
+            // Eingaben bleiben stehen, das Passwort wird neu eingegeben
             $this->addFlash( 'error' , $exception->getMessage() );
-            return $this->redirectToRoute('users');
+            return $this->renderNew( $form );
         }
-        $this->addFlash( 'success' , sprintf( 'Benutzer „%s“ angelegt.' , $user->getUserIdentifier() ) );
+        $this->addFlash( 'success' , sprintf( 'Nutzer „%s“ angelegt.' , $user->getUserIdentifier() ) );
         if( $key !== null ){
             $this->addFlash( 'key' , $key );
         }
@@ -71,7 +90,7 @@ class UserController extends AbstractController
             if( $request->request->has('delete') ){
                 $name = $user->getUserIdentifier();
                 $userManager->delete( $user , $current );
-                $this->addFlash( 'success' , sprintf( 'Benutzer „%s“ gelöscht.' , $name ) );
+                $this->addFlash( 'success' , sprintf( 'Nutzer „%s“ gelöscht.' , $name ) );
                 return $this->redirectToRoute('users');
             }
             if( $request->request->has('renewKey') ){
@@ -80,7 +99,7 @@ class UserController extends AbstractController
                 return $this->redirectToRoute('user_edit' , [ 'id' => $id ] );
             }
             $userManager->update( $user , $request->request->getString('username') , $request->request->getString('kind') , $request->request->getString('password') , $current );
-            $this->addFlash( 'success' , 'Benutzer gespeichert.' );
+            $this->addFlash( 'success' , 'Nutzer gespeichert.' );
         } catch( \InvalidArgumentException $exception ){
             $this->addFlash( 'error' , $exception->getMessage() );
         }

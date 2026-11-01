@@ -1,61 +1,90 @@
 {% extends 'base.loggedin.html.twig' %}
 
 {% block body %}
+    <div class="wrapper layout-compact">
+        <div class="form-page">
+            <div class="report-header">
+                <h2>Logs</h2>
+                <span class="report-subtitle">Was der Bot protokolliert hat</span>
+            </div>
 
-    <div class="form-page">
-        <div class="report-header">
-            <h2>Logs</h2>
-            <span class="report-subtitle">neueste zuerst</span>
+            <form method="get" action="{{ path('events_log') }}" class="log-filter">
+                <fieldset class="form-section">
+                    <legend>Filtern</legend>
+                    <div class="form-grid">
+                        <div class="form-field span-2">
+                            <label for="log-q">Suche</label>
+                            <input type="search" class="field" id="log-q" name="q" value="{{ filter.text }}" placeholder="in Meldung und Zusatzdaten">
+                        </div>
+                        <div class="form-field span-2">
+                            <label for="log-channel">Bereich</label>
+                            <select class="field" id="log-channel" name="channel">
+                                <option value="">Alle Bereiche</option>
+                                {% for value, label in channels %}<option value="{{ value }}"{{ filter.channel == value ? ' selected' }}>{{ label }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-field span-2">
+                            <label for="log-from">Von</label>
+                            <input type="datetime-local" class="field" id="log-from" name="from" value="{{ filter.from ? filter.from|date('Y-m-d\\TH:i') }}">
+                        </div>
+                        <div class="form-field span-2">
+                            <label for="log-to">Bis</label>
+                            <input type="datetime-local" class="field" id="log-to" name="to" value="{{ filter.to ? filter.to|date('Y-m-d\\TH:i') }}">
+                        </div>
+                        <div class="form-field span-all">
+                            <span class="log-filter-label">Art</span>
+                            <div class="log-levels">
+                                {% for value, label in levels %}
+                                    <label class="log-level-choice"><input type="checkbox" name="level[]" value="{{ value }}"{{ value in filter.levels ? ' checked' }}> <span class="log-level log-level-{{ value }}">{{ label }}</span></label>
+                                {% endfor %}
+                            </div>
+                            <p class="form-hint">Routine sind einzelne Aufrufe an Hermine und der Start eines Durchlaufs.</p>
+                        </div>
+                    </div>
+                </fieldset>
+                <div class="action-bar">
+                    {% if not filter.isDefault() %}<a href="{{ path('events_log') }}" class="button-secondary">Filter zurücksetzen</a>{% endif %}
+                    <button type="submit" class="button-primary">Anzeigen</button>
+                </div>
+            </form>
+
+            <p class="log-count"><strong>{{ total }}</strong> {{ total == 1 ? 'Eintrag' : 'Einträge' }}</p>
         </div>
-        <form method="post" action="{{ path('events_log_truncate') }}" class="page-actions">
-            <input type="hidden" name="_token" value="{{ csrf_token('events_log_truncate') }}">
-            <button type="submit" class="button-danger" onclick="return confirm('Alle Log-Einträge löschen, die älter als eine Woche sind?');">Logs bereinigen</button>
-        </form>
+
+        {% if logs is empty %}
+            <p class="text-center">Keine Einträge für diese Auswahl.</p>
+        {% else %}
+            <table class="object-center log-table">
+                <thead>
+                    <tr>
+                        <th>Zeit</th>
+                        <th>Bereich</th>
+                        <th>Art</th>
+                        <th>Meldung</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                        {% set kind = log.level in ['error','critical','alert','emergency'] ? 'error' : ( log.level == 'warning' ? 'warning' : ( log.level == 'debug' ? 'routine' : 'info' ) ) %}
+                        <tr>
+                            <td class="text-no-wrap">{{ log.createdAt|date(date_time_format) }}</td>
+                            <td>{{ channels[log.channel] ?? log.channel }}</td>
+                            <td><span class="log-level log-level-{{ kind }}">{{ levels[kind] }}</span></td>
+                            <td class="text-overflow-wrap-anywhere">
+                                {{ log.message }}
+                                {% if log.context %}
+                                    <details class="log-context">
+                                        <summary>Zusatzdaten</summary>
+                                        <pre>{{ log.context|json_encode(constant('JSON_PRETTY_PRINT') b-or constant('JSON_UNESCAPED_UNICODE') b-or constant('JSON_UNESCAPED_SLASHES')) }}</pre>
+                                    </details>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+
+        {% include 'default/_pagination.html.twig' with { route: 'events_log' } %}
     </div>
-
-    <div class="layout-compact">
-    <table class="object-center">
-        <thead>
-        <tr>
-            <th>DateTime</th>
-            <th>Channel</th>
-            <th>Level</th>
-            <th>Message</th>
-            <th>Context</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for log in logs %}
-            <tr>
-                <td>{{ log.getCreatedDateTime()|date(date_time_format) }}</td>
-                <td>{{ log.getChannel()|upper }}</td>
-                <td>{{ log.getLevel()|upper }}</td>
-                <td>{{ log.getMessage() }}</td>
-                <td class="text-overflow-wrap-anywhere">{{ log.getContext()|json_encode(constant('JSON_PRETTY_PRINT')  b-or constant('JSON_UNESCAPED_UNICODE'))|nl2br }}</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-    </div>
-    {% if maxPages > 1 %}
-        <ul class="pagination">
-            {# `«` arrow  #}
-            <li>
-                <a {{ currentPage == 1 ? 'class="disabled"' }} href="{{ path('events_log', {page: currentPage-1 < 1 ? 1 : currentPage-1}) }}">«</a>
-            </li>
-
-            {# Render each page number #}
-            {% for i in 1..maxPages %}
-                <li>
-                    <a {{ currentPage == i ? 'class="active"' }} href="{{ path('events_log', {page: i}) }}">{{ i }}</a>
-                </li>
-            {% endfor %}
-
-            {# `»` arrow #}
-            <li>
-                <a {{ currentPage == maxPages ? 'class="disabled"' }} href="{{ path('events_log', {page: currentPage+1 <= maxPages ? currentPage+1 : currentPage}) }}">»</a>
-            </li>
-        </ul>
-    {% endif %}
-
 {% endblock %}

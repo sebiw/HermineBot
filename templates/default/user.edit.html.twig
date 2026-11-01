@@ -7,12 +7,11 @@
                 <h2>{{ user.getUserIdentifier() }}</h2>
                 <span class="report-subtitle">{{ kinds[kind] }}{% if isSelf %} – dein Konto{% endif %}</span>
             </div>
-            <p class="form-hint"><a href="{{ path('users') }}">Alle Benutzer</a></p>
 
             {% for key in newKeys %}
                 <fieldset class="form-section">
                     <legend>Schlüssel – nur jetzt sichtbar</legend>
-                    <p class="form-hint">Beim Aufrufer zusammen mit dem Benutzernamen eintragen (beim StAN-Manager z. B. als API-Key des Hermine-Bots). Nach dem Verlassen der Seite lässt er sich nicht mehr anzeigen, nur neu erzeugen.</p>
+                    <p class="form-hint">Beim Aufrufer zusammen mit dem Nutzernamen eintragen (beim StAN-Manager z. B. als API-Key des Hermine-Bots). Nach dem Verlassen der Seite lässt er sich nicht mehr anzeigen, nur neu erzeugen.</p>
                     <div class="form-grid">
                         <div class="form-field span-all">
                             <label for="new-key-{{ loop.index }}">Schlüssel</label>
@@ -28,10 +27,10 @@
             <form method="post" action="{{ path('user_save' , { id : user.getId() }) }}">
                 <input type="hidden" name="_token" value="{{ csrf_token('user-' ~ user.getId()) }}">
                 <fieldset class="form-section">
-                    <legend>Benutzer</legend>
+                    <legend>Konto</legend>
                     <div class="form-grid">
                         <div class="form-field span-2">
-                            <label for="user-name">Benutzername</label>
+                            <label for="user-name">Nutzername</label>
                             <input type="text" class="field" id="user-name" name="username" value="{{ user.getUserIdentifier() }}" maxlength="180" required>
                         </div>
                         <div class="form-field span-2">
@@ -49,25 +48,39 @@
                     </div>
                 </fieldset>
                 <div class="action-bar">
-                    <span><a href="{{ path('users') }}" class="button-secondary">Zurück</a></span>
+                    <a href="{{ path('users') }}" class="button-secondary">Abbrechen</a>
                     <button type="submit" class="button-primary">Speichern</button>
                 </div>
             </form>
 
-            {# Schlüssel und Löschen in einem eigenen Formular – ungespeicherte Änderungen oben werden nicht mitgeschickt #}
-            <form method="post" action="{{ path('user_save' , { id : user.getId() }) }}">
-                <input type="hidden" name="_token" value="{{ csrf_token('user-' ~ user.getId()) }}">
-                <div class="action-bar">
-                    <span>
-                        {% if not isSelf %}
-                            <button type="submit" name="delete" value="1" class="button-danger" onclick="return confirm('Benutzer „{{ user.getUserIdentifier()|e('js') }}“ löschen?');">Löschen</button>
-                        {% endif %}
-                    </span>
-                    {% if kind == 'api' %}
+            {# Schlüssel und Löschen je in einem eigenen Formular – ungespeicherte Änderungen oben werden nicht mitgeschickt #}
+            {% if kind == 'api' %}
+                <form method="post" action="{{ path('user_save' , { id : user.getId() }) }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('user-' ~ user.getId()) }}">
+                    <fieldset class="form-section">
+                        <legend>Schlüssel</legend>
+                        <p class="form-hint">Ein neuer Schlüssel macht den alten sofort ungültig und muss danach beim Aufrufer eingetragen werden.</p>
+                    </fieldset>
+                    <div class="action-bar">
+                        <span></span>
                         <button type="submit" name="renewKey" value="1" class="button-secondary" onclick="return confirm('Neuen Schlüssel erzeugen? Der alte gilt sofort nicht mehr.');">Neuen Schlüssel erzeugen</button>
-                    {% endif %}
-                </div>
-            </form>
+                    </div>
+                </form>
+            {% endif %}
+
+            {% if not isSelf %}
+                <form method="post" action="{{ path('user_save' , { id : user.getId() }) }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('user-' ~ user.getId()) }}">
+                    <fieldset class="form-section">
+                        <legend>Löschen</legend>
+                        <p class="form-hint">Der Zugang gilt danach sofort nicht mehr.</p>
+                    </fieldset>
+                    <div class="action-bar">
+                        <span></span>
+                        <button type="submit" name="delete" value="1" class="button-danger" onclick="return confirm('Nutzer „{{ user.getUserIdentifier()|e('js') }}“ löschen?');">Löschen</button>
+                    </div>
+                </form>
+            {% endif %}
         </div>
     </div>
 {% endblock %}

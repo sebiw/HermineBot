@@ -128,7 +128,7 @@ class SendMessage extends Command
             throw new \Exception('Sending empty Messages is not allowed!');
         }
 
-        $this->getLogger()->log(LogLevel::INFO , sprintf('%s: Started event handler' , $context ) );
+        $this->getLogger()->log(LogLevel::DEBUG , sprintf('%s: Started event handler' , $context ) );
 
         $jsonResult = [];
 

@@ -8,6 +8,8 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity()]
 #[ORM\Table(name : "log")]
 #[ORM\Index(name: "idx_log_created_date_time", columns: [ "created_date_time" ])]
+#[ORM\Index(name: "idx_log_level_created", columns: [ "level" , "created_date_time" ])]
+#[ORM\Index(name: "idx_log_channel_created", columns: [ "channel" , "created_date_time" ])]
 class LogEntry
 {
     #[ORM\Id]

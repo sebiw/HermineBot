@@ -211,13 +211,66 @@ dl, dt, dd {
   padding: 0px;
 }
 
-table {
+:where(table) {
   border-collapse: collapse;
 }
 
 td, th {
   padding: 0.5rem;
-  border: 1px solid black;
+}
+
+/* Tabellen im Inhalt einheitlich wie im StAN-Manager: weiße Fläche mit weichem Rand, feine Zeilentrennung, dezente Kopfzeile.
+   :where() hält die Spezifität bei 0, eigene Tabellen-Styles gehen immer vor. */
+:where(main) :where(table) {
+  border-collapse: separate;
+  border-spacing: 0;
+  background-color: #fff;
+  border: 1px solid #DBD6D0;
+  border-radius: 0.6rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+:where(main) :where(td, th) {
+  padding: 0.45rem 0.7rem;
+  border-bottom: 1px solid #ece6df;
+}
+
+:where(main) :where(thead th, tr.table-cards-head > th) {
+  color: #5E5D5B;
+  font-size: 0.85rem;
+  background-color: #faf7f4;
+  border-bottom-color: #DBD6D0;
+}
+
+:where(main) :where(tbody th[colspan], tr.table-cards-section > th) {
+  color: #003399;
+  text-align: left;
+  background-color: #fff;
+  border-bottom: 2px solid #e3eaf7;
+}
+
+:where(main) :where(tbody > tr:hover) {
+  background-color: #fbf9f6;
+}
+
+:where(main) :where(table > tbody:last-child > tr:last-child, table > tr:last-child) > :where(td, th) {
+  border-bottom: 0;
+}
+
+:where(main) :where(table > :first-child > tr:first-child > :first-child) {
+  border-top-left-radius: 0.55rem;
+}
+
+:where(main) :where(table > :first-child > tr:first-child > :last-child) {
+  border-top-right-radius: 0.55rem;
+}
+
+:where(main .form-section, main td) :where(table) {
+  box-shadow: none;
+}
+
+:where(main .form-section) > :where(table, details > table) {
+  width: 100%;
 }
 
 input, textarea, select, button {
@@ -313,32 +366,28 @@ a.button-secondary:is(:link, :visited) {
 }
 
 .pagination {
-  text-align: center;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 1rem 0;
 }
 
-.pagination a {
-  display: inline-block;
-  padding: 0.1rem;
-  border: 1px solid black;
-  border-radius: 0.2rem;
-  color: #5E5D5B;
-  background-color: #DBD6D0;
-  text-decoration: none;
+.pagination-where {
+  padding: 0 0.6rem;
+  white-space: nowrap;
 }
 
-.pagination a:hover, .pagination a.active {
-  color: #fff;
-  background-color: #202020;
+.pagination-off {
+  opacity: 0.4;
+  cursor: default;
 }
 
-.pagination a.disabled {
-  color: #888888;
-}
-
-.pagination li {
-  margin: 0.1rem;
-  display: inline-block;
-  list-style: none;
+@media (max-width: 800px) {
+  .pagination .button-secondary span {
+    display: none;
+  }
 }
 
 .spacer {
@@ -812,6 +861,13 @@ a[title], a [title] {
 .events-table td {
   background-color: #fff;
 }
+/* Die Zellen haben eine eigene Farbe: untere Ecken passend zum runden Rand */
+.events-table tbody > tr:last-child > td:first-child {
+  border-bottom-left-radius: 0.55rem;
+}
+.events-table tbody > tr:last-child > td:last-child {
+  border-bottom-right-radius: 0.55rem;
+}
 
 .thw-datepicker {
   width: 6.5em;
@@ -932,4 +988,110 @@ a[title], a [title] {
 }
 .copy-field button {
   white-space: nowrap;
+}
+
+/* Log-Seite wie im StAN-Manager: Filter und Art als kleines Abzeichen; Warnung orange, Fehler rot */
+.log-filter-label {
+  font-weight: bold;
+}
+
+.log-levels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  margin: 0.3rem 0;
+}
+
+.log-level-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.log-level {
+  display: inline-block;
+  padding: 0.05rem 0.55rem;
+  border-radius: 1rem;
+  font-size: 0.8rem;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.log-level-routine {
+  color: #4a4744;
+  background-color: #e6e1db;
+}
+
+.log-level-info {
+  color: #003399;
+  background-color: #e3eaf7;
+}
+
+.log-level-warning {
+  color: #2b2000;
+  background-color: #e6a100;
+}
+
+.log-level-error {
+  color: #fff;
+  background-color: #b3261e;
+}
+
+.log-count {
+  margin: 0.8rem 0 0.5rem;
+}
+
+.log-context {
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+}
+
+.log-context summary {
+  cursor: pointer;
+  color: #5E5D5B;
+}
+
+.log-context pre {
+  margin: 0.3rem 0 0;
+  padding: 0.4rem 0.5rem;
+  border-radius: 0.3rem;
+  background-color: #f3f1ee;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Nutzerliste wie im StAN-Manager */
+.user-list {
+  width: 100%;
+}
+
+.user-list .user-role {
+  padding: 0 0.45rem;
+  border: 1px solid #DBD6D0;
+  border-radius: 1rem;
+  font-size: 0.8rem;
+  color: #5E5D5B;
+  white-space: nowrap;
+}
+
+.user-list .user-role.user-role-admin {
+  color: #003399;
+  border-color: #003399;
+}
+
+.user-list .user-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.4rem;
+}
+
+.user-list .user-actions a.button-secondary {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+/* Abstand zwischen mehreren Formularen auf einer Seite */
+.form-page form + form {
+  margin-top: 1rem;
 }

@@ -27,7 +27,7 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 class ApiController extends AbstractController
 {
     #[Route('/api/send-message', name: 'api_send_message', methods: ['POST'])]
-    public function apiSendMessage( KernelInterface $kernel, Request $request, #[CurrentUser] UserInterface $user , #[Autowire(service: 'logger.events')] DatabaseLogger $logger ): Response
+    public function apiSendMessage( KernelInterface $kernel, Request $request, #[CurrentUser] UserInterface $user , #[Autowire(service: 'logger.api')] DatabaseLogger $logger ): Response
     {
         $application = new Application( $kernel );
         $application->setAutoExit(false);
@@ -92,7 +92,7 @@ class ApiController extends AbstractController
      * Unterhaltungs-Platzhalter. Ohne Anmeldung bei Hermine. Antwort: status, channels (Namen).
      */
     #[Route('/api/channels', name: 'api_channels', methods: ['POST'])]
-    public function apiChannels( AppService $app , #[Autowire(service: 'logger.events')] DatabaseLogger $logger ): Response
+    public function apiChannels( AppService $app , #[Autowire(service: 'logger.api')] DatabaseLogger $logger ): Response
     {
         $config = $app->getAppConfig();
         $placeholder = $config->getConversationChannelPlaceholderName();
@@ -110,7 +110,7 @@ class ApiController extends AbstractController
      * nicht der Unterhaltungs-Platzhalter. Antwort: status, channel (id, name), ownUserId (der Account des Bots), members.
      */
     #[Route('/api/channel-members', name: 'api_channel_members', methods: ['POST'])]
-    public function apiChannelMembers( Request $request , AppService $app , #[Autowire(service: 'logger.events')] DatabaseLogger $logger ): Response
+    public function apiChannelMembers( Request $request , AppService $app , #[Autowire(service: 'logger.api')] DatabaseLogger $logger ): Response
     {
         $content = json_decode( $request->getContent() , true );
         $channelName = trim( strval( is_array( $content ) ? ( $content['channel'] ?? '' ) : '' ) );
@@ -155,7 +155,7 @@ class ApiController extends AbstractController
      * sonst 404. Der Text kommt nicht ins Log (kann eine PIN enthalten). Antwort: status, conversationId, created.
      */
     #[Route('/api/direct-message', name: 'api_direct_message', methods: ['POST'])]
-    public function apiDirectMessage( Request $request , AppService $app , #[Autowire(service: 'logger.events')] DatabaseLogger $logger ): Response
+    public function apiDirectMessage( Request $request , AppService $app , #[Autowire(service: 'logger.api')] DatabaseLogger $logger ): Response
     {
         $content = json_decode( $request->getContent() , true );
         $content = is_array( $content ) ? $content : [];
