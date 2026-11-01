@@ -4,6 +4,8 @@ Alle wesentlichen Änderungen am Hermine-Bot werden in dieser Datei festgehalten
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-11-01
+
 ### Geändert
 - Die Nutzer-Seite ist aufgeräumt: Die Übersicht zeigt nur noch die Liste, neue Nutzer legt man unter „Neuer Nutzer“ an, und auf der Bearbeiten-Seite stehen Schlüssel und Löschen in eigenen Abschnitten.
 - Die Logs lassen sich nach Zeitraum, Bereich und Art filtern und frei durchsuchen; einzelne Aufrufe an Hermine sind als Routine ausgeblendet, der Knopf „Logs bereinigen“ entfällt, alte Einträge werden weiter automatisch gelöscht.
