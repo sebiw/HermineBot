@@ -55,7 +55,9 @@ when@prod:
                 type: console
                 process_psr_3_messages: false
                 channels: ["!event", "!doctrine"]
+            # Nicht nach stderr: Alles dort verschickt der Cron als Mail, auch bei „nur bei Fehlern“.
             deprecation:
-                type: stream
+                type: rotating_file
                 channels: [deprecation]
-                path: php://stderr
+                path: "%kernel.logs_dir%/deprecation.log"
+                max_files: 7
