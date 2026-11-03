@@ -4,6 +4,11 @@ Alle wesentlichen Änderungen am Hermine-Bot werden in dieser Datei festgehalten
 
 ## [Unreleased]
 
+## [4.0.1] - 2026-11-03
+
+### Behoben
+- Auf schmalen Handys stehen Beschriftungen in Formularen über dem Eingabefeld, und nichts ragt mehr aus dem Rahmen.
+
 ## [4.0.0] - 2026-11-03
 
 ### Geändert
