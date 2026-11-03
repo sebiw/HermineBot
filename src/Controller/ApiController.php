@@ -37,10 +37,10 @@ class ApiController extends AbstractController
         $channel = $request->query->get('channel') ?? $request->request->get('channel') ?? $content['channel'] ?? null;
         $message = $request->query->get('message') ?? $request->request->get('message') ?? $content['message'] ?? null;
 
-        if( empty( $message ) ){
+        if( !is_string( $message ) || trim( $message ) === '' ){
             return $this->errorResponse('Message missing!' , Response::HTTP_BAD_REQUEST );
         }
-        if( empty( $channel ) ){
+        if( !is_string( $channel ) || $channel === '' ){
             return $this->errorResponse('channel missing!' , Response::HTTP_BAD_REQUEST );
         }
         // Nur freigegebene Channels: Unterhaltungen (Platzhalter) gehen per REST nicht, Einzelnachrichten nur über /api/direct-message
@@ -106,7 +106,7 @@ class ApiController extends AbstractController
     public function apiChannelMembers( Request $request , AppService $app , #[Autowire(service: 'logger.api')] DatabaseLogger $logger ): Response
     {
         $content = json_decode( $request->getContent() , true );
-        $channelName = trim( strval( is_array( $content ) ? ( $content['channel'] ?? '' ) : '' ) );
+        $channelName = is_array( $content ) && is_string( $content['channel'] ?? null ) ? trim( $content['channel'] ) : '';
         if( $channelName === '' ){
             return $this->errorResponse('channel missing!' , Response::HTTP_BAD_REQUEST );
         }
@@ -153,7 +153,7 @@ class ApiController extends AbstractController
         $content = json_decode( $request->getContent() , true );
         $content = is_array( $content ) ? $content : [];
         $userId = trim( strval( $content['userId'] ?? '' ) );
-        $channelName = trim( strval( $content['channel'] ?? '' ) );
+        $channelName = is_string( $content['channel'] ?? null ) ? trim( $content['channel'] ) : '';
         $message = trim( strval( $content['message'] ?? '' ) );
         // Only on explicit request: without an existing 1:1 conversation a new one is created (not yet tried against Hermine)
         $createConversation = ( $content['createConversation'] ?? false ) === true;

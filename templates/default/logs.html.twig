@@ -2,13 +2,12 @@
 
 {% block body %}
     <div class="wrapper layout-compact">
-        <div class="form-page">
-            <div class="report-header">
-                <h2>Logs</h2>
-                <span class="report-subtitle">Was der Bot protokolliert hat</span>
-            </div>
+        <div class="report-header">
+            <h2>Logs</h2>
+            <span class="report-subtitle">Was der Bot protokolliert hat</span>
+        </div>
 
-            <form method="get" action="{{ path('events_log') }}" class="log-filter">
+            <form method="get" action="{{ path('events_log') }}" class="form-page log-filter">
                 <fieldset class="form-section">
                     <legend>Filtern</legend>
                     <div class="form-grid">
@@ -48,8 +47,7 @@
                 </div>
             </form>
 
-            <p class="log-count"><strong>{{ total }}</strong> {{ total == 1 ? 'Eintrag' : 'Einträge' }}</p>
-        </div>
+            <div class="form-page"><p class="log-count"><strong>{{ total }}</strong> {{ total == 1 ? 'Eintrag' : 'Einträge' }}</p></div>
 
         {% if logs is empty %}
             <p class="text-center">Keine Einträge für diese Auswahl.</p>
@@ -67,7 +65,7 @@
                     {% for log in logs %}
                         {% set kind = log.level in ['error','critical','alert','emergency'] ? 'error' : ( log.level == 'warning' ? 'warning' : ( log.level == 'debug' ? 'routine' : 'info' ) ) %}
                         <tr>
-                            <td class="text-no-wrap">{{ log.createdAt|date(date_time_format) }}</td>
+                            <td class="text-no-wrap">{{ log.createdAt|date(date_time_format)|no_break }}</td>
                             <td>{{ channels[log.channel] ?? log.channel }}</td>
                             <td><span class="log-level log-level-{{ kind }}">{{ levels[kind] }}</span></td>
                             <td class="text-overflow-wrap-anywhere">

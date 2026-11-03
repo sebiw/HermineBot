@@ -315,10 +315,10 @@ class Event implements \JsonSerializable
 
     /** Stand für die Übersicht (Abzeichen, Farben wie „Stand der Abfrage“ im StAN-Manager) */
     const STATE_LABELS = [
-        self::STATE_PLANNED => 'Geplant',
-        self::STATE_RUNNING => 'Läuft',
-        self::STATE_DONE => 'Erledigt',
-        self::STATE_FAILED => 'Gesperrt',
+        self::STATE_PLANNED => '🕓 geplant',
+        self::STATE_RUNNING => '🔁 läuft',
+        self::STATE_DONE => '✔️ erledigt',
+        self::STATE_FAILED => '⛔ gesperrt',
     ];
 
     /**

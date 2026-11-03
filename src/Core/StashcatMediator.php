@@ -197,7 +197,8 @@ class StashcatMediator
     private function authStillValid( LoginResponse $login ): bool
     {
         try {
-            return $this->getStashcatApiClient()->check( $login->getClientKey() )->success() === true;
+            // Wie bisher jeder „wahre“ Wert (true, 1, "true"): sonst meldet sich der Bot bei jedem Takt neu an
+            return (bool) $this->getStashcatApiClient()->check( $login->getClientKey() )->success();
         } catch ( \Exception ){
             return false;
         }
@@ -283,7 +284,8 @@ class StashcatMediator
     public function getConversationById( int|string $id ) : ?Conversation{
         /* @var $conversation Conversation */
         foreach( $this->conversations AS $conversation ){
-            if( $conversation->getId() === $id ){
+            // Als Text vergleichen: Formular und Payload liefern Text, Hermine je nach Antwort Zahl oder Text
+            if( strval( $conversation->getId() ) === strval( $id ) ){
                 return $conversation;
             }
         }

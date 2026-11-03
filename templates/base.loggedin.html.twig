@@ -10,7 +10,7 @@
     <nav class="secondary{{ eventsActive ? ' is-current is-open' }}" id="nav-group-events">
         <a href="{{ path('events') }}" class="{{ route in [ 'events' , 'events_edit' , 'events_save' ] ? 'active' }}">Übersicht</a>
         <a href="{{ path('events_new') }}" class="{{ route in [ 'events_new' , 'events_create' ] ? 'active' }}">Neues Event</a>
-        <a href="{{ path('execute_events') }}" class="{{ route starts with 'execute_events' ? 'active' }}">Event-Ausführer starten</a>
+        <a href="{{ path('execute_events') }}" class="{{ route starts with 'execute_events' ? 'active' }}">Event-Ausführer</a>
     </nav>
     <a href="{{ path('events_log') }}" class="{{ route == 'events_log' ? 'active' }}">Logs</a>
     {% if is_granted('ROLE_ADMIN') %}

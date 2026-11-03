@@ -7,13 +7,14 @@
                 <h2>Nutzer</h2>
                 <span class="report-subtitle">Zugänge zur Oberfläche und für REST-Aufrufe</span>
             </div>
+        </div>
 
-            <table class="object-center user-list">
+        <table class="object-center user-list">
                 <thead>
                     <tr>
                         <th>Name</th>
                         <th>Art</th>
-                        <th title="Administratoren: letzte Anfrage in der Oberfläche; API-Nutzer: letzter Aufruf mit gültigem Schlüssel – auf die Minute genau">Zuletzt aktiv</th>
+                        <th tabindex="0" data-tooltip="Administratoren: letzte Anfrage in der Oberfläche; API-Nutzer: letzter Aufruf mit gültigem Schlüssel – auf die Minute genau">Zuletzt aktiv</th>
                         <th>Aktionen</th>
                     </tr>
                 </thead>
@@ -23,13 +24,12 @@
                         <tr>
                             <td class="text-no-wrap"><a href="{{ path('user_edit' , { id : user.getId() }) }}"><strong>{{ user.getUserIdentifier() }}</strong></a>{% if user is same as(app.user) %} <span class="text-small">(du)</span>{% endif %}</td>
                             <td><span class="user-role{{ isAdmin ? ' user-role-admin' }}">{{ isAdmin ? kinds.admin : kinds.api }}</span></td>
-                            <td class="text-no-wrap">{{ user.getLastSeenAt() ? user.getLastSeenAt()|date('d.m.Y H:i') : 'noch nie' }}</td>
-                            <td><div class="user-actions"><a href="{{ path('user_edit' , { id : user.getId() }) }}" class="button-secondary">Bearbeiten</a></div></td>
+                            <td class="text-no-wrap">{{ user.getLastSeenAt() ? user.getLastSeenAt()|date('d.m.Y H:i')|no_break : 'noch nie' }}</td>
+                            <td><div class="icon-actions"><a href="{{ path('user_edit' , { id : user.getId() }) }}" class="button-secondary icon-button" data-tooltip="Bearbeiten" aria-label="Bearbeiten"><span aria-hidden="true">✏️</span><span class="icon-button-label">Bearbeiten</span></a></div></td>
                         </tr>
                     {% endfor %}
                 </tbody>
             </table>
-            <p class="text-small text-center">{{ users|length }} Nutzer</p>
-        </div>
+        <p class="text-small text-center">{{ users|length }} Nutzer</p>
     </div>
 {% endblock %}

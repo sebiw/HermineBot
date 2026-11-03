@@ -20,8 +20,8 @@
                     <th>Ziel</th>
                     <th>Nachricht</th>
                     <th>Zeitplan</th>
-                    <th>Nächste</th>
-                    <th>Zuletzt</th>
+                    <th>Nächstes Senden</th>
+                    <th>Zuletzt gesendet</th>
                     <th>Aktionen</th>
                 </tr>
                 </thead>
@@ -32,23 +32,23 @@
                     <tr>
                         <td><span class="event-state event-state-{{ state }}">{{ constant('App\\Entity\\Event::STATE_LABELS')[state] }}</span></td>
                         <td>
-                            {% if isConversation %}💬&nbsp;Unterhaltung<br><small>ID {{ event.getConversationIdFromPayload() }}</small>{% else %}<span class="text-no-wrap">📢&nbsp;{{ event.getChannelTarget() }}</span>{% endif %}
+                            {% if isConversation %}💬&nbsp;Unterhaltung<br><small>ID {{ event.getConversationIdFromPayload() }}</small>{% else %}📢&nbsp;{{ event.getChannelTarget()|no_break }}{% endif %}
                         </td>
                         <td><div class="event-text">{{ event.getText()|event_text(labels) }}</div></td>
                         <td>
-                            {{ event.getDateInterval() ? ( allowed_intervals[ event.getDateInterval() ] ?? event.getDateInterval() ) : 'einmalig' }}{% if event.getUntilDateTime() %} bis <span class="text-no-wrap">{{ event.getUntilDateTime()|date('d.m.Y') }}</span>{% endif %}
-                            <br><small class="text-no-wrap">ab {{ event.getStartDateTime()|date }}</small>
+                            {{ event.getDateInterval() ? ( allowed_intervals[ event.getDateInterval() ] ?? event.getDateInterval() ) : 'einmalig' }}{% if event.getUntilDateTime() %} bis {{ event.getUntilDateTime()|date('d.m.Y') }}{% endif %}
+                            <br><small>ab&nbsp;{{ event.getStartDateTime()|date|no_break }}</small>
                         </td>
                         <td>
-                            {% if state == 'done' %}–{% elseif event.getDueDateTime() <= now %}sofort fällig{% else %}<span class="text-no-wrap">{{ event.getDueDateTime()|date }}</span>{% endif %}
+                            {% if state == 'done' %}–{% elseif event.getDueDateTime() <= now %}sofort fällig{% else %}{{ event.getDueDateTime()|date|no_break }}{% endif %}
                         </td>
                         <td>
-                            <span class="text-no-wrap">{{ event.getDoneDateTime() ? event.getDoneDateTime()|date : 'noch nie' }}</span>
+                            {{ event.getDoneDateTime() ? event.getDoneDateTime()|date|no_break : 'noch nie' }}
                             <br><small>{{ event.getTransmissionsCount() }}× gesendet</small>
                             {% if event.getFailedAttempts() > 0 %}<br><small class="event-failed-note">{{ event.getFailedAttempts() }} Fehlversuche{{ state == 'failed' ? ' – Speichern gibt es wieder frei' }}</small>{% endif %}
                         </td>
                         <td>
-                            <div class="event-actions">
+                            <div class="icon-actions">
                                 <a href="{{ path('events_edit', { id: event.getId() }) }}" class="button-secondary icon-button" data-tooltip="Bearbeiten" aria-label="Bearbeiten"><span aria-hidden="true">✏️</span><span class="icon-button-label">Bearbeiten</span></a>
                                 <form method="post" action="{{ path('events_send', { id: event.getId() }) }}">
                                     <input type="hidden" name="_token" value="{{ csrf_token('events') }}">

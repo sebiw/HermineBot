@@ -15,14 +15,14 @@
                 </fieldset>
                 <div class="action-bar">
                     <span></span>
-                    <button type="submit" class="button-primary">Event-Ausführer jetzt starten</button>
+                    <button type="submit" class="button-primary">Jetzt senden</button>
                 </div>
             </form>
             {% if response is not null %}
-                <fieldset class="form-section">
-                    <legend>Ausgabe</legend>
-                    <pre class="text-overflow-wrap-anywhere">{{ response }}</pre>
-                </fieldset>
+                <details class="form-section" open>
+                    <summary>Ausgabe</summary>
+                    <pre class="job-output">{{ response }}</pre>
+                </details>
             {% endif %}
         </div>
     </div>

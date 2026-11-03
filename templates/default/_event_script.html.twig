@@ -19,7 +19,7 @@
     function render( value ){
         var chips = [];
         value = ( value.trim() + append ).replace( /\x01/g , '' ).replace( /\{\{\w+\}\}|\{%[^%]+%\}/g , function( code ){
-            chips.push( '<span class="event-placeholder" title="' + escape( code ) + '">' + escape( labels[ code ] || code ) + '</span>' );
+            chips.push( '<span class="event-placeholder" data-tooltip="' + escape( code ) + '">' + escape( labels[ code ] || code ) + '</span>' );
             return '\x01' + ( chips.length - 1 ) + '\x01';
         } );
         var html = escape( value.replace( /\r\n?/g , '\n' ) ).replace( /\n{3,}/g , '\n\n' )

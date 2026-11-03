@@ -1,0 +1,2 @@
+{# Pfad auf Unterseiten. trail = Liste aus { label, url }, der letzte Eintrag ohne url ist die Seite selbst #}
+<p class="page-trail no-print">{% for step in trail %}{% if not loop.first %}<span class="page-trail-separator" aria-hidden="true">›</span>{% endif %}{% if step.url is defined %}<a href="{{ step.url }}">{{ step.label }}</a>{% else %}{{ step.label }}{% endif %}{% endfor %}</p>

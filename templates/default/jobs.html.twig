@@ -16,7 +16,7 @@
             </p>
             <p class="{{ tickLate ? 'form-hint job-tick-late' : 'form-hint job-tick' }}">
                 <strong>Takt zuletzt:</strong>
-                <span class="text-no-wrap">{{ lastTick ? lastTick|date('d.m.Y H:i:s') : 'noch nie' }}</span>
+                {{ lastTick ? lastTick|date('d.m.Y H:i:s')|no_break : 'noch nie' }}
                 {% if tickLate %} – der Cron scheint nicht zu laufen; ohne ihn läuft keine Aufgabe von selbst.{% endif %}
             </p>
 
@@ -32,12 +32,12 @@
                             {% if not row.enabled %}
                                 <strong>Aus</strong> – läuft nicht von selbst.<br>
                             {% elseif row.nextRunAt %}
-                                <strong>Nächster Lauf:</strong> <span class="text-no-wrap">ab {{ row.nextRunAt|date('d.m.Y H:i') }}</span><br>
+                                <strong>Nächster Lauf:</strong> ab&nbsp;{{ row.nextRunAt|date('d.m.Y H:i')|no_break }}<br>
                             {% endif %}
                             <strong>Plan:</strong> {{ row.plan }}<br>
                             <strong>Zuletzt:</strong>
                             {% if state and state.getLastStartedAt() %}
-                                <span class="text-no-wrap">{{ state.getLastStartedAt()|date('d.m.Y H:i:s') }}</span>{% if state.getLastStatus() %} – {{ statusLabels[ state.getLastStatus() ] }}{% if state.getLastMessage() %}: {{ state.getLastMessage() }}{% endif %}{% if state.getLastDurationMs() is not null %} ({{ _self.duration( state.getLastDurationMs() ) }}){% endif %}{% elseif row.running %} – läuft{% else %} – abgebrochen{% endif %}
+                                {{ state.getLastStartedAt()|date('d.m.Y H:i:s')|no_break }}{% if state.getLastStatus() %} – {{ statusLabels[ state.getLastStatus() ] }}{% if state.getLastMessage() %}: {{ state.getLastMessage() }}{% endif %}{% if state.getLastDurationMs() is not null %} ({{ _self.duration( state.getLastDurationMs() ) }}){% endif %}{% elseif row.running %} – läuft{% else %} – abgebrochen{% endif %}
                             {% else %}
                                 noch nie
                             {% endif %}

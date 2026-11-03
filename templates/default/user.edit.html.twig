@@ -2,6 +2,7 @@
 
 {% block body %}
     <div class="wrapper layout-compact">
+        {% include '_trail.html.twig' with { trail: [ { label: 'Übersicht' , url: path('users') } , { label: user.getUserIdentifier() } ] } %}
         <div class="form-page">
             <div class="report-header">
                 <h2>{{ user.getUserIdentifier() }}</h2>

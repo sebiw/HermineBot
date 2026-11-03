@@ -57,7 +57,7 @@ final class EventForm
     }
 
     /**
-     * Prüft die Eingaben und übernimmt sie in das Event. Neue Events beginnen immer beim Start („Übermittlung zurücksetzen“).
+     * Prüft die Eingaben und übernimmt sie in das Event. Neue Events beginnen immer beim Start (wie „Wieder ab ‚Erstmals‘ senden“).
      * @return list<string> Fehler für die Anzeige; leer = übernommen
      */
     public function applyTo( Event $event , Config $config , \DateTime $now ): array
@@ -74,7 +74,8 @@ final class EventForm
         if( trim( $this->text ) === '' ){
             $errors[] = 'Bitte einen Text eingeben.';
         }
-        $start = self::parse( self::DATE_TIME_FORMAT , $this->start );
+        // Manche Browser schicken Sekunden mit
+        $start = self::parse( self::DATE_TIME_FORMAT , $this->start ) ?? self::parse( self::DATE_TIME_FORMAT . ':s' , $this->start );
         if( $start === null ){
             $errors[] = 'Bitte „Erstmals“ mit Datum und Uhrzeit angeben, z. B. 14.11.2026 09:00.';
         }

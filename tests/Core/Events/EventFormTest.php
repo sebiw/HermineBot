@@ -59,6 +59,13 @@ class EventFormTest extends TestCase
         self::assertNotSame( [] , $this->form( [ 'start' => '2026-02-31T09:00' ] )->applyTo( new Event() , $this->config() , new \DateTime() ) );
     }
 
+    public function testStartMitSekunden(): void
+    {
+        $event = new Event();
+        self::assertSame( [] , $this->form( [ 'start' => '2026-11-14T09:00:00' ] )->applyTo( $event , $this->config() , new \DateTime( '2026-11-03' ) ) );
+        self::assertSame( '2026-11-14 09:00' , $event->getStartDateTime()?->format( 'Y-m-d H:i' ) );
+    }
+
     public function testBisVorErstmals(): void
     {
         $errors = $this->form( [ 'interval' => 'P1W' , 'until' => '2026-11-01' ] )->applyTo( new Event() , $this->config() , new \DateTime() );

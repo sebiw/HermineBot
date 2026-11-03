@@ -38,14 +38,6 @@
   font-size: 0.82rem;
   white-space: nowrap;
 }
-.event-actions {
-  display: flex;
-  gap: 0.3rem;
-  flex-wrap: nowrap;
-}
-.event-actions form {
-  margin: 0;
-}
 .event-failed-note {
   color: #b3261e;
 }
@@ -103,7 +95,7 @@ main .placeholder-chip:hover, main .placeholder-chip:focus { background-color: #
   padding: 0.25rem;
   text-align: left;
   background: #fff;
-  border: 1px solid #999;
+  border: 1px solid #DBD6D0;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
@@ -126,15 +118,15 @@ main .placeholder-chip:hover, main .placeholder-chip:focus { background-color: #
 
 .conversation-option {
   cursor: pointer;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid #DBD6D0;
 }
 .conversation-option:hover, .conversation-option.selected {
-  background: #dde6f4;
+  background: #e3eaf7;
 }
 
 .conversation-hint {
   font-style: italic;
-  color: #666;
+  color: #5E5D5B;
 }
 
 .secret-value {
@@ -143,31 +135,6 @@ main .placeholder-chip:hover, main .placeholder-chip:focus { background-color: #
   word-break: break-all;
 }
 
-.user-list .user-role {
-  padding: 0 0.45rem;
-  border: 1px solid #DBD6D0;
-  border-radius: 1rem;
-  font-size: 0.8rem;
-  color: #5E5D5B;
-  white-space: nowrap;
-}
-
-.user-list .user-role.user-role-admin {
-  color: #003399;
-  border-color: #003399;
-}
-
-.user-list .user-actions {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 0.4rem;
-}
-
-.user-list .user-actions a.button-secondary {
-  padding: 0.3rem 0.7rem;
-  font-size: 0.85rem;
-  white-space: nowrap;
-}
 
 /* Hintergrundaufgaben mit eigenem Wert (z. B. Aufbewahrung): Knöpfe in der zweiten Zeile rechts, wie bei den Zeitfenstern im StAN-Manager */
 @media (min-width: 801px) {

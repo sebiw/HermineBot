@@ -4,10 +4,11 @@
 
 {% block body %}
     <div class="wrapper layout-compact">
+        {% if not isNew %}{% include '_trail.html.twig' with { trail: [ { label: 'Übersicht' , url: path('events') } , { label: 'Event bearbeiten' } ] } %}{% endif %}
         <div class="form-page">
             <div class="report-header">
                 <h2>{{ isNew ? 'Neues Event' : 'Event bearbeiten' }}</h2>
-                <span class="report-subtitle">{% if isNew %}Nachricht an einen Channel oder eine Unterhaltung planen{% else %}{{ event.getTransmissionsCount() }}× gesendet{% if event.getDoneDateTime() %}, zuletzt <span class="text-no-wrap">{{ event.getDoneDateTime()|date }}</span>{% endif %}{% endif %}</span>
+                <span class="report-subtitle">{% if isNew %}Nachricht an einen Channel oder eine Unterhaltung planen{% else %}{{ event.getTransmissionsCount() }}× gesendet{% if event.getDoneDateTime() %}, zuletzt {{ event.getDoneDateTime()|date|no_break }}{% endif %}{% endif %}</span>
             </div>
 
             <form method="post" action="{{ isNew ? path('events_create') : path('events_save', { id: event.getId() }) }}" id="event-form" data-conversations-url="{{ path('events_conversations') }}">
@@ -85,7 +86,7 @@
                         </div>
                         {% if not isNew %}
                             <div class="form-field span-all">
-                                <label><input type="checkbox" name="resetDue" value="1"{{ form.resetDue ? ' checked' }}> Übermittlung zurücksetzen <small>(nächste Übermittlung wieder ab „Erstmals“)</small></label>
+                                <label><input type="checkbox" name="resetDue" value="1"{{ form.resetDue ? ' checked' }}> Wieder ab „Erstmals“ senden <small>(sonst bleibt das nächste Senden, wie es ist)</small></label>
                             </div>
                         {% endif %}
                     </div>

@@ -11,6 +11,7 @@ Alle wesentlichen Änderungen am Hermine-Bot werden in dieser Datei festgehalten
 - Meldungen nach dem Speichern erscheinen oben rechts und verschwinden von selbst, Rückfragen wie „Löschen?“ öffnen ein eigenes Fenster statt der Abfrage des Browsers.
 - Die Hintergrundaufgaben zeigen den Plan in Worten und haben Speichern und Jetzt ausführen nebeneinander wie im StAN-Manager.
 - Zeiten stehen ohne Bindestrich zwischen Datum und Uhrzeit.
+- Das Enddatum wiederkehrender Nachrichten gilt einschließlich des ganzen Tages.
 
 ### Sicherheit
 - Nach fünf falschen Anmeldungen mit demselben Namen wird die Anmeldung von dort für 15 Minuten gesperrt, auch für die Schnittstelle zum StAN-Manager.

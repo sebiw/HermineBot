@@ -83,6 +83,24 @@ class StashcatMediatorLoginTest extends TestCase
         self::assertSame( 2 , $api->loginCalls );
     }
 
+    public function testPruefungMitEinsStattTrueGiltAlsGueltig(): void
+    {
+        $api = new FakeLoginApi();
+        self::assertTrue( $this->mediator( $api )->login() );
+        $api->checkPayload = [ 'success' => 1 ];
+        self::assertTrue( $this->mediator( $api )->login() );
+        self::assertSame( 1 , $api->loginCalls , 'keine neue Anmeldung bei jedem Takt' );
+    }
+
+    public function testUnterhaltungPerIdAlsZahlOderText(): void
+    {
+        $mediator = $this->mediator( new FakeLoginApi() );
+        ( new \ReflectionProperty( StashcatMediator::class , 'conversations' ) )->setValue( $mediator , [ new \App\Stashcat\Entities\Conversation( [ 'id' => 966886 ] ) , new \App\Stashcat\Entities\Conversation( [ 'id' => '42' ] ) ] );
+        self::assertNotNull( $mediator->getConversationById( '966886' ) );
+        self::assertNotNull( $mediator->getConversationById( 42 ) );
+        self::assertNull( $mediator->getConversationById( '7' ) );
+    }
+
     public function testGueltigeGespeicherteAnmeldungWirdWiederverwendet(): void
     {
         $api = new FakeLoginApi();
