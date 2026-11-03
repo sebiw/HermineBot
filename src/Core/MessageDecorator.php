@@ -5,6 +5,7 @@ namespace App\Core;
 use App\Entity\Event;
 use App\Service\AppService;
 use App\Stashcat\Entities\Channel;
+use App\Stashcat\Entities\Group;
 use App\Stashcat\Entities\Company;
 use DateTimeInterface;
 use Sabre\VObject\Component\VTodo;
@@ -106,7 +107,14 @@ class MessageDecorator {
      * @return void
      */
     protected function addCommandDecoration( string $key , callable $callback ){
-        $this->replaceCallbacks[ $this->getCommandSyntax( $key ) ] = $callback;
+        // Externe Quelle ohne Ergebnis: Fehler statt Nachricht mit rohem {%…%} – der Daemon zählt dann einen Fehlversuch und versucht es erneut
+        $this->replaceCallbacks[ $this->getCommandSyntax( $key ) ] = function() use ( $key , $callback ){
+            $result = $callback();
+            if( $result === null || !is_scalar( $result ) ){
+                throw new \RuntimeException( sprintf( 'Command %s returned no content' , $key ) );
+            }
+            return $result;
+        };
     }
 
     /**
@@ -143,9 +151,10 @@ class MessageDecorator {
                             case 'REST_JSON' :
                                 $this->addCommandDecoration( $key , function() use ($data){
                                     if( isset( $data['url'] ) && isset( $data['payload'] ) ){
-                                        $rest = new RestClient( RestClient::RESPONSE_FORMAT_JSON );
+                                        $rest = new RestClient( RestClient::RESPONSE_FORMAT_JSON , null , true );
                                         $result = $rest->post( $data['url'] , json_encode( $data['payload'] , JSON_THROW_ON_ERROR ) , null , [ 'Content-Type' => 'application/json'] );
-                                        return $result['content'] ?? $result['message'] ?? null;
+                                        // Nur der Inhalt: eine Fehlermeldung der Gegenseite (message) gehört nicht in den Channel
+                                        return is_array( $result ) ? ( $result['content'] ?? null ) : null;
                                     }
                                     return null;
                                 } );
@@ -156,7 +165,7 @@ class MessageDecorator {
                                     if( isset( $data['url'] ) ){
 
                                         $mode = $data['events'] ?? 'OPEN';
-                                        $rest = new RestClient( RestClient::RESPONSE_FORMAT_PLAIN );
+                                        $rest = new RestClient( RestClient::RESPONSE_FORMAT_PLAIN , null , true );
                                         $additionalHeader = [];
                                         if( isset( $data['authorization_basic'] , $data['authorization_basic']['user'] , $data['authorization_basic']['password'] ) ){
                                             $basicKey = $data['authorization_basic']['user'] . ':' . $data['authorization_basic']['password'];
@@ -281,15 +290,24 @@ class MessageDecorator {
                 return null;
             }
             $stashcatMediator->loadGroups( $stashCatCompany );
-            $THWGroups = $stashcatMediator->getGroupsOfCompany( $stashCatCompany );
-            $groupStatistics = [];
-            foreach( $THWGroups AS $group ){
-                $groupStatistics[ $group->getPossibleUser() ] = sprintf('%s: %s mögliche Nutzer' , $group->getName() , $group->getPossibleUser() );
-            }
-            ksort( $groupStatistics );
-            return implode( "\r\n" , $groupStatistics );
+            return self::groupStatsText( $stashcatMediator->getGroupsOfCompany( $stashCatCompany ) );
         } );
 
         $this->addPlaceholderDecoration( 'EventInterval' , fn() => !empty( $event?->getDateInterval() ) && is_array( $allowedIntervals ) ? ( $allowedIntervals[ $event->getDateInterval() ] ?? '#N/A' ) : null );
+    }
+
+    /**
+     * {{CompanyGroupsStats}}: je Gruppe eine Zeile, aufsteigend nach Zahl der möglichen Nutzer, bei gleicher Zahl nach Name
+     * (vorher war die Zahl der Schlüssel, Gruppen mit gleicher Zahl verdrängten sich)
+     * @param iterable<Group> $groups
+     */
+    public static function groupStatsText( iterable $groups ): string
+    {
+        $rows = [];
+        foreach( $groups AS $group ){
+            $rows[] = [ (int) $group->getPossibleUser() , (string) $group->getName() ];
+        }
+        usort( $rows , fn( array $a , array $b ) => [ $a[0] , $a[1] ] <=> [ $b[0] , $b[1] ] );
+        return implode( "\r\n" , array_map( fn( array $row ) => sprintf( '%s: %d mögliche Nutzer' , $row[1] , $row[0] ) , $rows ) );
     }
 }

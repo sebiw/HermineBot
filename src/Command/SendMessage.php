@@ -51,6 +51,7 @@ class SendMessage extends Command
         $this->addOption('conversationId' , null , InputOption::VALUE_REQUIRED , 'Target-Conversation ID' , null );
         $this->addOption('message' , '-m' , InputOption::VALUE_REQUIRED , 'Message to send' );
         $this->addOption('message-b64' , '-b' , InputOption::VALUE_REQUIRED , 'Message to send as Base64 encoded string' );
+        $this->addOption('literal' , null , InputOption::VALUE_NONE , 'Send the text as is, without replacing placeholders' );
     }
 
     /**
@@ -133,7 +134,9 @@ class SendMessage extends Command
         $jsonResult = [];
 
         $stashcatMediator = $this->getAppService()->getMediator();
-        $stashcatMediator->login();
+        if( !$stashcatMediator->login() ){
+            throw new \RuntimeException('Hermine rejected the login');
+        }
         $stashcatMediator->decryptPrivateKey();
         $stashcatMediator->loadCompanies();
 
@@ -175,7 +178,9 @@ class SendMessage extends Command
             throw new \Exception('Argument missing!');
         }
 
-        $eventText = $messageDecorator->replace( $eventText );
+        if( !$input->getOption('literal') ){
+            $eventText = $messageDecorator->replace( $eventText );
+        }
 
         // Send message!
         if( $channelTarget !== null ){

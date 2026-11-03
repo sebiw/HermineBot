@@ -90,4 +90,14 @@ class Config extends ArrayDataCollection {
         return $path;
     }
 
+    /**
+     * Darf ein Channel per REST (StAN-Manager) beschrieben oder gelesen werden? Nur aus der Freigabeliste, nie der
+     * Unterhaltungs-Platzhalter: In Unterhaltungen geht per REST nur die Einzelnachricht (/api/direct-message)
+     */
+    public function isRestChannelAllowed( ?string $channelName ): bool
+    {
+        return $channelName !== null
+            && $channelName !== $this->getConversationChannelPlaceholderName()
+            && in_array( $channelName , $this->getAllowedChannelNames() , true );
+    }
 }

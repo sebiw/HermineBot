@@ -288,9 +288,22 @@ class Event implements \JsonSerializable
      */
     public function eventDone(): bool
     {
-        $simpleDone =  ( $this->getDateInterval() === null && $this->getDoneDateTime() !== null );
-        $intervalDone = ( $this->getDateInterval() !== null && $this->getDoneDateTime() !== null && $this->getDoneDateTime() >= $this->getUntilDateTime() && $this->getUntilDateTime() !== null  );
-        return $simpleDone || $intervalDone;
+        if( $this->getDateInterval() === null ){
+            return $this->getDoneDateTime() !== null;
+        }
+        // Wiederkehrend: fertig, sobald die nächste Fälligkeit hinter dem Enddatum liegt (nicht schon, wenn der letzte Versand davor lag)
+        return $this->getUntilDateTime() !== null && $this->getDueDateTime() > $this->getUntilDateTime();
+    }
+
+    /**
+     * Soll der Daemon das Event jetzt senden? Fällig, nicht fertig (einmalig: noch nie gesendet; wiederkehrend: Fälligkeit
+     * spätestens am Enddatum) und nicht nach zu vielen Fehlversuchen gesperrt.
+     */
+    public function isDue( \DateTimeInterface $now ): bool
+    {
+        return $this->getDueDateTime() <= $now
+            && !$this->eventDone()
+            && !$this->eventFailed();
     }
 
 

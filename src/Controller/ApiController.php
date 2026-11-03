@@ -27,7 +27,7 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 class ApiController extends AbstractController
 {
     #[Route('/api/send-message', name: 'api_send_message', methods: ['POST'])]
-    public function apiSendMessage( KernelInterface $kernel, Request $request, #[CurrentUser] UserInterface $user , #[Autowire(service: 'logger.api')] DatabaseLogger $logger ): Response
+    public function apiSendMessage( KernelInterface $kernel, Request $request, AppService $app , #[CurrentUser] UserInterface $user , #[Autowire(service: 'logger.api')] DatabaseLogger $logger ): Response
     {
         $application = new Application( $kernel );
         $application->setAutoExit(false);
@@ -35,35 +35,28 @@ class ApiController extends AbstractController
         $content = json_decode( $request->getContent() , true );
 
         $channel = $request->query->get('channel') ?? $request->request->get('channel') ?? $content['channel'] ?? null;
-        $conversationId = $request->query->get('conversationId') ?? $request->request->get('conversationId') ?? $content['conversationId'] ?? null;
         $message = $request->query->get('message') ?? $request->request->get('message') ?? $content['message'] ?? null;
 
         if( empty( $message ) ){
             return $this->errorResponse('Message missing!' , Response::HTTP_BAD_REQUEST );
         }
+        if( empty( $channel ) ){
+            return $this->errorResponse('channel missing!' , Response::HTTP_BAD_REQUEST );
+        }
+        // Nur freigegebene Channels: Unterhaltungen (Platzhalter) gehen per REST nicht, Einzelnachrichten nur über /api/direct-message
+        $config = $app->getAppConfig();
+        if( !$config->isRestChannelAllowed( $channel ) ){
+            return $this->errorResponse('Channel not allowed!' , Response::HTTP_FORBIDDEN );
+        }
 
-        if( !empty( $channel ) )
-        {
-            $input = new ArrayInput([
-                'command' => 'hermine:send-message',
-                '--context' => 'REST',
-                '--channel' => $channel,
-                '--message' => $message
-            ]);
-        }
-        else if( !empty( $conversationId ) )
-        {
-            $input = new ArrayInput([
-                'command' => 'hermine:send-message',
-                '--context' => 'REST',
-                '--conversationId' => $conversationId,
-                '--message' => $message
-            ]);
-        }
-        else
-        {
-            return $this->errorResponse('channel or conversationId missing!' , Response::HTTP_BAD_REQUEST );
-        }
+        // Text wörtlich: Platzhalter wie {%…%} könnten sonst externe Quellen abrufen, der Text kommt von Nutzern des StAN-Managers
+        $input = new ArrayInput([
+            'command' => 'hermine:send-message',
+            '--context' => 'REST',
+            '--channel' => $channel,
+            '--message' => $message,
+            '--literal' => true,
+        ]);
 
         // You can use NullOutput() if you don't need the output
         $output = new BufferedOutput();
@@ -72,14 +65,14 @@ class ApiController extends AbstractController
         $commandOutput = $output->fetch();
 
         if( $exitCode === Command::SUCCESS ){
-            $logger->info(sprintf('Message sent via REST to %s' , $channel ?? $conversationId ) );
+            $logger->info(sprintf('Message sent via REST to %s' , $channel ) );
             return new JsonResponse([
                 'status' => 'OK',
                 'content' => $commandOutput
             ]);
         }
 
-        $logger->emergency(sprintf('Message sent via REST to %s FAILED' , $channel ?? $conversationId ), ['error' => $commandOutput] );
+        $logger->emergency(sprintf('Message sent via REST to %s FAILED' , $channel ), ['error' => $commandOutput] );
         // Stacktrace nur ins Log, nicht an den Aufrufer
         return new JsonResponse([
             'status' => 'ERROR',
@@ -118,7 +111,7 @@ class ApiController extends AbstractController
             return $this->errorResponse('channel missing!' , Response::HTTP_BAD_REQUEST );
         }
         $config = $app->getAppConfig();
-        if( $channelName === $config->getConversationChannelPlaceholderName() || !in_array( $channelName , $config->getAllowedChannelNames() , true ) ){
+        if( !$config->isRestChannelAllowed( $channelName ) ){
             return $this->errorResponse('Channel not allowed!' , Response::HTTP_FORBIDDEN );
         }
 
@@ -168,7 +161,7 @@ class ApiController extends AbstractController
             return $this->errorResponse('userId, channel or message missing!' , Response::HTTP_BAD_REQUEST );
         }
         $config = $app->getAppConfig();
-        if( $channelName === $config->getConversationChannelPlaceholderName() || !in_array( $channelName , $config->getAllowedChannelNames() , true ) ){
+        if( !$config->isRestChannelAllowed( $channelName ) ){
             return $this->errorResponse('Channel not allowed!' , Response::HTTP_FORBIDDEN );
         }
 

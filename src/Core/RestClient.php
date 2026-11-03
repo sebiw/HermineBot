@@ -25,10 +25,11 @@ class RestClient {
     protected ?LoggerInterface $logger = null;
 
     /**
-     *
+     * @param bool $failOnError true = Verbindungsfehler und HTTP-Status außerhalb 2xx werfen eine Exception (externe Quellen für Platzhalter).
+     *                          Hermine selbst meldet Fehler im Inhalt, dort bleibt es aus.
      * @throws \Exception
      */
-    public function __construct( $defaultResponseFormat = self::RESPONSE_FORMAT_PLAIN , ?LoggerInterface $logger = null ){
+    public function __construct( $defaultResponseFormat = self::RESPONSE_FORMAT_PLAIN , ?LoggerInterface $logger = null , private readonly bool $failOnError = false ){
         if( !in_array( $defaultResponseFormat , self::getValidFormats() ) ){
             throw new \Exception("Default response format not valid!");
         }
@@ -114,12 +115,6 @@ class RestClient {
         return $curlInstance;
     }
 
-    /**
-     * @param $session
-     */
-    protected function closeCURLSession( $session ){
-        curl_close( $session );
-    }
 
     /**
      * @param $method
@@ -170,7 +165,8 @@ class RestClient {
         $result = curl_exec( $session );
         $httpStatus = curl_getinfo( $session , CURLINFO_HTTP_CODE );
         $curlError = curl_error( $session );
-        $this->closeCURLSession( $session );
+        // Die Verbindung schließt PHP selbst (curl_close() ist seit 8.5 abgekündigt)
+        unset( $session );
 
         if( $result === false ){
             // z. B. Timeout oder Verbindungsfehler
@@ -180,7 +176,23 @@ class RestClient {
         // Nur Adresse und Status: Anfragen und Antworten enthalten Schlüssel und Nachrichten
         $this->getLogger()?->debug( sprintf('%s %s' , $method , $url ) , [ 'status' => $httpStatus ] );
 
+        if( $this->failOnError ){
+            if( $result === false ){
+                throw new \RuntimeException( sprintf( '%s %s failed: %s' , $method , self::withoutQuery( $url ) , $curlError ) );
+            }
+            if( $httpStatus < 200 || $httpStatus >= 300 ){
+                throw new \RuntimeException( sprintf( '%s %s answered with HTTP %d' , $method , self::withoutQuery( $url ) , $httpStatus ) );
+            }
+        }
+
         return $result;
     }
 
+    /**
+     * Adresse für Fehlermeldungen ohne Query (kann Schlüssel enthalten)
+     */
+    private static function withoutQuery( string $url ): string
+    {
+        return explode( '?' , $url , 2 )[0];
+    }
 }

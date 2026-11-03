@@ -152,29 +152,40 @@ class Daemon extends Command
         $now = new DateTime();
         $entityManager = $this->getDoctrine()->getManagerForClass( Event::class );
 
-        /* @var $events Event[] */
-        $events = $entityManager->getRepository( Event::class )
+        // Die Datenbank liefert nur die Kandidaten, ob ein Event wirklich fällig ist, entscheidet Event::isDue() (eine Regel, testbar)
+        /* @var $candidates Event[] */
+        $candidates = $entityManager->getRepository( Event::class )
             ->createQueryBuilder('entries')
             ->select('entries')
-            // Entweder: das Fälligkeitsdatum liegt in der Vergangenheit und es wurde noch nicht abgearbeitet
-            ->where('( entries.dueDateTime <= :now AND entries.doneDateTime IS NULL )')
-            // ODER: das Fälligkeitsdatum liegt in der Vergangenheit, und das (Datum der letzten abarbeitung ist kleiner gleich des Enddatums oder das Enddatum ist NULL oder es wurde noch nie abgearbeitet)
-            ->orWhere('( entries.dueDateTime <= :now AND ( entries.doneDateTime < entries.untilDateTime OR entries.untilDateTime IS NULL ) AND entries.dateInterval IS NOT NULL )')
-            // UND: das Event ist nicht nach zu vielen Fehlversuchen gesperrt
+            ->where('entries.dueDateTime <= :now')
             ->andWhere('entries.failedAttempts < :maxFailedAttempts')
-            ->setParameter('now' , $now  ) // Und das Fälligkeitsdatum liegt in der vergangenheit
+            ->setParameter('now' , $now )
             ->setParameter('maxFailedAttempts' , Event::MAX_FAILED_ATTEMPTS )
             ->getQuery()->getResult();
+        $events = array_values( array_filter( $candidates , fn( Event $event ) => $event->isDue( $now ) ) );
 
         $eventsProcessed = 0;
         if( count( $events ) > 0 ){
             // Mediator -> ease of access
             $stashcatMediator = $this->getAppService()->getMediator();
-            $stashcatMediator->login();
-            $stashcatMediator->decryptPrivateKey();
-            $stashcatMediator->loadCompanies();
-
-            $THWCompany = $stashcatMediator->getCompanyMembers()->getCompanyByName( $this->getAppService()->getAppConfig()->getStashcatEventCompany() );
+            // Hermine nicht erreichbar oder Anmeldung abgelehnt: kein Fehlversuch der Events, sie warten auf den nächsten Takt
+            try {
+                if( !$stashcatMediator->login() ){
+                    throw new \RuntimeException( 'Hermine rejected the login (next attempt after a pause)' );
+                }
+                $stashcatMediator->decryptPrivateKey();
+                $stashcatMediator->loadCompanies();
+                $THWCompany = $stashcatMediator->getCompanyMembers()?->getCompanyByName( $this->getAppService()->getAppConfig()->getStashcatEventCompany() );
+                if( $THWCompany === null ){
+                    throw new \RuntimeException( 'Company from stashcat_event_company not found' );
+                }
+            } catch ( \Throwable $e ){
+                // In der Pause nach einer Ablehnung nur ein Hinweis, sonst käme jede Minute eine Fehlermeldung (und eine Cron-Mail)
+                $paused = $stashcatMediator->isLoginPaused();
+                $this->getLogger()->log( $paused ? LogLevel::WARNING : LogLevel::ERROR , sprintf('%s: Hermine not available, %d due events wait' , $context , count( $events ) ) , [ 'error' => $e->getMessage() ] );
+                $output->writeln( json_encode( [ 'status' => 'HERMINE_UNAVAILABLE' , 'error' => $e->getMessage() ] , JSON_PRETTY_PRINT ) );
+                return $paused ? Command::SUCCESS : Command::FAILURE;
+            }
 
             foreach( $events AS $event ){
 

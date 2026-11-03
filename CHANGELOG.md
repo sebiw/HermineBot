@@ -10,7 +10,14 @@ Alle wesentlichen Änderungen am Hermine-Bot werden in dieser Datei festgehalten
 - Die Hintergrundaufgaben zeigen den Plan in Worten und haben Speichern und Jetzt ausführen nebeneinander wie im StAN-Manager.
 - Zeiten stehen ohne Bindestrich zwischen Datum und Uhrzeit.
 
+### Sicherheit
+- Über die Schnittstelle zum StAN-Manager gehen Nachrichten nur noch an freigegebene Channels, nicht mehr in private Unterhaltungen, und der Text wird wörtlich gesendet, ohne Abfragen externer Quellen auszulösen.
+
 ### Behoben
+- Lehnt Hermine die Anmeldung einmal ab, sendet der Bot wieder, sobald Hermine erreichbar ist, statt dauerhaft stehen zu bleiben; nach einer Ablehnung wartet er zehn Minuten, damit der Zugang nicht gesperrt wird.
+- Liefert eine externe Quelle für einen Platzhalter einen Fehler, wird die Nachricht später erneut versucht, statt mit Fehlertext oder unersetztem Platzhalter gesendet zu werden.
+- Wiederkehrende Nachrichten werden nach dem Enddatum nicht mehr ein weiteres Mal gesendet.
+- Die Gruppenstatistik zeigt wieder alle Gruppen, auch wenn mehrere gleich viele Mitglieder haben.
 - Fehlt der Schlüssel eines Channels oder einer Unterhaltung, steht im Log jetzt eine verständliche Fehlermeldung statt eines Absturzes.
 
 ## [3.1.0] - 2026-11-01

@@ -19,12 +19,16 @@ use App\Stashcat\Responses\SendMessageResponse;
 
 class StashcatMediator
 {
+    /** Nach einer abgelehnten Anmeldung so lange keinen neuen Versuch */
+    const LOGIN_RETRY_AFTER_SECONDS = 600;
+
 
     private Config $config;
     private ApiClient $stashcatApiClient;
     private CryptoBox $stashcatCryptoBox;
 
     private ?LoginResponse $loginResponse = null;
+    private bool $loginPaused = false;
 
     private ?CompanyMemberResponse $companyMembersResponse = null;
     private array $companyGroups = [];
@@ -138,29 +142,63 @@ class StashcatMediator
     }
 
     /**
-     * @return bool
+     * Anmelden, die Anmeldung wird in data/credentials/login-data.json wiederverwendet.
+     * Gespeichert wird nur eine gültige Anmeldung: Eine Fehlerantwort von Hermine (Sperre, Wartung, falsches Passwort)
+     * darf den nächsten Lauf nicht blockieren. Ist die gespeicherte Anmeldung kaputt oder abgelaufen, wird neu angemeldet.
+     * @return bool false = Hermine hat die Anmeldung abgelehnt
      * @throws \Exception
      */
     public function login(): bool
     {
         $filename = $this->getAppConfig()->getDataPath("credentials/login-data.json");
-        if( !file_exists( $filename ) ){
-            // Login if not sored...
-            $this->loginResponse = $this->getStashcatApiClient()->login();
-            file_put_contents($filename , json_encode( $this->loginResponse , JSON_PRETTY_PRINT ) );
-        } else {
-            // Reload from cache
-            $this->loginResponse = new \App\Stashcat\Responses\LoginResponse( json_decode( file_get_contents( $filename ) , true ) );
+        $failedFile = $this->getAppConfig()->getDataPath("credentials/login-failed-at");
+        // Nach einer Ablehnung eine Weile nicht erneut versuchen: Jede Minute ein Versuch kann den (persönlichen) Account sperren
+        $this->loginPaused = file_exists( $failedFile ) && time() - (int) file_get_contents( $failedFile ) < self::LOGIN_RETRY_AFTER_SECONDS;
+        if( $this->loginPaused ){
+            $this->loginResponse = null;
+            return false;
+        }
+        if( file_exists( $filename ) ){
+            $cached = json_decode( (string) file_get_contents( $filename ) , true );
+            $this->loginResponse = is_array( $cached ) ? new LoginResponse( $cached ) : null;
+            if( $this->loginResponse !== null && $this->loginResponse->isValid() && $this->authStillValid( $this->loginResponse ) ){
+                return true;
+            }
         }
 
-        // Auth Check - login still valid?=
-        $authCheckResponse = $this->getStashcatApiClient()->check( $this->loginResponse->getClientKey() );
-        if( !$authCheckResponse->success() ){
-            // if not valid - login and store results
-            $this->loginResponse = $this->getStashcatApiClient()->login();
-            file_put_contents($filename , json_encode( $this->loginResponse , JSON_PRETTY_PRINT ) );
+        $this->loginResponse = $this->getStashcatApiClient()->login();
+        if( $this->loginResponse->isValid() ){
+            file_put_contents( $filename , json_encode( $this->loginResponse , JSON_PRETTY_PRINT ) );
+            if( file_exists( $failedFile ) ){
+                unlink( $failedFile );
+            }
+            return true;
         }
-        return $this->loginResponse->isValid();
+        if( file_exists( $filename ) ){
+            unlink( $filename );
+        }
+        file_put_contents( $failedFile , (string) time() );
+        return false;
+    }
+
+    /**
+     * true = login() hat Hermine nicht gefragt, weil die letzte Ablehnung noch keine LOGIN_RETRY_AFTER_SECONDS her ist
+     */
+    public function isLoginPaused(): bool
+    {
+        return $this->loginPaused;
+    }
+
+    /**
+     * Gilt die gespeicherte Anmeldung noch? Eine unklare Antwort zählt als nein (dann neu anmelden)
+     */
+    private function authStillValid( LoginResponse $login ): bool
+    {
+        try {
+            return $this->getStashcatApiClient()->check( $login->getClientKey() )->success() === true;
+        } catch ( \Exception ){
+            return false;
+        }
     }
 
     /**
