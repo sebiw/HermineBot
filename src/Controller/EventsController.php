@@ -28,7 +28,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\KernelInterface;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 #[IsGranted('ROLE_ADMIN')]
@@ -289,24 +289,5 @@ class EventsController extends AbstractController
             'response' => $output->fetch(),
         ]);
     }
-
-
-    // @TODO: Mail to Hermine?
-    // Materialanforderungen / Materialeingang automatisch in Hermine Posten?
-    // Tracking von Material: Was für Anforderungen wurden erfasst / Welche sind noch offen?
-
-    // @TODO: iCal to Hermine?
-    // Trigger events by Kalender entries
-
-    // @TODO: Hermine Bot?
-    // Keywords trigger messages? => Kombination mit "Question Bot"
-
-    // @TODO: Question Bot?
-    // Umfragen / Abfragen vereinfachen: Rückmeldungen Lesen unter Bereitstellen um Übersichten zu planen.
-    // Kombinieren mit der Helferdislozierungsliste aus dem THWin könnte man Excel-Dateien in Software gießen.
-    // Antwort-Optionen durch Emojies? (JA / NEIN)
-    // Mehrere Termine: unterschiedliche Emojies / Keywords?
-    // => DENNOCH Manuelles Editieren muss möglich sein!!!
-    // PRIVATE Nachrichten entschlüsseln?
 
 }

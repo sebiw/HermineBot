@@ -17,13 +17,10 @@ use Doctrine\Persistence\ManagerRegistry;
 use Psr\Log\LogLevel;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
-use Symfony\Component\Filesystem\Filesystem;
-use Symfony\Component\Finder\Finder;
 
 // the name of the command is what users type after "php bin/console"
 #[AsCommand(name: 'daemon:tick', description: 'One Tick for the Background Daemon')]
@@ -154,8 +151,6 @@ class Daemon extends Command
         $jsonResult = [];
         $now = new DateTime();
         $entityManager = $this->getDoctrine()->getManagerForClass( Event::class );
-
-        $this->checkMessageFiles( $input , $output );
 
         /* @var $events Event[] */
         $events = $entityManager->getRepository( Event::class )
@@ -345,57 +340,6 @@ class Daemon extends Command
         $entityManager = $this->getDoctrine()->getManagerForClass( Event::class );
         $entityManager->persist( $event );
         $entityManager->flush();
-    }
-
-    /**
-     * @param InputInterface $input
-     * @param OutputInterface $output
-     * @return void
-     * @throws \Symfony\Component\Console\Exception\ExceptionInterface
-     */
-    protected function checkMessageFiles( InputInterface $input, OutputInterface $output  ): void
-    {
-        $messageFilesIn = trim( $this->getKernel()->getContainer()->getParameter('app.message_files_in') ?? '' );
-        if( empty( $messageFilesIn ) ){
-            return;
-        }
-        $messageInDir = BASE_PATH . $messageFilesIn;
-        $fileSystem = new Filesystem();
-        $fileSystem->mkdir( $messageInDir );
-        $finder = new Finder();
-        $finder->files()->in( $messageInDir )->name('*.json');
-        foreach( $finder AS $file ){
-            $this->getLogger()->log(LogLevel::INFO , 'Processing message file...' , [ 'file' => $file->getRealPath() ]);
-            $message = json_decode( $file->getContents() , true );
-            $sent = false;
-            if( isset( $message['message'] , $message['channel'] , $message['context'] ) ){
-                try {
-                    $command = $this->getApplication()->find('hermine:send-message');
-                    $input = new ArrayInput([
-                        '--context' => $message['context'],
-                        '--channel' => $message['channel'],
-                        '--message' => $message['message']
-                    ]);
-                    if( $command->run( $input , $output ) === self::SUCCESS ){
-                        $this->getLogger()->log(LogLevel::INFO , 'hermine:send-message executed!');
-                        $sent = true;
-                    }
-                } catch ( \Throwable $e ){
-                    // Darf den Tick (und damit die Events) nicht abbrechen
-                    $this->getLogger()->log(LogLevel::ERROR , 'Sending message file failed' , [ 'file' => $file->getRealPath() , 'error' => $e->getMessage() ]);
-                }
-            } else {
-                $this->getLogger()->log(LogLevel::ERROR , 'Message malformed!' , [ 'keys_exist' => is_array( $message ) ? array_keys( $message ) : null ]);
-            }
-
-            if( $sent ){
-                $fileSystem->remove( $file->getRealPath() );
-            } else {
-                // Nicht löschen, sondern beiseitelegen (wird wegen der Endung nicht erneut verarbeitet)
-                $fileSystem->rename( $file->getRealPath() , $file->getRealPath() . '.failed' , true );
-                $this->getLogger()->log(LogLevel::CRITICAL , 'Message file not sent, kept as .failed' , [ 'file' => $file->getRealPath() . '.failed' ]);
-            }
-        }
     }
 
 }

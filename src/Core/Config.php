@@ -7,15 +7,6 @@ class Config extends ArrayDataCollection {
     const DEFAULT_CHANNEL_CONVERSATION_PLACEHOLDER = '[[Konversation]]';
 
     /**
-     * @return bool
-     * @throws \Exception
-     */
-    public function isDevMode(): bool
-    {
-        return boolval( $this->getResults('dev_mode') );
-    }
-
-    /**
      * @return string
      * @throws \Exception
      */
@@ -54,15 +45,6 @@ class Config extends ArrayDataCollection {
     }
 
     /**
-     * Channel für Tests und Prototypen (z. B. QueryController) – der Name gehört nicht in den Code
-     * @return string
-     * @throws \Exception
-     */
-    public function getTestChannelName() : string {
-        return $this->getResults('test_channel');
-    }
-
-    /**
      * @return array
      * @throws \Exception
      */
@@ -84,14 +66,6 @@ class Config extends ArrayDataCollection {
      */
     public function getTimeFormat() : string {
         return $this->getResults('time_format');
-    }
-
-    /**
-     * @return string
-     * @throws \Exception
-     */
-    public function getBaseUrl() : string {
-        return $this->getResults('base_url');
     }
 
     /**

@@ -87,14 +87,12 @@ Die Installation wird in diesem Beispiel auf einem Debian 12 und eigener MySQL-D
 `sudo su -`
 * MySQL-Client starten\
 `mysql`
-* DBs anlegen (`messages` ist die Nachrichten-Warteschlange, die z. B. der StAN-Manager mitbenutzt)\
-`create database hermine_bot;`\
-`create database messages;`
+* DB anlegen\
+`create database hermine_bot;`
 * DB-User anlegen\
 `CREATE USER '<DB-Benutzernamen>'@localhost IDENTIFIED BY '<Passwort>';`
 * DB-User Berechtigungen vergeben\
-`GRANT ALL PRIVILEGES ON hermine_bot.* TO '<DB-Benutzernamen>'@'localhost';`\
-`GRANT ALL PRIVILEGES ON messages.* TO '<DB-Benutzernamen>'@'localhost';`
+`GRANT ALL PRIVILEGES ON hermine_bot.* TO '<DB-Benutzernamen>'@'localhost';`
 * MySQL-Client beenden\
 `quit;`
 * Aus Root-Kontext raus\
