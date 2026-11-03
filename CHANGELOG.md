@@ -9,8 +9,10 @@ Alle wesentlichen Änderungen am Hermine-Bot werden in dieser Datei festgehalten
 - Meldungen nach dem Speichern erscheinen oben rechts und verschwinden von selbst, Rückfragen wie „Löschen?“ öffnen ein eigenes Fenster statt der Abfrage des Browsers.
 - Die Hintergrundaufgaben zeigen den Plan in Worten und haben Speichern und Jetzt ausführen nebeneinander wie im StAN-Manager.
 - Zeiten stehen ohne Bindestrich zwischen Datum und Uhrzeit.
+- Meldungen bei der Anmeldung erscheinen auf Deutsch.
 
 ### Sicherheit
+- Nach fünf falschen Anmeldungen mit demselben Namen wird die Anmeldung von dort für 15 Minuten gesperrt, auch für die Schnittstelle zum StAN-Manager.
 - Über die Schnittstelle zum StAN-Manager gehen Nachrichten nur noch an freigegebene Channels, nicht mehr in private Unterhaltungen, und der Text wird wörtlich gesendet, ohne Abfragen externer Quellen auszulösen.
 
 ### Behoben
@@ -18,6 +20,7 @@ Alle wesentlichen Änderungen am Hermine-Bot werden in dieser Datei festgehalten
 - Liefert eine externe Quelle für einen Platzhalter einen Fehler, wird die Nachricht später erneut versucht, statt mit Fehlertext oder unersetztem Platzhalter gesendet zu werden.
 - Wiederkehrende Nachrichten werden nach dem Enddatum nicht mehr ein weiteres Mal gesendet.
 - Die Gruppenstatistik zeigt wieder alle Gruppen, auch wenn mehrere gleich viele Mitglieder haben.
+- Aufgaben aus der Nextcloud ohne festgelegte Priorität erscheinen nicht mehr als „hoch“ und nicht mehr oben.
 - Fehlt der Schlüssel eines Channels oder einer Unterhaltung, steht im Log jetzt eine verständliche Fehlermeldung statt eines Absturzes.
 
 ## [3.1.0] - 2026-11-01

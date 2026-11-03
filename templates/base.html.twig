@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}{{ title }} - {{ ov }}{% endblock %}</title>
+    <title>{% block title %}{{ title }}{% if ov %} - {{ ov }}{% endif %}{% endblock %}</title>
     <link rel="icon" href="/favicon.ico">
     {# Aussehen und Verhalten wie im StAN-Manager: gebaut dort mit bin/hermine-bot-assets, main.css nur für Bot-Eigenes #}
     {% block stylesheets %}
@@ -30,7 +30,7 @@
         {% if navigation is not empty %}
             <button type="button" class="nav-toggle no-print" aria-label="Menü" aria-controls="main-nav" aria-expanded="false">☰</button>
         {% endif %}
-        <span class="header-title">{{ title }} - {{ ov }}</span>
+        <span class="header-title">{{ title }}{% if ov %} - {{ ov }}{% endif %}</span>
         {% if is_granted('ROLE_USER') %}
             <a href="#" class="app-version no-print" title="Changelog anzeigen" data-changelog-url="{{ path('changelog') }}">v{{ app_version }}</a>
         {% else %}

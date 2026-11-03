@@ -7,7 +7,7 @@ use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Process\Process;
 
 /**
- * Alles, was ein Cronjob auf stdout oder stderr ausgibt, verschickt Plesk als Mail, auch bei „nur bei Fehlern“.
+ * Alles, was ein Cronjob auf stdout oder stderr ausgibt, verschickt die Hosting-Oberfläche als Mail, auch bei „nur bei Fehlern“.
  * Läuft die Aufgabe jede Minute, sind das Tausende Mails. Deprecations gehören deshalb in eine Logdatei,
  * echte Fehler müssen weiter im Cron ankommen.
  */

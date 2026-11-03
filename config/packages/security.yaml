@@ -21,6 +21,10 @@ security:
                 enable_csrf: true
                 login_path: app_login
                 check_path: app_login
+            # Gegen Durchprobieren von Passwörtern, für Login-Seite und API (je Name und IP-Adresse; nur Fehlversuche zählen)
+            login_throttling:
+                max_attempts: 5
+                interval: '15 minutes'
 
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/

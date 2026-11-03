@@ -233,14 +233,10 @@ class MessageDecorator {
                                                 $priorityText = null;
                                                 if( isset( $todo->PRIORITY ) && $todo->PRIORITY instanceof Property ){
                                                     $priority = (int) $todo->PRIORITY->getValue();
-                                                    if( $priority > 5 ){
-                                                        $priorityText = '🟦 niedrig (' . $priority . ')';
-                                                    } else if( $priority < 5 ){
-                                                        $priorityText = '🟥 hoch (' . $priority . ')';
-                                                    } else {
-                                                        $priorityText = '🟨 mittel (' . $priority . ')';
+                                                    $priorityText = self::priorityText( $priority );
+                                                    if( $priorityText !== null ){
+                                                        $sortKey = $priority . '_' . $sortKey;
                                                     }
-                                                    $sortKey = $priority . '_' . $sortKey;
                                                 }
 
                                                 // Description
@@ -311,5 +307,18 @@ class MessageDecorator {
         }
         usort( $rows , fn( array $a , array $b ) => [ $a[0] , $a[1] ] <=> [ $b[0] , $b[1] ] );
         return implode( "\r\n" , array_map( fn( array $row ) => sprintf( '%s: %d mögliche Nutzer' , $row[1] , $row[0] ) , $rows ) );
+    }
+
+    /**
+     * Priorität einer Aufgabe nach RFC 5545: 1 (hoch) bis 9 (niedrig), 5 mittel; 0 = nicht festgelegt (keine Angabe, sortiert wie ohne)
+     */
+    public static function priorityText( int $priority ): ?string
+    {
+        return match( true ){
+            $priority < 1 || $priority > 9 => null,
+            $priority < 5 => '🟥 hoch (' . $priority . ')',
+            $priority > 5 => '🟦 niedrig (' . $priority . ')',
+            default => '🟨 mittel (' . $priority . ')',
+        };
     }
 }

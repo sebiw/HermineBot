@@ -80,21 +80,22 @@ Agenten committen, taggen und pushen in keinem der beiden Repos eigenständig �
 - `src/Command` – `daemon:tick`, `hermine:send-message`
 - `src/Controller` – Events, Jobs, Login, API, Changelog, User
 - `src/Security` – `ApiKeyAuthenticator`; `src/Service/AppService` – zentraler Einstieg zu Config und Mediator
-- `src/Entity` – `Event`, `LogEntry`, `User`
+- `src/Entity` – `Event`, `LogEntry`, `User`, `JobState`
 - `bootstrap.php` – definiert die Konstante `BASE_PATH` (Projektwurzel), von `public/index.php` und `bin/console` geladen; Pfade in `services.yaml` (`app.message_*`) sind relativ dazu
 - `config/legacy/` – echte Konfiguration (gitignored), Vorlagen in `config_examples/`
 - `data/` – Laufzeitdaten (gitignored): `credentials/login-data.json`
-- `migrations/` – Tabellen `events`, `user`, `log` (DB `hermine_bot`)
+- `migrations/` – Tabellen `events`, `user`, `log`, `job_state` (DB `hermine_bot`)
 - `tests/` – PHPUnit-Tests (`php8.5 vendor/bin/phpunit`), bisher vor allem Hilfsklassen, Jobs und Log; Mediator, API und Platzhalter sind noch ungetestet. Statische Analyse: `php8.5 vendor/bin/phpstan analyse --memory-limit=1G` (Stufe 6, ohne Baseline, Stufe schrittweise anheben und alles beheben, auch alten Code). Alle Prüfungen auf einmal: `bin/pruefen` (mit Migrationen auf MySQL 8.4 im Wegwerf-Container, `--kurz` ohne), vor jedem Commit-Vorschlag und Release
 
 ## Konfiguration
 
-- `.env` (eingecheckt, Platzhalter) / `.env.local` (nicht committen): `DATABASE_URL`, `ORGANIZATION_UNIT` (Anzeige im Titel), `APP_SECRET`.
+- `.env` (eingecheckt, nur Platzhalter, `APP_SECRET` leer – echter Wert in `.env.local` bzw. produktiv `.env.local.php`) / `.env.local` (nicht committen): `DATABASE_URL`, `ORGANIZATION_UNIT`, optional `APP_TIMEZONE` (Standard `Europe/Berlin`, gesetzt in `Kernel::boot()`, damit Oberfläche und Cron dieselbe Zeit nutzen, unabhängig von der php.ini) (Anzeige im Titel), `APP_SECRET`.
 - `config/legacy/env.api.php` – Stashcat-Zugang: `baseUrl`, `version`, `appNamePattern`, `deviceId` (32 Zeichen), `userEmail`, `userPassword`, `userPassphrase` (für den privaten Schlüssel), Krypto-Parameter.
 - `config/legacy/env.app.php` – `data_path`, `stashcat_event_company` (Name der Stashcat-Firma), `auto_append_to_messages`, `allowed_channel` (Freigabeliste), `conversation_channel_placeholder_name` (optional), `allowed_intervals` (ISO-Intervall → Bezeichnung), `date_format`, `time_format`. Nicht mehr gelesen (dürfen in alten Dateien stehen bleiben): `dev_mode`, `base_url`, `test_channel`.
 - `config/legacy/command_api_endpoints.json` – externe Datenquellen für Befehle (enthält API-Keys/Passwörter).
 - `config/services.yaml` – `app.version`, Pfad `app.message_command_api_endpoints`, Logger-Services.
-- Rollen (`config/packages/security.yaml`): `ROLE_ADMIN` (enthält `ROLE_USER`, derzeit gleichbedeutend), `ROLE_API` für `/api/*`. Benutzer anlegen: Hash mit `php bin/console security:hash-password`, dann per SQL in `user` eintragen (siehe `readme.md`); es gibt keinen Befehl/keine Oberfläche dafür.
+- Anmeldung gegen Durchprobieren geschützt (`login_throttling`, 5 Fehlversuche je Name und IP in 15 Minuten, gilt auch für `/api/*`; braucht `symfony/rate-limiter`). Sprache der Oberfläche `de` (`translation.yaml`), Meldungen der API bleiben englisch.
+- Rollen (`config/packages/security.yaml`): `ROLE_ADMIN` (enthält `ROLE_USER`, derzeit gleichbedeutend), `ROLE_API` für `/api/*`. Benutzer anlegen und pflegen unter `/users` (siehe „Nutzer“); nur den ersten Administrator einer neuen Installation per SQL (siehe `readme.md`).
 
 ## Lokale Entwicklung
 

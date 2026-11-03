@@ -120,7 +120,9 @@ Die Installation wird in diesem Beispiel auf einem Debian 12 und eigener MySQL-D
 Ohne Cron-Job verschickt der Bot keine geplanten Nachrichten. Als Webserver-Benutzer einrichten (`sudo crontab -u www-data -e`):\
 `* * * * * php /opt/HermineBot/bin/console daemon:tick`
 
-## Web-Benutzer anlegen
+## Ersten Web-Benutzer anlegen
+Nur für den ersten Administrator nötig; weitere Nutzer (auch API-Nutzer) danach in der Oberfläche unter „Nutzer“.
+
 ### Passwort-Hash erstellen
 `php bin/console security:hash-password`
 
