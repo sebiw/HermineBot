@@ -4,6 +4,8 @@ Alle wesentlichen Änderungen am Hermine-Bot werden in dieser Datei festgehalten
 
 ## [Unreleased]
 
+## [4.0.0] - 2026-11-03
+
 ### Geändert
 - Die Events-Seite ist neu aufgebaut wie die Dienste im StAN-Manager: eine Übersicht mit Stand und ganzem Text, Anlegen und Bearbeiten auf einer eigenen Seite mit Vorschau wie in Hermine und Platzhaltern zum Anklicken.
 - Die Anmeldung ist durchgehend auf Deutsch, auch Knopf und Meldungen, und Passwortmanager erkennen Benutzername und Passwort jetzt zuverlässig.
