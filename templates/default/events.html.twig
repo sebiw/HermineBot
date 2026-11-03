@@ -1,0 +1,69 @@
+{% extends 'base.loggedin.html.twig' %}
+{# Übersicht der Events; Anlegen und Bearbeiten auf event.edit.html.twig (wie Dienste im StAN-Manager) #}
+
+{% block body %}
+    <div class="wrapper layout-compact">
+        <div class="form-page">
+            <div class="report-header">
+                <h2>Events</h2>
+                <span class="report-subtitle">geplante und wiederkehrende Nachrichten an Channels und Unterhaltungen</span>
+            </div>
+            {% if events is empty %}
+                <p class="form-hint">Noch keine Events. Unter „Neues Event“ anlegen.</p>
+            {% endif %}
+        </div>
+        {% if events is not empty %}
+            <table class="object-center event-list">
+                <thead>
+                <tr>
+                    <th>Stand</th>
+                    <th>Ziel</th>
+                    <th>Nachricht</th>
+                    <th>Zeitplan</th>
+                    <th>Nächste</th>
+                    <th>Zuletzt</th>
+                    <th>Aktionen</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for event in events %}
+                    {% set state = event.getState() %}
+                    {% set isConversation = event.getChannelTarget() == conversation_placeholder %}
+                    <tr>
+                        <td><span class="event-state event-state-{{ state }}">{{ constant('App\\Entity\\Event::STATE_LABELS')[state] }}</span></td>
+                        <td>
+                            {% if isConversation %}💬&nbsp;Unterhaltung<br><small>ID {{ event.getConversationIdFromPayload() }}</small>{% else %}<span class="text-no-wrap">📢&nbsp;{{ event.getChannelTarget() }}</span>{% endif %}
+                        </td>
+                        <td><div class="event-text">{{ event.getText()|event_text(labels) }}</div></td>
+                        <td>
+                            {{ event.getDateInterval() ? ( allowed_intervals[ event.getDateInterval() ] ?? event.getDateInterval() ) : 'einmalig' }}{% if event.getUntilDateTime() %} bis {{ event.getUntilDateTime()|date('d.m.Y') }}{% endif %}
+                            <br><small>ab {{ event.getStartDateTime()|date }}</small>
+                        </td>
+                        <td>
+                            {% if state == 'done' %}–{% elseif event.getDueDateTime() <= now %}sofort fällig{% else %}{{ event.getDueDateTime()|date }}{% endif %}
+                        </td>
+                        <td>
+                            {{ event.getDoneDateTime() ? event.getDoneDateTime()|date : 'noch nie' }}
+                            <br><small>{{ event.getTransmissionsCount() }}× gesendet</small>
+                            {% if event.getFailedAttempts() > 0 %}<br><small class="event-failed-note">{{ event.getFailedAttempts() }} Fehlversuche{{ state == 'failed' ? ' – Speichern gibt es wieder frei' }}</small>{% endif %}
+                        </td>
+                        <td>
+                            <div class="event-actions">
+                                <a href="{{ path('events_edit', { id: event.getId() }) }}" class="button-secondary icon-button" data-tooltip="Bearbeiten" aria-label="Bearbeiten"><span aria-hidden="true">✏️</span><span class="icon-button-label">Bearbeiten</span></a>
+                                <form method="post" action="{{ path('events_send', { id: event.getId() }) }}">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('events') }}">
+                                    <button type="submit" class="button-secondary icon-button" data-confirm="Jetzt an {{ isConversation ? 'die Unterhaltung' : event.getChannelTarget() }} senden? Der Plan bleibt, wie er ist." data-tooltip="Jetzt senden: einmal sofort, ändert den Plan nicht" aria-label="Jetzt senden"><span aria-hidden="true">📤</span><span class="icon-button-label">Jetzt senden</span></button>
+                                </form>
+                                <form method="post" action="{{ path('events_delete', { id: event.getId() }) }}">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('events') }}">
+                                    <button type="submit" class="button-danger icon-button" data-confirm="Event löschen?" data-tooltip="Löschen" aria-label="Löschen"><span aria-hidden="true">🗑️</span><span class="icon-button-label">Löschen</span></button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+{% endblock %}

@@ -4,11 +4,12 @@
     {# Aufbau wie templates/_navigation.html.twig im StAN-Manager: Bereich mit Unterpunkten = Link mit data-nav-toggle und
        direkt dahinter seine nav.secondary; am Rechner erscheinen nur die Unterpunkte des aktuellen Bereichs, am Handy klappen sie auf #}
     {% set route = app.current_route %}
-    {% set eventsActive = route in [ 'events' , 'execute_events' , 'execute_events_run' ] %}
+    {% set eventsActive = route starts with 'events' and route != 'events_log' or route starts with 'execute_events' %}
     {% set usersActive = route starts with 'user' %}
     <a href="{{ path('events') }}" class="{{ eventsActive ? 'active' }}" data-nav-toggle="nav-group-events">Events</a>
     <nav class="secondary{{ eventsActive ? ' is-current is-open' }}" id="nav-group-events">
-        <a href="{{ path('events') }}" class="{{ route == 'events' ? 'active' }}">Übersicht</a>
+        <a href="{{ path('events') }}" class="{{ route in [ 'events' , 'events_edit' , 'events_save' ] ? 'active' }}">Übersicht</a>
+        <a href="{{ path('events_new') }}" class="{{ route in [ 'events_new' , 'events_create' ] ? 'active' }}">Neues Event</a>
         <a href="{{ path('execute_events') }}" class="{{ route starts with 'execute_events' ? 'active' }}">Event-Ausführer starten</a>
     </nav>
     <a href="{{ path('events_log') }}" class="{{ route == 'events_log' ? 'active' }}">Logs</a>

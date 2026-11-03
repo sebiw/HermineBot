@@ -34,7 +34,8 @@ class ApiKeyAuthenticator extends AbstractAuthenticator
         }
 
         $content = json_decode( $request->getContent() , true );
-        if( !isset( $content['user']) || !isset( $content['key'] ) ) {
+        // Nur Texte: {"user":["x"]} wäre sonst ein Fehler 500 (TypeError in UserBadge) statt 401
+        if( !is_array( $content ) || !is_string( $content['user'] ?? null ) || !is_string( $content['key'] ?? null ) ) {
             // Request-Inhalt bewusst nicht zurückgeben (kann Zugangsdaten enthalten)
             throw new CustomUserMessageAuthenticationException('No API token provided: User and Key not submitted!');
         }

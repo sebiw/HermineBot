@@ -10,6 +10,10 @@ security:
                 class: App\Entity\User
                 property: username
     firewalls:
+        # Zuerst: secured_area hat kein pattern und fängt sonst alles ab (Profiler gibt es nur in dev, unter /css, /images, /js liegen keine Routen)
+        dev:
+            pattern: ^/(_(profiler|wdt)|css|images|js)/
+            security: false
         secured_area:
             custom_authenticators:
                 - App\Security\ApiKeyAuthenticator
@@ -26,9 +30,6 @@ security:
                 max_attempts: 5
                 interval: '15 minutes'
 
-        dev:
-            pattern: ^/(_(profiler|wdt)|css|images|js)/
-            security: false
 
             # lazy: true
             # provider: users_in_memory

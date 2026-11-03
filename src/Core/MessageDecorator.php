@@ -25,6 +25,23 @@ class MessageDecorator {
     /** @var array<class-string, object> */
     private array $serviceInstances = [];
 
+    /** @var array<string, array{label: string, group: string}> Platzhalter-Syntax => Name und Gruppe für die Auswahl im Formular */
+    private array $descriptions = [];
+
+    const GROUP_HERMINE = 'Aus Hermine';
+    const GROUP_EVENT = 'Zu diesem Event';
+    const GROUP_SOURCES = 'Aus anderen Quellen (beim Senden abgerufen)';
+
+    /** Namen der fest eingebauten Platzhalter */
+    const PLACEHOLDER_LABELS = [
+        'CompanyName' => [ 'Name der Firma' , self::GROUP_HERMINE ],
+        'CompanyActiveUser' => [ 'aktive Nutzer' , self::GROUP_HERMINE ],
+        'CompanyCreatedUser' => [ 'angelegte Nutzer' , self::GROUP_HERMINE ],
+        'CompanyGroupsStats' => [ 'Gruppen mit Nutzerzahl' , self::GROUP_HERMINE ],
+        'ChannelUserCount' => [ 'Mitglieder des Channels' , self::GROUP_HERMINE ],
+        'EventInterval' => [ 'Wiederholung' , self::GROUP_EVENT ],
+    ];
+
     /**
      * @param ContainerInterface $container
      * @param list<mixed> $serviceInstances Objekte für die Platzhalter (Firma, Channel, AppService, Event)
@@ -87,6 +104,30 @@ class MessageDecorator {
     }
 
     /**
+     * Platzhalter für die Auswahl im Formular und die Anzeige in der Übersicht, in der Reihenfolge der Gruppen
+     * @return list<array{code: string, label: string, group: string}>
+     */
+    public function describeReplacements(): array
+    {
+        $order = [ self::GROUP_HERMINE => 0 , self::GROUP_EVENT => 1 , self::GROUP_SOURCES => 2 ];
+        $rows = [];
+        foreach( $this->descriptions AS $code => $description ){
+            $rows[] = [ 'code' => $code ] + $description;
+        }
+        usort( $rows , fn( array $a , array $b ) => $order[ $a['group'] ] <=> $order[ $b['group'] ] );
+        return $rows;
+    }
+
+    /**
+     * Anzeigename einer externen Quelle: Feld „label“ in command_api_endpoints.json, sonst der Name des Befehls
+     * @param array<mixed> $data
+     */
+    private static function configLabel( array $data ): ?string
+    {
+        return isset( $data['label'] ) && is_string( $data['label'] ) && trim( $data['label'] ) !== '' ? trim( $data['label'] ) : null;
+    }
+
+    /**
      * @return list<string>
      */
     public function getAvailableReplacements(): array
@@ -101,6 +142,8 @@ class MessageDecorator {
      */
     protected function addPlaceholderDecoration( string $key , callable $callback ){
         $this->replaceCallbacks[ $this->getPlaceholderSyntax( $key ) ] = $callback;
+        [ $label , $group ] = self::PLACEHOLDER_LABELS[ $key ] ?? [ $key , self::GROUP_HERMINE ];
+        $this->descriptions[ $this->getPlaceholderSyntax( $key ) ] = [ 'label' => $label , 'group' => $group ];
     }
 
     /**
@@ -108,7 +151,8 @@ class MessageDecorator {
      * @param callable $callback
      * @return void
      */
-    protected function addCommandDecoration( string $key , callable $callback ){
+    protected function addCommandDecoration( string $key , callable $callback , ?string $label = null ){
+        $this->descriptions[ $this->getCommandSyntax( $key ) ] = [ 'label' => $label ?? $key , 'group' => self::GROUP_SOURCES ];
         // Externe Quelle ohne Ergebnis: Fehler statt Nachricht mit rohem {%…%} – der Daemon zählt dann einen Fehlversuch und versucht es erneut
         $this->replaceCallbacks[ $this->getCommandSyntax( $key ) ] = function() use ( $key , $callback ){
             $result = $callback();
@@ -159,7 +203,7 @@ class MessageDecorator {
                                         return is_array( $result ) ? ( $result['content'] ?? null ) : null;
                                     }
                                     return null;
-                                } );
+                                } , self::configLabel( $data ) );
                                 break;
 
                             case 'ICAL_DOWNLOAD_VTODO':
@@ -267,7 +311,7 @@ class MessageDecorator {
                                         return implode( PHP_EOL , $vToDos );
                                     }
                                     return null;
-                                } );
+                                } , self::configLabel( $data ) );
                                 break;
                         }
                     }

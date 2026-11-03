@@ -24,6 +24,8 @@ class AppExtension extends AbstractExtension {
     {
         return array(
             new TwigFilter('date', array($this, 'dateFilter')),
+            // Text eines Events in der Übersicht, Argument: Platzhalter => Name
+            new TwigFilter('event_text', [ \App\Core\Events\EventTextHtml::class , 'render' ] , [ 'is_safe' => [ 'html' ] ]),
         );
     }
 

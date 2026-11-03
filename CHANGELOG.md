@@ -5,11 +5,12 @@ Alle wesentlichen Änderungen am Hermine-Bot werden in dieser Datei festgehalten
 ## [Unreleased]
 
 ### Geändert
+- Die Events-Seite ist neu aufgebaut wie die Dienste im StAN-Manager: eine Übersicht mit Stand und ganzem Text, Anlegen und Bearbeiten auf einer eigenen Seite mit Vorschau wie in Hermine und Platzhaltern zum Anklicken.
+- Die Anmeldung ist durchgehend auf Deutsch, auch Knopf und Meldungen, und Passwortmanager erkennen Benutzername und Passwort jetzt zuverlässig.
 - Die Oberfläche übernimmt Aussehen und Bedienung des StAN-Managers: Formulare mit Knöpfen im gemeinsamen grauen Rahmen, Navigation, Tabellen und Abzeichen.
 - Meldungen nach dem Speichern erscheinen oben rechts und verschwinden von selbst, Rückfragen wie „Löschen?“ öffnen ein eigenes Fenster statt der Abfrage des Browsers.
 - Die Hintergrundaufgaben zeigen den Plan in Worten und haben Speichern und Jetzt ausführen nebeneinander wie im StAN-Manager.
 - Zeiten stehen ohne Bindestrich zwischen Datum und Uhrzeit.
-- Meldungen bei der Anmeldung erscheinen auf Deutsch.
 
 ### Sicherheit
 - Nach fünf falschen Anmeldungen mit demselben Namen wird die Anmeldung von dort für 15 Minuten gesperrt, auch für die Schnittstelle zum StAN-Manager.

@@ -12,10 +12,11 @@
     {% endblock %}
     {# Meldungen nach Aktionen erscheinen oben rechts (appToast), wie im StAN-Manager #}
     <script type="application/javascript">
+        {% set flashes = app.flashes([ 'error' , 'warning' , 'success' ]) %}
         var session = {{ {
-            errorMessage: app.flashes('error')|join(' ') ?: null,
-            warningMessage: app.flashes('warning')|join(' ') ?: null,
-            statusMessage: app.flashes('success')|join(' ') ?: null
+            errorMessage: flashes.error ? flashes.error|join(' ') : null,
+            warningMessage: flashes.warning ? flashes.warning|join(' ') : null,
+            statusMessage: flashes.success ? flashes.success|join(' ') : null
         }|json_encode(constant('JSON_HEX_TAG') b-or constant('JSON_HEX_AMP') b-or constant('JSON_HEX_APOS') b-or constant('JSON_HEX_QUOT'))|raw }};
     </script>
     {% block javascripts %}

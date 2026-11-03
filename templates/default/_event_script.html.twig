@@ -1,0 +1,145 @@
+{# Formular „Neues Event“/„Event bearbeiten“: Vorschau wie in Hermine, Platzhalter einfügen, Unterhaltung wählen.
+   Darstellung der Vorschau wie in der Übersicht (Core\Events\EventTextHtml) und wie die Post-Vorschau im StAN-Manager. #}
+{% verbatim %}
+<script>
+( function(){
+    var form = document.getElementById( 'event-form' );
+    if( !form ){ return; }
+    var text = document.getElementById( 'event-text' );
+    var start = document.getElementById( 'event-start' );
+    var preview = document.getElementById( 'event-preview' );
+    var labels = JSON.parse( preview.dataset.labels || '{}' );
+    var append = preview.dataset.append || '';
+
+    function escape( value ){
+        return value.replace( /&/g , '&amp;' ).replace( /</g , '&lt;' ).replace( />/g , '&gt;' ).replace( /"/g , '&quot;' );
+    }
+
+    // Gleiche Regeln wie EventTextHtml::render(), dazu der Zusatz des Bots und Unterstreichungen wie in Hermine
+    function render( value ){
+        var chips = [];
+        value = ( value.trim() + append ).replace( /\x01/g , '' ).replace( /\{\{\w+\}\}|\{%[^%]+%\}/g , function( code ){
+            chips.push( '<span class="event-placeholder" title="' + escape( code ) + '">' + escape( labels[ code ] || code ) + '</span>' );
+            return '\x01' + ( chips.length - 1 ) + '\x01';
+        } );
+        var html = escape( value.replace( /\r\n?/g , '\n' ) ).replace( /\n{3,}/g , '\n\n' )
+            .replace( /\*\*([\s\S]+?)\*\*/g , '<strong>$1</strong>' )
+            .replace( /(^|[\s(])_(\S(?:.*?\S)?)_(?=[\s.,:;!?)]|$)/gm , '$1<em>$2</em>' )
+            .replace( /https?:\/\/\S+|\b\d{2}\.\d{2}\.\d{4}\b|\b\d{1,2}:\d{2}\b/g , '<u>$&</u>' );
+        return html.replace( /\x01(\d+)\x01/g , function( all , index ){ return chips[ index ]; } );
+    }
+
+    function update(){
+        preview.querySelector( '.post-preview-text' ).innerHTML = render( text.value );
+        var time = ( start.value || '' ).split( 'T' )[1] || '';
+        preview.querySelector( '.post-preview-time' ).textContent = time;
+    }
+    text.addEventListener( 'input' , update );
+    start.addEventListener( 'change' , update );
+    start.addEventListener( 'input' , update );
+    update();
+
+    // Platzhalter an der Schreibmarke einfügen
+    form.querySelectorAll( '.placeholder-chip' ).forEach( function( chip ){
+        chip.addEventListener( 'click' , function(){
+            var from = text.selectionStart , to = text.selectionEnd , code = chip.dataset.insert;
+            text.value = text.value.slice( 0 , from ) + code + text.value.slice( to );
+            text.focus();
+            text.selectionStart = text.selectionEnd = from + code.length;
+            update();
+        } );
+    } );
+
+    // Unterhaltung: nur bei „Unterhaltung …“; die Liste lädt erst dann (meldet sich bei Hermine an)
+    var channel = document.getElementById( 'event-channel' );
+    var field = form.querySelector( '.conversation-field' );
+    var id = form.querySelector( '.conversation-id' );
+    var toggle = form.querySelector( '.conversation-toggle' );
+    var panel = form.querySelector( '.conversation-panel' );
+    var filter = form.querySelector( '.conversation-filter' );
+    var list = form.querySelector( '.conversation-list' );
+    var info = form.querySelector( '.conversation-info' );
+    var conversations = null , state = 'idle' , error = '';
+
+    function isConversation(){ return channel.value === channel.dataset.conversationValue; }
+    function find( value ){ return ( conversations || [] ).find( function( c ){ return c.id === value; } ); }
+
+    function updateInfo(){
+        var value = id.value.trim();
+        if( !isConversation() ){ info.textContent = ''; }
+        else if( state === 'error' ){ info.textContent = 'Unterhaltungen konnten nicht geladen werden, ID von Hand eintragen. Fehler: ' + error; }
+        else if( conversations === null ){ info.textContent = 'Lade Unterhaltungen …'; }
+        else if( value === '' ){ info.textContent = ''; }
+        else { var found = find( value ); info.textContent = found ? found.label : 'Nicht in der Liste der offenen Unterhaltungen (archiviert?), die ID bleibt erhalten.'; }
+    }
+
+    function item( text , className , value ){
+        var li = document.createElement( 'li' );
+        li.className = className;
+        li.textContent = text;
+        if( value !== undefined ){ li.dataset.id = value; }
+        list.appendChild( li );
+    }
+
+    function renderList(){
+        var terms = filter.value.toLowerCase().split( /\s+/ ).filter( Boolean );
+        list.textContent = '';
+        if( state === 'error' ){ item( 'Fehler: ' + error , 'conversation-hint' ); return; }
+        if( conversations === null ){ item( 'Lade Unterhaltungen …' , 'conversation-hint' ); return; }
+        var matches = conversations.filter( function( c ){ var label = c.label.toLowerCase(); return terms.every( function( t ){ return label.indexOf( t ) !== -1; } ); } );
+        if( matches.length === 0 ){ item( 'Keine passende Unterhaltung.' , 'conversation-hint' ); }
+        matches.forEach( function( c ){ item( c.label , 'conversation-option' + ( c.id === id.value.trim() ? ' selected' : '' ) , c.id ); } );
+    }
+
+    function load(){
+        if( state !== 'idle' ){ return; }
+        state = 'loading';
+        fetch( form.dataset.conversationsUrl , { headers: { 'Accept': 'application/json' } } )
+            .then( function( response ){ return response.json().then( function( data ){ return { ok: response.ok , data: data }; } ); } )
+            .then( function( result ){
+                if( !result.ok ){ throw new Error( result.data.message || 'Fehler' ); }
+                conversations = result.data.conversations || [];
+                state = 'loaded';
+            } )
+            .catch( function( e ){ state = 'error'; error = e.message; } )
+            .finally( function(){ updateInfo(); if( !panel.hidden ){ renderList(); } } );
+    }
+
+    function open(){
+        panel.hidden = false;
+        var rect = toggle.getBoundingClientRect();
+        panel.style.top = rect.bottom + 'px';
+        panel.style.left = Math.max( 8 , Math.min( rect.right - panel.offsetWidth , window.innerWidth - panel.offsetWidth - 8 ) ) + 'px';
+        filter.value = '';
+        renderList();
+        filter.focus();
+    }
+    function close(){ panel.hidden = true; }
+
+    toggle.addEventListener( 'click' , function(){ panel.hidden ? open() : close(); } );
+    filter.addEventListener( 'input' , renderList );
+    filter.addEventListener( 'keydown' , function( event ){
+        if( event.key === 'Enter' ){ event.preventDefault(); var first = list.querySelector( '.conversation-option' ); if( first ){ first.click(); } }
+        else if( event.key === 'Escape' ){ close(); toggle.focus(); }
+    } );
+    list.addEventListener( 'click' , function( event ){
+        var option = event.target.closest( '.conversation-option' );
+        if( option ){ id.value = option.dataset.id; close(); updateInfo(); }
+    } );
+    document.addEventListener( 'click' , function( event ){ if( !event.target.closest( '.conversation-picker' ) ){ close(); } } );
+    window.addEventListener( 'resize' , close );
+    window.addEventListener( 'scroll' , close );
+    id.addEventListener( 'input' , updateInfo );
+
+    function updateChannel(){
+        var conversation = isConversation();
+        field.hidden = !conversation;
+        id.required = conversation;
+        if( conversation ){ load(); } else { close(); }
+        updateInfo();
+    }
+    channel.addEventListener( 'change' , updateChannel );
+    updateChannel();
+} )();
+</script>
+{% endverbatim %}

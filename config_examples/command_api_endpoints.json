@@ -1,5 +1,6 @@
 {
   "StAN-Manager:open-messages" : {
+    "label" : "offene Material-Meldungen",
     "type" : "REST_JSON",
     "url" : "http://stan-manager.localhost/api/open-messages",
     "payload" : {
@@ -8,6 +9,7 @@
     }
   },
   "StAN-Manager:open-files" : {
+    "label" : "offene Vorgänge",
     "type" : "REST_JSON",
     "url" : "http://stan-manager.localhost/api/open-files",
     "payload" : {
@@ -16,6 +18,7 @@
     }
   },
   "Hofdienst:ToDo" : {
+    "label" : "Aufgaben aus der Nextcloud",
     "type" : "ICAL_DOWNLOAD_VTODO",
     "url" : "https://domain.de/path/dav/calendars/aufgaben?export",
     "authorization_basic" : {

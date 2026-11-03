@@ -4,49 +4,92 @@
  * Gibt es etwas Gleiches im StAN-Manager, dort die Klasse nutzen statt hier etwas Ähnliches zu bauen.
  */
 
-/* Events-Tabelle: Eingaben direkt in den Zellen */
-.events-table input, .events-table textarea, .events-table select, .events-table button {
-  font-size: 0.95rem;
+/* Events: Übersicht und Formular (default/events.html.twig, event.edit.html.twig) */
+/* Stand als Abzeichen, Farben wie „Stand der Abfrage“ im StAN-Manager ($pollPlanned, $pollOpen, $pollClosed), gesperrt wie Fehler im Log */
+.event-state {
+  display: inline-block;
+  padding: 0.1rem 0.6rem;
+  border-radius: 1rem;
+  font-size: 0.8rem;
+  font-weight: bold;
+  white-space: nowrap;
 }
-.events-table td {
-  background-color: #fff;
-}
-/* Die Zellen haben eine eigene Farbe: untere Ecken passend zum runden Rand */
-.events-table tbody > tr:last-child > td:first-child {
-  border-bottom-left-radius: 0.55rem;
-}
-.events-table tbody > tr:last-child > td:last-child {
-  border-bottom-right-radius: 0.55rem;
-}
+.event-state-planned { color: #2b2000; background-color: #e6a100; }
+.event-state-running { color: #fff; background-color: #1f7a3a; }
+.event-state-done { color: #4a4744; background-color: #e6e1db; }
+.event-state-failed { color: #fff; background-color: #b3261e; }
 
-.thw-datepicker {
-  width: 6.5em;
+/* Ganzer Text in der Übersicht, leicht eingerückt wie ein Zitat; Platzhalter als graues Kästchen */
+.event-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  padding: 0.1rem 0 0.1rem 0.7rem;
+  border-left: 3px solid #dbd6d0;
+  max-width: 34rem;
 }
-
-.thw-timepicker {
-  width: 4em;
-}
-
-.thw-textarea {
-  min-width: 25rem;
-  width: 100%;
-  height: 5rem;
-}
-
-.event-done td {
-  background-color: #e5e1dc;
+.event-placeholder {
+  background-color: #efece8;
+  border: 1px solid #dbd6d0;
+  border-radius: 0.3rem;
+  padding: 0 0.3rem;
   color: #5E5D5B;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+.event-actions {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: nowrap;
+}
+.event-actions form {
+  margin: 0;
+}
+.event-failed-note {
+  color: #b3261e;
 }
 
-.event-failed td {
-  background-color: #f8e3e3;
+/* Vorschau im Formular: bewusst dunkel wie die Hermine-App (gleich wie die Post-Vorschau im StAN-Manager) */
+.post-preview {
+  box-sizing: border-box;
+  width: calc(100% - 12px);
+  max-width: 380px;
+  align-self: start;
+  margin: 0.5rem 0 0.4rem 6px;
+  padding: 0.7rem 0.8rem 0.4rem;
+  border-radius: 0 0 14px 14px;
+  background: #0a1a4a;
+  color: #e9e9ee;
+  font-size: 0.95rem;
+  line-height: 1.35;
+  box-shadow: 0 0 0 6px #000;
 }
+.post-preview-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.post-preview-text u { text-underline-offset: 2px; }
+.post-preview-time { margin-top: 0.3rem; text-align: right; font-size: 0.78rem; color: #b9bdcc; }
+.post-preview .event-placeholder { background-color: #2c3e7a; border-color: #2c3e7a; color: #cfd8ff; font-style: italic; }
 
-.conversation-info {
-  font-size: 0.7em;
-  max-width: 16rem;
-  margin: 0 auto;
+/* Platzhalter zum Einfügen, gruppiert nach Herkunft */
+.placeholder-picker { margin-top: 0.5rem; font-size: 0.85rem; }
+.placeholder-picker-title { font-weight: bold; color: #5E5D5B; margin-bottom: 0.3rem; }
+.placeholder-picker-title small { font-weight: normal; }
+.placeholder-group { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; margin: 0.25rem 0; }
+.placeholder-group-label { flex-basis: 100%; color: #5E5D5B; font-size: 0.78rem; margin-top: 0.2rem; }
+main .placeholder-chip {
+  background-color: #efece8;
+  border: 1px solid #dbd6d0;
+  border-radius: 1rem;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.82rem;
+  font-weight: normal;
+  color: #3a3936;
+  cursor: pointer;
+  height: auto;
 }
+main .placeholder-chip:hover, main .placeholder-chip:focus { background-color: #e3eaf7; border-color: #003399; color: #003399; }
+
+.form-page .form-field[hidden] { display: none; }
 
 .conversation-picker {
   position: relative;

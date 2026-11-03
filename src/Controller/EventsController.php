@@ -2,8 +2,8 @@
 
 namespace App\Controller;
 
-use App\Command\SendMessage;
 use App\Core\DatabaseLogger;
+use App\Core\Events\EventForm;
 use App\Core\Logging\LogChannels;
 use App\Core\Logging\LogFilter;
 use App\Core\Logging\LogSearch;
@@ -20,13 +20,9 @@ use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\BufferedOutput;
-use Symfony\Component\Filesystem\Filesystem;
-use Symfony\Component\Filesystem\Path;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
@@ -37,36 +33,169 @@ class EventsController extends AbstractController
     use CsrfTokenCheck;
 
     #[Route('/events', name: 'events', methods: [ 'GET' ])]
-    public function main( AppService $app , Kernel $kernel , ManagerRegistry $doctrine , Request $request, #[CurrentUser] ?User $user ): Response
+    public function main( AppService $app , Kernel $kernel , ManagerRegistry $doctrine ): Response
     {
-        $manager = $doctrine->getManagerForClass( Event::class );
-
-        $events = $manager->getRepository(Event::class )
-            ->createQueryBuilder('entries')
-            ->select('entries')
-            ->orderBy('entries.dueDateTime' , \SortDirection::Ascending)
-            ->getQuery()->getResult();
-
-        if( ( $id = $request->query->get('id') ) === null ){
-            $entity = new Event();
-        } else if( ( $entity = $manager->getRepository( Event::class )->find( $id ) ) === null ){
-            throw new \Exception('Entity not found!');
-        }
-
-        $decorator = new MessageDecorator( $kernel->getContainer() , [] );
-
-
-        return $this->render('default/index.html.twig' , [
+        /** @var Event[] $events */
+        $events = $doctrine->getManagerForClass( Event::class )->getRepository( Event::class )->findAll();
+        // Offene nach nächster Übermittlung, Erledigte danach (zuletzt gesendete zuerst)
+        usort( $events , function( Event $a , Event $b ){
+            $doneA = $a->getState() === Event::STATE_DONE;
+            $doneB = $b->getState() === Event::STATE_DONE;
+            if( $doneA !== $doneB ){
+                return $doneA <=> $doneB;
+            }
+            return $doneA ? ( $b->getDoneDateTime() <=> $a->getDoneDateTime() ) : ( $a->getDueDateTime() <=> $b->getDueDateTime() );
+        } );
+        return $this->render('default/events.html.twig' , [
             'events' => $events,
-            'date_format' => $app->getAppConfig()->getDateFormat(),
-            'time_format' => $app->getAppConfig()->getTimeFormat(),
-            'date_time_format' => $app->getAppConfig()->getDateFormat() . " " . $app->getAppConfig()->getTimeFormat(),
-            'current_entry' => $entity,
+            'labels' => $this->placeholderLabels( $kernel ),
             'allowed_intervals' => $app->getAppConfig()->getAllowedIntervals(),
-            'allowed_channels' => $app->getAppConfig()->getAllowedChannelNames(),
-            'replacementKeys' => $decorator->getAvailableReplacements(),
-            'conversation_channel_placeholder_name' => $app->getAppConfig()->getConversationChannelPlaceholderName()
+            'conversation_placeholder' => $app->getAppConfig()->getConversationChannelPlaceholderName(),
+            'now' => new \DateTime(),
         ]);
+    }
+
+    #[Route('/events/new', name: 'events_new', methods: [ 'GET' ])]
+    public function newEvent( AppService $app , Kernel $kernel ): Response
+    {
+        // Vorschlag: nächste volle Stunde
+        $start = new \DateTime( '+1 hour' );
+        $start->setTime( (int) $start->format( 'H' ) , 0 );
+        return $this->renderForm( new Event() , new EventForm( start: $start->format( EventForm::DATE_TIME_FORMAT ) ) , [] , $app , $kernel );
+    }
+
+    #[Route('/events/new', name: 'events_create', methods: [ 'POST' ])]
+    public function createEvent( Request $request , ManagerRegistry $doctrine , AppService $app , Kernel $kernel , DatabaseLogger $logger ): Response
+    {
+        $this->denyAccessUnlessCsrfTokenValid( 'events' , $request );
+        return $this->saveForm( new Event() , $request , $doctrine , $app , $kernel , $logger );
+    }
+
+    #[Route('/events/{id}', name: 'events_edit', requirements: [ 'id' => '\d+' ], methods: [ 'GET' ])]
+    public function editEvent( int $id , ManagerRegistry $doctrine , AppService $app , Kernel $kernel ): Response
+    {
+        $event = $this->findEvent( $id , $doctrine );
+        return $this->renderForm( $event , EventForm::fromEvent( $event ) , [] , $app , $kernel );
+    }
+
+    #[Route('/events/{id}', name: 'events_save', requirements: [ 'id' => '\d+' ], methods: [ 'POST' ])]
+    public function saveEvent( int $id , Request $request , ManagerRegistry $doctrine , AppService $app , Kernel $kernel , DatabaseLogger $logger ): Response
+    {
+        $this->denyAccessUnlessCsrfTokenValid( 'events' , $request );
+        return $this->saveForm( $this->findEvent( $id , $doctrine ) , $request , $doctrine , $app , $kernel , $logger );
+    }
+
+    #[Route('/events/{id}/delete', name: 'events_delete', requirements: [ 'id' => '\d+' ], methods: [ 'POST' ])]
+    public function deleteEvent( int $id , Request $request , ManagerRegistry $doctrine , DatabaseLogger $logger ): Response
+    {
+        $this->denyAccessUnlessCsrfTokenValid( 'events' , $request );
+        $event = $this->findEvent( $id , $doctrine );
+        $manager = $doctrine->getManagerForClass( Event::class );
+        $logger->log( LogLevel::NOTICE , sprintf( 'DELETE Event #%d' , $id ) , [ 'channel' => $event->getChannelTarget() , 'text' => $event->getText() ] );
+        $manager->remove( $event );
+        $manager->flush();
+        $this->addFlash( 'success' , 'Event gelöscht.' );
+        return $this->redirectToRoute('events');
+    }
+
+    /**
+     * Sendet das Event einmal sofort (mit Platzhaltern), ändert den Plan nicht
+     */
+    #[Route('/events/{id}/send', name: 'events_send', requirements: [ 'id' => '\d+' ], methods: [ 'POST' ])]
+    public function sendEvent( int $id , Request $request , ManagerRegistry $doctrine , Kernel $kernel , DatabaseLogger $logger ): Response
+    {
+        $this->denyAccessUnlessCsrfTokenValid( 'events' , $request );
+        $event = $this->findEvent( $id , $doctrine );
+
+        $application = new Application( $kernel );
+        $application->setAutoExit( false );
+        $arguments = [
+            'command' => 'hermine:send-message',
+            '--context' => 'GUI-TRIGGER',
+            '--channel' => $event->getChannelTarget(),
+            '--message' => $event->getText(),
+        ];
+        if( ( $conversationId = $event->getConversationIdFromPayload() ) !== null ){
+            $arguments['--conversationId'] = $conversationId;
+        }
+        $output = new BufferedOutput();
+        if( $application->run( new ArrayInput( $arguments ) , $output ) === Command::SUCCESS ){
+            $event->increaseTransmissionsCount();
+            $doctrine->getManagerForClass( Event::class )->flush();
+            $logger->info( sprintf( 'Message Event #%d triggered & processed' , $id ) );
+            $this->addFlash( 'success' , 'Nachricht gesendet.' );
+        } else {
+            $logger->emergency( sprintf( 'Message Event #%d triggered & failed' , $id ) , [ 'error' => $output->fetch() ] );
+            $this->addFlash( 'error' , 'Senden fehlgeschlagen, Einzelheiten unter Logs.' );
+        }
+        return $this->redirectToRoute('events');
+    }
+
+    private function findEvent( int $id , ManagerRegistry $doctrine ): Event
+    {
+        $event = $doctrine->getManagerForClass( Event::class )->getRepository( Event::class )->find( $id );
+        if( !$event instanceof Event ){
+            throw $this->createNotFoundException( 'Event nicht gefunden.' );
+        }
+        return $event;
+    }
+
+    private function saveForm( Event $event , Request $request , ManagerRegistry $doctrine , AppService $app , Kernel $kernel , DatabaseLogger $logger ): Response
+    {
+        $isNew = $event->getId() === null;
+        $form = EventForm::fromInput( $request->request->all() );
+        $errors = $form->applyTo( $event , $app->getAppConfig() , new \DateTime() );
+        if( $errors !== [] ){
+            // Eingaben bleiben stehen, nichts gespeichert
+            return $this->renderForm( $event , $form , $errors , $app , $kernel , Response::HTTP_UNPROCESSABLE_ENTITY );
+        }
+        $manager = $doctrine->getManagerForClass( Event::class );
+        $manager->persist( $event );
+        $manager->flush();
+        $logger->log( LogLevel::NOTICE , sprintf( '%s Event #%d' , $isNew ? 'ADD' : 'SAVE' , $event->getId() ) , [
+            'channel' => $event->getChannelTarget(),
+            'text' => $event->getText(),
+            'interval' => $event->getDateInterval(),
+            'startDate' => $event->getStartDateTime(),
+            'untilDate' => $event->getUntilDateTime(),
+        ]);
+        $this->addFlash( 'success' , $isNew ? 'Event angelegt.' : 'Event gespeichert.' );
+        return $this->redirectToRoute('events');
+    }
+
+    /**
+     * @param list<string> $errors
+     */
+    private function renderForm( Event $event , EventForm $form , array $errors , AppService $app , Kernel $kernel , int $status = Response::HTTP_OK ): Response
+    {
+        $config = $app->getAppConfig();
+        if( $errors !== [] ){
+            // Meldung oben rechts wie im StAN-Manager, die Eingaben bleiben im Formular
+            $this->addFlash( 'error' , implode( ' ' , $errors ) );
+        }
+        $placeholders = ( new MessageDecorator( $kernel->getContainer() , [] ) )->describeReplacements();
+        $groups = [];
+        foreach( $placeholders AS $placeholder ){
+            $groups[ $placeholder['group'] ][] = $placeholder;
+        }
+        return $this->render('default/event.edit.html.twig' , [
+            'event' => $event,
+            'form' => $form,
+            'allowed_intervals' => $config->getAllowedIntervals(),
+            'channels' => array_values( array_diff( $config->getAllowedChannelNames() , [ $config->getConversationChannelPlaceholderName() ] ) ),
+            'conversation_placeholder' => $config->getConversationChannelPlaceholderName(),
+            'placeholder_groups' => $groups,
+            'placeholder_labels' => array_column( $placeholders , 'label' , 'code' ),
+            'auto_append' => $config->getAutoAppendToMessages(),
+        ] , new Response( null , $status ) );
+    }
+
+    /**
+     * @return array<string, string> Platzhalter-Syntax => Name
+     */
+    private function placeholderLabels( Kernel $kernel ): array
+    {
+        return array_column( ( new MessageDecorator( $kernel->getContainer() , [] ) )->describeReplacements() , 'label' , 'code' );
     }
 
     #[Route('/events/log', name: 'events_log', methods: [ 'GET' ])]
@@ -123,140 +252,6 @@ class EventsController extends AbstractController
             // Nur für Admins sichtbar; Meldungen nennen keine Werte aus Hermine-Antworten
             return $this->json( [ 'status' => 'ERROR' , 'message' => $e->getMessage() ] , Response::HTTP_INTERNAL_SERVER_ERROR );
         }
-    }
-
-    #[Route('/events', name: 'save_event', methods: [ 'POST' ] )]
-    public function saveEvent( Request $request , ManagerRegistry $doctrine , AppService $app, DatabaseLogger $logger, #[CurrentUser] ?User $user , Kernel $kernel ): RedirectResponse
-    {
-        $this->denyAccessUnlessCsrfTokenValid( 'events' , $request );
-
-        $manager = $doctrine->getManagerForClass( Event::class );
-
-        switch( $request->request->get('action') ){
-            case 'save':
-            case 'add' :
-
-                    if( ( $id = $request->request->get('id') )  == null ){
-                        $entity = new Event();
-                    } else if( ( $entity = $manager->getRepository( Event::class )->find( $id ) ) === null ){
-                        throw new \Exception('Entity not found!');
-                    }
-
-                    $now = new \DateTime();
-                    $date = \DateTime::createFromFormat( $app->getAppConfig()->getDateFormat() . '-' . $app->getAppConfig()->getTimeFormat() , $request->request->get('date') . '-' . $request->request->get('time') );
-                    if( $date === false ){
-                        throw new BadRequestHttpException('Startdatum oder -uhrzeit ungültig!');
-                    }
-
-                    if( in_array( $request->request->get('channel') , $app->getAppConfig()->getAllowedChannelNames() ) ){
-                        $entity->setChannelTarget( $request->request->get('channel') );
-                    } else {
-                        throw new \Exception('Channel-Name not allowed!');
-                    }
-
-                    $conversationId = trim( strval( $request->request->get('channel_payload_conversation_id') ) );
-                    if( $entity->getChannelTarget() === $app->getAppConfig()->getConversationChannelPlaceholderName() && $conversationId === '' ){
-                        throw new BadRequestHttpException('Bitte eine Unterhaltung auswählen oder eine ID eintragen!');
-                    }
-                    $entity->setConversationIdToPayload( $conversationId === '' ? null : $conversationId );
-                    $entity->setStartDateTime( $date );
-
-                    if( $request->request->get('resetDue' ) == 1 ){
-                        $entity->setDueDateTime( $date );
-                    }
-
-                    $entity->setText( $request->request->get('text') );
-
-                    if( ( $interval = $request->request->get('interval') ) !== null && !empty( $interval ) ){
-
-                        if( !in_array( $interval , array_keys( $app->getAppConfig()->getAllowedIntervals() ) ) ){
-                            throw new \Exception('Interval not allowed!');
-                        }
-
-                        if( ( $untilDate = $request->request->get('untilDate') ) !== null && !empty( $untilDate ) && ( $untilTime = $request->request->get('untilTime') ) !== null && !empty( $untilTime )  ){
-                            $untilDate = \DateTime::createFromFormat( $app->getAppConfig()->getDateFormat() . '-' . $app->getAppConfig()->getTimeFormat() , $untilDate . '-' . $untilTime );
-                            if( $untilDate === false ){
-                                throw new BadRequestHttpException('Enddatum oder -uhrzeit ungültig!');
-                            }
-                            $entity->setUntilDateTime( $untilDate );
-                        } else {
-                            $entity->setUntilDateTime( null );
-                        }
-                        $entity->setDateInterval( strval( $interval ) );
-
-                    } else {
-                        $entity->setUntilDateTime( null );
-                        $entity->setDateInterval( null );
-                        // Single processing event and new due date is in the future => redo it!
-                        if( $entity->getDueDateTime() >= $now ){
-                            $entity->setDoneDateTime( null );
-                        }
-                    }
-
-                    // Erneutes Speichern gibt ein nach Fehlversuchen gesperrtes Event wieder frei
-                    $entity->resetFailedAttempts();
-
-                    $logger->log( LogLevel::NOTICE , sprintf('%s Event' , strtoupper( $request->request->get('action') )) , [
-                        'text' => $entity->getText() ,
-                        'interval' => $entity->getDateInterval() ,
-                        'startDate' => $entity->getStartDateTime() ,
-                        'untilDate' => $entity->getUntilDateTime()
-                    ]);
-
-                    $manager->persist( $entity );
-                    $manager->flush();
-                break;
-            case 'delete' :
-                if( ( $id = $request->request->get('id') )  !== null && ( $entity = $manager->getRepository( Event::class )->find( $id ) ) !== null ){
-                    $manager->remove( $entity );
-                    $manager->flush();
-                }
-                break;
-            case 'edit' :
-                if( ( $id = $request->request->get('id') ) !== null ){
-                    return $this->redirectToRoute('events' , ['id' => $id ] );
-                }
-                break;
-            case 'trigger' :
-                /* @var $entity Event */
-                if( ( $id = $request->request->get('id') )  !== null && ( $entity = $manager->getRepository( Event::class )->find( $id ) ) !== null ){
-
-                    $application = new Application( $kernel );
-                    $application->setAutoExit(false);
-
-                    $arguments = [
-                        'command' => 'hermine:send-message',
-                        '--context' => 'GUI-TRIGGER',
-                        '--channel' => $entity->getChannelTarget(),
-                        '--message' => $entity->getText()
-                    ];
-
-                    $channelPayload = $entity->getChannelTargetPayload();
-                    if( isset( $channelPayload['conversationId'] ) ){
-                        $arguments['--conversationId'] = $channelPayload['conversationId'];
-                    }
-
-                    $input = new ArrayInput( $arguments );
-
-                    // You can use NullOutput() if you don't need the output
-                    $output = new BufferedOutput();
-                    if( $application->run($input, $output) === Command::SUCCESS ){
-
-                        $entity->increaseTransmissionsCount();
-                        $manager->persist( $entity );
-                        $manager->flush();
-
-                        $logger->info('Message Event triggered & processed' );
-                    } else {
-                        $logger->emergency('Message Event triggered & failed' , ['error' => $output->fetch()] );
-                    }
-
-                    return $this->redirectToRoute('events' );
-                }
-                break;
-        }
-
-        return $this->redirectToRoute('events');
     }
 
     #[Route('/events/execute', name: 'execute_events', methods: [ 'GET' ] )]

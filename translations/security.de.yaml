@@ -1,0 +1,4 @@
+# Sperrmeldung nach zu vielen Fehlversuchen in Du-Form wie im StAN-Manager (die Vorlage von Symfony siezt)
+'Too many failed login attempts, please try again later.': 'Zu viele falsche Anmeldeversuche. Bitte versuche es später noch einmal.'
+'Too many failed login attempts, please try again in %minutes% minute.': 'Zu viele falsche Anmeldeversuche. Bitte versuche es in einer Minute noch einmal.'
+'Too many failed login attempts, please try again in %minutes% minutes.': 'Zu viele falsche Anmeldeversuche. Bitte versuche es in %minutes% Minuten noch einmal.'

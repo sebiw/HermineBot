@@ -308,6 +308,32 @@ class Event implements \JsonSerializable
     }
 
 
+    const STATE_PLANNED = 'planned';
+    const STATE_RUNNING = 'running';
+    const STATE_DONE = 'done';
+    const STATE_FAILED = 'failed';
+
+    /** Stand für die Übersicht (Abzeichen, Farben wie „Stand der Abfrage“ im StAN-Manager) */
+    const STATE_LABELS = [
+        self::STATE_PLANNED => 'Geplant',
+        self::STATE_RUNNING => 'Läuft',
+        self::STATE_DONE => 'Erledigt',
+        self::STATE_FAILED => 'Gesperrt',
+    ];
+
+    /**
+     * Gesperrt nach Fehlversuchen, erledigt, wiederkehrend aktiv oder einmalig noch offen
+     */
+    public function getState(): string
+    {
+        return match( true ){
+            $this->eventFailed() => self::STATE_FAILED,
+            $this->eventDone() => self::STATE_DONE,
+            $this->getDateInterval() !== null => self::STATE_RUNNING,
+            default => self::STATE_PLANNED,
+        };
+    }
+
     public function jsonSerialize(): mixed
     {
         return [

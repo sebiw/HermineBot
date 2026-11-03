@@ -1,0 +1,114 @@
+{% extends 'base.loggedin.html.twig' %}
+{# Neues Event / Event bearbeiten; Vorschau und Platzhalter: _event_script.html.twig #}
+{% set isNew = event.getId() is null %}
+
+{% block body %}
+    <div class="wrapper layout-compact">
+        <div class="form-page">
+            <div class="report-header">
+                <h2>{{ isNew ? 'Neues Event' : 'Event bearbeiten' }}</h2>
+                <span class="report-subtitle">{{ isNew ? 'Nachricht an einen Channel oder eine Unterhaltung planen' : event.getTransmissionsCount() ~ '× gesendet' ~ ( event.getDoneDateTime() ? ', zuletzt ' ~ event.getDoneDateTime()|date : '' ) }}</span>
+            </div>
+
+            <form method="post" action="{{ isNew ? path('events_create') : path('events_save', { id: event.getId() }) }}" id="event-form" data-conversations-url="{{ path('events_conversations') }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('events') }}">
+                <fieldset class="form-section">
+                    <legend>Ziel</legend>
+                    <div class="form-grid">
+                        <div class="form-field span-2">
+                            <label for="event-channel">Channel oder Unterhaltung</label>
+                            <select class="field" id="event-channel" name="channel" data-conversation-value="{{ conversation_placeholder }}">
+                                {% for channel in channels %}<option value="{{ channel }}"{{ form.channel == channel ? ' selected' }}>{{ channel }}</option>{% endfor %}
+                                <option value="{{ conversation_placeholder }}"{{ form.channel == conversation_placeholder ? ' selected' }}>Unterhaltung …</option>
+                            </select>
+                        </div>
+                        <div class="form-field span-2 conversation-field">
+                            <label for="event-conversation">Unterhaltung <small>(nur bei Unterhaltung)</small></label>
+                            <div class="conversation-picker">
+                                <div class="copy-field">
+                                    <input type="text" class="field conversation-id" id="event-conversation" name="conversationId" value="{{ form.conversationId }}" placeholder="ID der Unterhaltung" autocomplete="off">
+                                    <button type="button" class="button-secondary conversation-toggle">Wählen …</button>
+                                </div>
+                                <div class="conversation-panel" hidden>
+                                    <input type="search" class="field conversation-filter" placeholder="Nach Namen filtern …" autocomplete="off">
+                                    <ul class="conversation-list"></ul>
+                                </div>
+                            </div>
+                            <small class="form-hint conversation-info"></small>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset class="form-section">
+                    <legend>Nachricht</legend>
+                    <div class="form-grid">
+                        <div class="form-field span-2">
+                            <label for="event-text">Text <small>(**fett**, _kursiv_ wie in Hermine)</small></label>
+                            <textarea class="field" id="event-text" name="text" rows="12" required data-check-message="Bitte einen Text eingeben.">{{ form.text }}</textarea>
+                            <div class="placeholder-picker">
+                                <div class="placeholder-picker-title">Platzhalter einfügen <small>(Klick fügt an der Schreibmarke ein)</small></div>
+                                {% for group, items in placeholder_groups %}
+                                    <div class="placeholder-group">
+                                        <span class="placeholder-group-label">{{ group }}</span>
+                                        {% for item in items %}<button type="button" class="placeholder-chip" data-insert="{{ item.code }}" data-tooltip="{{ item.code }}">{{ item.label }}</button>{% endfor %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="form-field span-2">
+                            <label>Vorschau in Hermine <small>(Platzhalter werden beim Senden ersetzt)</small></label>
+                            <div class="post-preview" id="event-preview" data-labels="{{ placeholder_labels|json_encode }}" data-append="{{ auto_append }}">
+                                <div class="post-preview-text"></div>
+                                <div class="post-preview-time"></div>
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset class="form-section">
+                    <legend>Zeitplan</legend>
+                    <div class="form-grid">
+                        <div class="form-field span-2">
+                            <label for="event-start">Erstmals</label>
+                            <input type="datetime-local" class="field" data-date-text id="event-start" name="start" value="{{ form.start }}" required>
+                        </div>
+                        <div class="form-field">
+                            <label for="event-interval">Wiederholen</label>
+                            <select class="field" id="event-interval" name="interval">
+                                <option value="">einmalig</option>
+                                {% for interval, label in allowed_intervals %}<option value="{{ interval }}"{{ form.interval == interval ? ' selected' }}>{{ label }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="event-until">Bis <small>(optional, einschließlich)</small></label>
+                            <input type="date" class="field" id="event-until" name="until" value="{{ form.until }}">
+                        </div>
+                        {% if not isNew %}
+                            <div class="form-field span-all">
+                                <label><input type="checkbox" name="resetDue" value="1"{{ form.resetDue ? ' checked' }}> Übermittlung zurücksetzen <small>(nächste Übermittlung wieder ab „Erstmals“)</small></label>
+                            </div>
+                        {% endif %}
+                    </div>
+                </fieldset>
+
+                <div class="action-bar">
+                    <span>
+                        {% if not isNew %}
+                            <button type="submit" class="button-danger" form="event-delete" data-confirm="Event löschen?">Löschen</button>
+                        {% endif %}
+                    </span>
+                    <span>
+                        <a href="{{ path('events') }}" class="button-secondary">Abbrechen</a>
+                        <button type="submit" class="button-primary">{{ isNew ? 'Event anlegen' : 'Speichern' }}</button>
+                    </span>
+                </div>
+            </form>
+            {% if not isNew %}
+                <form method="post" action="{{ path('events_delete', { id: event.getId() }) }}" id="event-delete">
+                    <input type="hidden" name="_token" value="{{ csrf_token('events') }}">
+                </form>
+            {% endif %}
+        </div>
+    </div>
+    {% include 'default/_event_script.html.twig' %}
+{% endblock %}
