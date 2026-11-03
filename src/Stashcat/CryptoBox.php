@@ -7,7 +7,6 @@ use App\Stashcat\Entities\Message;
 use App\Stashcat\Entities\User;
 use App\Stashcat\Responses\PrivateKeyResponse;
 use App\Stashcat\Responses\SigningKeyResponse;
-use PHPUnit\Util\Exception;
 
 class CryptoBox {
 
@@ -213,10 +212,13 @@ class CryptoBox {
     }
 
     /**
-     * @return false|string
+     * @return string
      */
-    public function getRandomIv(){
+    public function getRandomIv(): string {
         $ivLength = openssl_cipher_iv_length( $this->getConfig()->getCipherAlgo() );
+        if( $ivLength === false ){
+            throw new \RuntimeException('Unknown cipher algorithm');
+        }
         return openssl_random_pseudo_bytes( $ivLength );
     }
 
@@ -234,7 +236,7 @@ class CryptoBox {
         $result = Crypt::padString( $result , $this->getConfig()->getCipherAlgoPaddingBlockSize() );
 
         if( !isset( $this->channelKeys[ $channelId ] ) ){
-            throw new Exception(sprintf('Channel-Key %s not available!' , $channelId ));
+            throw new \RuntimeException(sprintf('Channel-Key %s not available!' , $channelId ));
         }
 
         // Encrypt
@@ -260,7 +262,7 @@ class CryptoBox {
         // Encrypt
 
         if( !isset( $this->conversationKeys[ $conversationId ] ) ){
-            throw new Exception(sprintf('Conversation-Key %s not available!' , $conversationId ));
+            throw new \RuntimeException(sprintf('Conversation-Key %s not available!' , $conversationId ));
         }
 
         $ciphertext = Crypt::encodeWithConversationKey( $result ,  $this->getConfig()->getCipherAlgo() , $this->conversationKeys[ $conversationId ] ,  $this->getConfig()->getAesPadding() , $iv );

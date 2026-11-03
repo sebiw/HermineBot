@@ -116,8 +116,8 @@ class SendMessage extends Command
 
         foreach( [ 'message' => null , 'message-b64' => 'base64_decode' ] AS $key => $callback ){
             $eventText =  trim( $input->getOption( $key ) ?? '' );
-            if( !empty( $eventText ) && strlen( $eventText ) > 0 ){
-                if( $callback !== null && is_callable( $callback ) ){
+            if( $eventText !== '' ){
+                if( $callback !== null ){
                     $eventText = $callback( $eventText );
                 }
                 break;
@@ -185,7 +185,7 @@ class SendMessage extends Command
                 $this->getLogger()->log(LogLevel::INFO , sprintf('Message sent to channel %s' , $channelTarget  ) , [ 'text' => $eventText ]);
             }
 
-        } elseif( $conversationId !== null && $conversation !== null ){
+        } else {
 
             $memberNames = [];
             foreach( $conversation->getMembers() AS $member ){
@@ -198,8 +198,6 @@ class SendMessage extends Command
                 $this->getLogger()->log(LogLevel::INFO , sprintf('Message sent to conversation %s, members: %s' , $conversation->getId() , implode(', ' , $memberNames ) ) , [ 'text' => $eventText ]);
             }
 
-        } else {
-            throw new \Exception('Message-Target (Channel or Conversation) is invalid!');
         }
 
         // Nicht angenommen -> Fehler melden, statt Erfolg vorzutäuschen (Wiederholen ist Sache des Aufrufers)

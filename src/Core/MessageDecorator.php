@@ -144,7 +144,7 @@ class MessageDecorator {
                                 $this->addCommandDecoration( $key , function() use ($data){
                                     if( isset( $data['url'] ) && isset( $data['payload'] ) ){
                                         $rest = new RestClient( RestClient::RESPONSE_FORMAT_JSON );
-                                        $result = $rest->post( $data['url'] , json_encode( $data['payload'] ) , null , [ 'Content-Type' => 'application/json'] );
+                                        $result = $rest->post( $data['url'] , json_encode( $data['payload'] , JSON_THROW_ON_ERROR ) , null , [ 'Content-Type' => 'application/json'] );
                                         return $result['content'] ?? $result['message'] ?? null;
                                     }
                                     return null;

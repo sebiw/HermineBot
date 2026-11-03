@@ -4,6 +4,9 @@ Alle wesentlichen Änderungen am Hermine-Bot werden in dieser Datei festgehalten
 
 ## [Unreleased]
 
+### Behoben
+- Fehlt der Schlüssel eines Channels oder einer Unterhaltung, steht im Log jetzt eine verständliche Fehlermeldung statt eines Absturzes.
+
 ## [3.1.0] - 2026-11-01
 
 ### Geändert

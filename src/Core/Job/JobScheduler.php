@@ -188,9 +188,12 @@ class JobScheduler
     private function manager(): EntityManagerInterface
     {
         $manager = $this->doctrine->getManagerForClass( JobState::class );
-        if( !$manager->isOpen() ){
+        if( $manager instanceof EntityManagerInterface && !$manager->isOpen() ){
             $this->doctrine->resetManager();
             $manager = $this->doctrine->getManagerForClass( JobState::class );
+        }
+        if( !$manager instanceof EntityManagerInterface ){
+            throw new \LogicException('No Doctrine ORM manager for JobState');
         }
         return $manager;
     }

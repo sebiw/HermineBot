@@ -7,6 +7,7 @@ use App\Entity\User;
 use App\Repository\UserRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Session\FlashBagAwareSessionInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
@@ -76,7 +77,7 @@ class UserController extends AbstractController
             'kind' => UserManager::kindOf( $user ),
             'kinds' => UserManager::KINDS,
             'isSelf' => $user === $current,
-            'newKeys' => $request->getSession()->getFlashBag()->get('key'),
+            'newKeys' => $request->getSession() instanceof FlashBagAwareSessionInterface ? $request->getSession()->getFlashBag()->get('key') : [],
             'passwordMinLength' => UserManager::PASSWORD_MIN_LENGTH,
         ]);
     }

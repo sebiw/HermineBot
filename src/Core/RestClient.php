@@ -59,7 +59,7 @@ class RestClient {
 
     /**
      * @param $url
-     * @param null $data
+     * @param array<string, mixed>|string|null $data
      * @param string|null $responseFormat
      * @param array $additionalHeader
      * @return bool|string|array
@@ -124,7 +124,7 @@ class RestClient {
     /**
      * @param $method
      * @param $url
-     * @param null $data
+     * @param array<string, mixed>|string|null $data
      * @param array $additionalHeader
      * @return bool|string
      * @throws \Exception
@@ -139,14 +139,14 @@ class RestClient {
         switch ($method)
         {
             case self::METHOD_POST:
-                curl_setopt( $session, CURLOPT_POST, 1);
+                curl_setopt( $session, CURLOPT_POST, true);
                 if ($data !== null){
                     curl_setopt( $session, CURLOPT_POSTFIELDS, $data);
                 }
 
                 break;
             case self::METHOD_PUT:
-                curl_setopt( $session , CURLOPT_PUT, 1);
+                curl_setopt( $session , CURLOPT_PUT, true);
                 break;
 
             case self::METHOD_GET:
@@ -165,7 +165,7 @@ class RestClient {
         }
 
         curl_setopt( $session , CURLOPT_URL, $url);
-        curl_setopt( $session , CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt( $session , CURLOPT_RETURNTRANSFER, true);
 
         $result = curl_exec( $session );
         $httpStatus = curl_getinfo( $session , CURLINFO_HTTP_CODE );

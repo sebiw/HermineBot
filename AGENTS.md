@@ -85,7 +85,7 @@ Agenten committen, taggen und pushen in keinem der beiden Repos eigenständig �
 - `config/legacy/` – echte Konfiguration (gitignored), Vorlagen in `config_examples/`
 - `data/` – Laufzeitdaten (gitignored): `credentials/login-data.json`
 - `migrations/` – Tabellen `events`, `user`, `log` (DB `hermine_bot`)
-- `tests/` – PHPUnit-Tests (`php8.5 vendor/bin/phpunit`), bisher vor allem Hilfsklassen, Jobs und Log; Mediator, API und Platzhalter sind noch ungetestet
+- `tests/` – PHPUnit-Tests (`php8.5 vendor/bin/phpunit`), bisher vor allem Hilfsklassen, Jobs und Log; Mediator, API und Platzhalter sind noch ungetestet. Statische Analyse: `php8.5 vendor/bin/phpstan analyse --memory-limit=1G` (Stufe 5, ohne Baseline, Stufe schrittweise anheben und alles beheben, auch alten Code). Alle Prüfungen auf einmal: `bin/pruefen` (mit Migrationen auf MySQL 8.4 im Wegwerf-Container, `--kurz` ohne), vor jedem Commit-Vorschlag und Release
 
 ## Konfiguration
 
@@ -109,7 +109,7 @@ Agenten committen, taggen und pushen in keinem der beiden Repos eigenständig �
   - **Einzig der in der privaten Betriebsdoku genannte Test-Channel darf ohne Rückfrage beschrieben werden.** Kanalnamen gehören in die Konfiguration, nicht in Code oder Repo. Alle anderen Channels, Gruppen und Unterhaltungen sind echt – niemals dorthin senden, auch nicht zum Testen.
   - Lokal `allowed_channel` auf diesen Test-Channel einschränken und vor jedem Lauf prüfen, dass keine fälligen Events für andere Ziele anstehen (`daemon:tick` verarbeitet *alles*, was fällig ist). Achtung: Unterhaltungen sind über den Platzhalter immer erlaubt.
   - Agenten führen sendende Befehle nur nach ausdrücklicher Freigabe aus.
-  - Gefahrlos ohne Hermine-Zugriff: `php8.5 bin/console lint:twig templates`, `lint:container`, `debug:router`, `doctrine:schema:validate`, `debug:container --deprecations`, `php8.5 -l`.
+  - Gefahrlos ohne Hermine-Zugriff: `bin/pruefen`, `php8.5 bin/console lint:twig templates`, `lint:container`, `debug:router`, `doctrine:schema:validate`, `debug:container --deprecations`, `php8.5 -l`.
   - Lokal sind PHP 8.1 und 8.5 installiert; `php` kann noch auf 8.1 zeigen – deshalb `php8.5` ausdrücklich aufrufen.
 - Dateien sind im Repo mit LF gespeichert.
 - Migrationen: `php8.5 bin/console doctrine:migrations:migrate`

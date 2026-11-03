@@ -23,7 +23,12 @@ class Crypt {
     public static function hexToBytes( string  $u ){
         $k = "";
         $U = 0;
-        for ( (!0 & strlen( $u ) && (($U = 1) && ($k .= mb_chr(hexdec($u[0]))))); $U < strlen($u); $U += 2 ){
+        // Ungerade Länge: das erste Zeichen allein (wie im Web-Client)
+        if( strlen( $u ) % 2 === 1 ){
+            $U = 1;
+            $k .= mb_chr( hexdec( $u[0] ) );
+        }
+        for ( ; $U < strlen($u); $U += 2 ){
             $k .= mb_chr(hexdec( substr($u, $U , 2)));
         }
         return $k;
@@ -39,7 +44,7 @@ class Crypt {
     }
 
     /**
-     * @param array $bytes
+     * @param string $bytes
      * @return string
      */
     public static function bytesToHex( string $bytes ){

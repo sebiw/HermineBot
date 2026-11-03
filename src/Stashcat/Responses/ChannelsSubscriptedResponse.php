@@ -21,7 +21,7 @@ class ChannelsSubscriptedResponse extends DefaultResponse {
 
     /**
      * @param string $name
-     * @return array|null
+     * @return Channel|null
      * @throws \Exception
      */
     function getChannelByName( string $name ) : ?Channel {

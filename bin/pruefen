@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# Alle Prüfungen lokal, vor Commit-Vorschlägen und vor jedem Release: Tests, statische Analyse, Vorlagen, Container
+# und die Migrationen auf einer leeren Datenbank mit der Version des Produktivsystems (MySQL 8.4; lokal läuft sonst MariaDB).
+# Für MySQL startet ein Wegwerf-Container ohne dauerhafte Daten. Rückgabe 0 nur, wenn alles lief und grün war.
+# Aufruf: bin/pruefen          alles
+#         bin/pruefen --kurz   ohne MySQL
+set -uo pipefail
+cd "$( dirname "$0" )/.."
+
+PHP=php8.5
+MYSQL_IMAGE=mysql:8.4
+CONTAINER=bot-pruefen-mysql
+PORT=33085
+
+failed=()
+step(){
+    local name="$1"; shift
+    echo; echo "=== $name"
+    "$@" || failed+=( "$name" )
+}
+
+# Sonst prüft lint:container einen veralteten Stand
+step "Cache leeren" $PHP bin/console cache:clear --quiet
+step "Tests" $PHP vendor/bin/phpunit
+step "PHPStan" $PHP vendor/bin/phpstan analyse --memory-limit=1G --no-progress
+step "Twig-Vorlagen" $PHP bin/console lint:twig templates
+step "Container" $PHP bin/console lint:container
+step "Deprecations" $PHP bin/console debug:container --deprecations
+
+skipped=""
+if [ "${1:-}" = "--kurz" ]; then
+    skipped="MySQL auf Wunsch übersprungen"
+else
+    # Direkt nach dem Eintragen in die Gruppe docker gilt sie erst in einer neuen Anmeldung
+    if docker ps >/dev/null 2>&1; then
+        run_docker(){ docker "$@"; }
+    elif sg docker -c "docker ps" >/dev/null 2>&1; then
+        run_docker(){ sg docker -c "docker $( printf '%q ' "$@" )"; }
+    else
+        run_docker=""
+        skipped="MySQL übersprungen: kein Zugriff auf Docker"
+    fi
+fi
+
+if [ -z "$skipped" ]; then
+    echo; echo "=== Migrationen auf $MYSQL_IMAGE"
+    trap 'run_docker rm -f "$CONTAINER" >/dev/null 2>&1' EXIT
+    run_docker rm -f "$CONTAINER" >/dev/null 2>&1
+    if ! run_docker run -d --rm --name "$CONTAINER" -e MYSQL_ROOT_PASSWORD=pruefen -e MYSQL_DATABASE=bot_pruefen -p "127.0.0.1:$PORT:3306" --tmpfs /var/lib/mysql "$MYSQL_IMAGE" >/dev/null; then
+        failed+=( "MySQL-Container startet nicht" )
+    else
+        ready=""
+        for _ in $( seq 1 60 ); do
+            # Über TCP: Beim ersten Start läuft kurz ein Startserver nur auf dem Socket, er wird danach neu gestartet
+            if run_docker exec "$CONTAINER" mysql -uroot -ppruefen -h 127.0.0.1 --protocol=tcp -e "SELECT 1" bot_pruefen >/dev/null 2>&1; then ready=1; break; fi
+            sleep 2
+        done
+        if [ -z "$ready" ]; then
+            failed+=( "MySQL wird nicht bereit" )
+        else
+            # Nur für diese beiden Befehle: Die Datenbank aus .env.local bleibt unberührt
+            export DATABASE_URL="mysql://root:pruefen@127.0.0.1:$PORT/bot_pruefen?serverVersion=8.4.0&charset=utf8mb4"
+            step "Migrationen ausführen" $PHP bin/console doctrine:migrations:migrate --no-interaction
+            step "Schema passt zu den Entities" $PHP bin/console doctrine:schema:validate
+            unset DATABASE_URL
+        fi
+    fi
+fi
+
+echo; echo "=== Ergebnis"
+[ -n "$skipped" ] && echo "NICHT VOLLSTÄNDIG: $skipped"
+if [ ${#failed[@]} -gt 0 ]; then
+    printf 'FEHLER: %s\n' "${failed[@]}"
+    exit 1
+fi
+if [ -n "$skipped" ] && [ "${1:-}" != "--kurz" ]; then
+    exit 2
+fi
+echo "Alles grün."

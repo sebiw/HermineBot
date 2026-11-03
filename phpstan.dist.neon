@@ -1,0 +1,18 @@
+# php8.5 vendor/bin/phpstan analyse --memory-limit=1G
+# Die Stufe wird schrittweise angehoben und alles behoben, auch in altem Code – bewusst ohne Baseline.
+includes:
+    - vendor/phpstan/phpstan-doctrine/extension.neon
+    - vendor/phpstan/phpstan-symfony/extension.neon
+parameters:
+    level: 5
+    doctrine:
+        objectManagerLoader: tests/phpstan-object-manager.php
+    paths:
+        - src
+        - tests
+    excludePaths:
+        - src/Kernel.php
+    bootstrapFiles:
+        - tests/phpstan-bootstrap.php
+    scanDirectories:
+        - migrations

@@ -34,7 +34,7 @@ class CompanyMemberResponse extends DefaultResponse {
 
     /**
      * @param $name
-     * @return mixed|null
+     * @return Company|null
      * @throws \Exception
      */
     public function getCompanyByName( $name ) : ?Company {

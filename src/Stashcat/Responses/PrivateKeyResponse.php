@@ -13,7 +13,7 @@ class PrivateKeyResponse extends DefaultResponse {
     }
 
     /**
-     * @return mixed
+     * @return string
      */
     public function getPrivateKey() : string {
         $private_key = json_decode( $this->getPrivateKeyRaw() );

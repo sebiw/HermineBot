@@ -542,7 +542,7 @@ class StashcatMediator
      */
     public function getMessageSeenUsers( Message $message ): array
     {
-        return $this->getStashcatApiClient()->messageSeenUsers( $this->getLoginResponse()->getClientKey() , $message->getId() )->getSeenUsers();
+        return $this->getStashcatApiClient()->messageSeenUsers( $this->getLoginResponse()->getClientKey() , (string) $message->getId() )->getSeenUsers();
     }
 
     /**
@@ -552,7 +552,7 @@ class StashcatMediator
      */
     public function getMessageSeenCount( Message $message ): int
     {
-        return $this->getStashcatApiClient()->messageSeenUsersCount( $this->getLoginResponse()->getClientKey() , $message->getId() )->getCount();
+        return $this->getStashcatApiClient()->messageSeenUsersCount( $this->getLoginResponse()->getClientKey() , (string) $message->getId() )->getCount();
     }
 
     /**
@@ -563,7 +563,7 @@ class StashcatMediator
     public function likeMessage( Message $message ): ?\App\Stashcat\Responses\SuccessResponse
     {
         if( !$message->isLiked() ){
-            return $this->getStashcatApiClient()->sendLikeToMessage( $this->getLoginResponse()->getClientKey() , $message->getId() );
+            return $this->getStashcatApiClient()->sendLikeToMessage( $this->getLoginResponse()->getClientKey() , (string) $message->getId() );
         }
         return null;
     }
