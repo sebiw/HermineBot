@@ -21,6 +21,11 @@ step(){
 
 # Sonst prüft lint:container einen veralteten Stand
 step "Cache leeren" $PHP bin/console cache:clear --quiet
+# Laufzeit-Deprecations: alles, was ab hier im Log landet (Tests, Konsole, Migrationen). Vorher fielen sie nur im 33 MB großen
+# dev.log an und wurden nie gelesen (curl_close bei jedem Hermine-Aufruf, Transaktion bei jeder Migration; 2026-11-03)
+LOG=var/log/dev.log
+mkdir -p var/log && touch "$LOG"
+log_start=$( stat -c %s "$LOG" )
 step "Tests" $PHP vendor/bin/phpunit
 step "PHPStan" $PHP vendor/bin/phpstan analyse --memory-limit=1G --no-progress
 step "Twig-Vorlagen" $PHP bin/console lint:twig templates
@@ -65,6 +70,15 @@ if [ -z "$skipped" ]; then
             unset DATABASE_URL
         fi
     fi
+fi
+
+echo; echo "=== Deprecations zur Laufzeit"
+new_deprecations="$( tail -c +$(( log_start + 1 )) "$LOG" | grep 'deprecation\.' | sed -E 's/^\[[^]]*\] //; s/\{.*//' | sort | uniq -c || true )"
+if [ -n "$new_deprecations" ]; then
+    echo "$new_deprecations" | cut -c1-220
+    failed+=( "Deprecations zur Laufzeit" )
+else
+    echo "keine"
 fi
 
 echo; echo "=== Ergebnis"

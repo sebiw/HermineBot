@@ -17,6 +17,12 @@ final class Version20261101200000 extends AbstractMigration
         return 'Log: Indizes für Level und Channel';
     }
 
+    public function isTransactional(): bool
+    {
+        // Tabellenänderungen beenden in MySQL/MariaDB ohnehin jede Transaktion (sonst Deprecation „transaction is already committed“)
+        return false;
+    }
+
     public function up(Schema $schema): void
     {
         $this->addSql('CREATE INDEX idx_log_level_created ON log (level, created_date_time)');

@@ -17,6 +17,12 @@ final class Version20220804165854 extends AbstractMigration
         return 'Add the user table';
     }
 
+    public function isTransactional(): bool
+    {
+        // Tabellenänderungen beenden in MySQL/MariaDB ohnehin jede Transaktion (sonst Deprecation „transaction is already committed“)
+        return false;
+    }
+
     public function up(Schema $schema): void
     {
         // this up() migration is auto-generated, please modify it to your needs

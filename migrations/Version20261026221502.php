@@ -17,6 +17,12 @@ final class Version20261026221502 extends AbstractMigration
         return 'user.last_seen_at: last activity of a user (web or REST)';
     }
 
+    public function isTransactional(): bool
+    {
+        // Tabellenänderungen beenden in MySQL/MariaDB ohnehin jede Transaktion (sonst Deprecation „transaction is already committed“)
+        return false;
+    }
+
     public function up(Schema $schema): void
     {
         $this->addSql('ALTER TABLE user ADD last_seen_at DATETIME DEFAULT NULL');

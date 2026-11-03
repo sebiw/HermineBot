@@ -3,8 +3,12 @@
 includes:
     - vendor/phpstan/phpstan-doctrine/extension.neon
     - vendor/phpstan/phpstan-symfony/extension.neon
+    # Abgekündigte Funktionen und Klassen (PHP 8.5, Symfony, Doctrine) – fehlte bis 2026-11-03, deshalb fiel curl_close() nicht auf
+    - vendor/phpstan/phpstan-deprecation-rules/rules.neon
 parameters:
     level: 6
+    # Gegen die Version prüfen, die produktiv läuft
+    phpVersion: 80500
     doctrine:
         objectManagerLoader: tests/phpstan-object-manager.php
     paths:

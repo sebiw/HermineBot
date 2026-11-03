@@ -17,6 +17,12 @@ final class Version20261031120000 extends AbstractMigration
         return 'Background jobs: job_state, index on log.created_date_time';
     }
 
+    public function isTransactional(): bool
+    {
+        // Tabellenänderungen beenden in MySQL/MariaDB ohnehin jede Transaktion (sonst Deprecation „transaction is already committed“)
+        return false;
+    }
+
     public function up(Schema $schema): void
     {
         $this->addSql('CREATE TABLE job_state (name VARCHAR(100) NOT NULL, enabled TINYINT DEFAULT NULL, interval_minutes INT DEFAULT NULL, setting_value INT DEFAULT NULL, last_started_at DATETIME DEFAULT NULL, last_status VARCHAR(10) DEFAULT NULL, last_message VARCHAR(500) DEFAULT NULL, last_duration_ms INT DEFAULT NULL, PRIMARY KEY (name)) DEFAULT CHARACTER SET utf8mb4');

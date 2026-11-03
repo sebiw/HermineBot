@@ -18,6 +18,12 @@ final class Version20261031110000 extends AbstractMigration
         return 'Remove messenger table of the failure transport';
     }
 
+    public function isTransactional(): bool
+    {
+        // Tabellenänderungen beenden in MySQL/MariaDB ohnehin jede Transaktion (sonst Deprecation „transaction is already committed“)
+        return false;
+    }
+
     public function up(Schema $schema): void
     {
         $this->skipIf( !$schema->hasTable('messenger_messages') , 'messenger_messages gibt es nicht.' );

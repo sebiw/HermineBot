@@ -44,10 +44,13 @@ class MessageDecoratorCommandTest extends TestCase
         }
     }
 
-    private function decorator( string $url ): MessageDecorator
+    /**
+     * @param array<string, mixed>|null $endpoint
+     */
+    private function decorator( string $url , ?array $endpoint = null ): MessageDecorator
     {
         $this->endpointsFile = '/var/test-endpoints-' . getmypid() . '.json';
-        file_put_contents( BASE_PATH . $this->endpointsFile , json_encode( [ 'Report' => [ 'type' => 'REST_JSON' , 'url' => $url , 'payload' => [ 'user' => 'u' ] ] ] ) );
+        file_put_contents( BASE_PATH . $this->endpointsFile , json_encode( [ 'Report' => $endpoint ?? [ 'type' => 'REST_JSON' , 'url' => $url , 'payload' => [ 'user' => 'u' ] ] ] ) );
         return new MessageDecorator( new Container( new ParameterBag( [ 'app.message_command_api_endpoints' => $this->endpointsFile ] ) ) );
     }
 
@@ -72,6 +75,27 @@ class MessageDecoratorCommandTest extends TestCase
     {
         $this->expectException( \RuntimeException::class );
         $this->decorator( 'http://127.0.0.1:1/ok' )->replace( 'Stand: {%Report%}' );
+    }
+
+    public function testAufgabenAusKalenderOffen(): void
+    {
+        $url = 'http://127.0.0.1:' . self::$port . '/todo.ics';
+        $text = $this->decorator( $url , [ 'type' => 'ICAL_DOWNLOAD_VTODO' , 'url' => $url , 'events' => 'OPEN' ] )->replace( '{%Report%}' );
+        // Einrückung mit geschützten Leerzeichen, damit Hermine sie stehen lässt
+        $indent = str_repeat( "\u{00A0}" , 5 );
+        self::assertSame(
+            "🔖 Reifen prüfen" . PHP_EOL . $indent . "_Priorität: 🟥 hoch (1), Status: ⚠️ Handlungsbedarf_" . PHP_EOL . $indent . "_Vorne links_" . PHP_EOL
+            . "🔖 Halle fegen" . PHP_EOL . $indent . "_Status: 🛠️ In Bearbeitung_",
+            $text
+        );
+    }
+
+    public function testAufgabenAusKalenderErledigt(): void
+    {
+        $url = 'http://127.0.0.1:' . self::$port . '/todo.ics';
+        $text = $this->decorator( $url , [ 'type' => 'ICAL_DOWNLOAD_VTODO' , 'url' => $url , 'events' => 'COMPLETED' ] )->replace( '{%Report%}' );
+        self::assertStringContainsString( 'Licht tauschen' , $text );
+        self::assertStringNotContainsString( 'Reifen' , $text );
     }
 
     public function testTextOhneBefehlRuftNichtsAuf(): void

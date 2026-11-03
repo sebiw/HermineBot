@@ -90,7 +90,7 @@ Agenten committen, taggen und pushen in keinem der beiden Repos eigenständig �
 - `config/legacy/` – echte Konfiguration (gitignored), Vorlagen in `config_examples/`
 - `data/` – Laufzeitdaten (gitignored): `credentials/login-data.json`
 - `migrations/` – Tabellen `events`, `user`, `log`, `job_state` (DB `hermine_bot`)
-- `tests/` – PHPUnit-Tests (`php8.5 vendor/bin/phpunit`), Hilfsklassen, Jobs, Log, Anmeldung im Mediator, API-Anmeldung und Freigabe, Platzhalter-Quellen, Events-Formular und -Text; Senden an Hermine selbst ist ungetestet (nur mit Freigabe im Test-Channel). Statische Analyse: `php8.5 vendor/bin/phpstan analyse --memory-limit=1G` (Stufe 6, ohne Baseline, Stufe schrittweise anheben und alles beheben, auch alten Code). Alle Prüfungen auf einmal: `bin/pruefen` (mit Migrationen auf MySQL 8.4 im Wegwerf-Container, `--kurz` ohne), vor jedem Commit-Vorschlag und Release
+- `tests/` – PHPUnit-Tests (`php8.5 vendor/bin/phpunit`), Hilfsklassen, Jobs, Log, Anmeldung im Mediator, API-Anmeldung und Freigabe, Platzhalter-Quellen, Events-Formular und -Text; Senden an Hermine selbst ist ungetestet (nur mit Freigabe im Test-Channel). Statische Analyse: `php8.5 vendor/bin/phpstan analyse --memory-limit=1G` (Stufe 6, ohne Baseline, Stufe schrittweise anheben und alles beheben, auch alten Code). PHPStan prüft mit `phpstan-deprecation-rules` gegen PHP 8.5 auch abgekündigte Funktionen (`curl_close()` fiel bis 2026-11-03 nur deshalb nicht auf, weil die Regeln fehlten). Alle Prüfungen auf einmal: `bin/pruefen` (mit Migrationen auf MySQL 8.4 im Wegwerf-Container, `--kurz` ohne; schlägt auch bei jeder neuen Deprecation im Log während des Laufs fehl), vor jedem Commit-Vorschlag und Release
 
 ## Konfiguration
 
@@ -118,7 +118,7 @@ Agenten committen, taggen und pushen in keinem der beiden Repos eigenständig �
   - Gefahrlos ohne Hermine-Zugriff: `bin/pruefen`, `php8.5 bin/console lint:twig templates`, `lint:container`, `debug:router`, `doctrine:schema:validate`, `debug:container --deprecations`, `php8.5 -l`.
   - Lokal sind PHP 8.1 und 8.5 installiert; `php` kann noch auf 8.1 zeigen – deshalb `php8.5` ausdrücklich aufrufen.
 - Dateien sind im Repo mit LF gespeichert.
-- Migrationen: `php8.5 bin/console doctrine:migrations:migrate`
+- Migrationen: `php8.5 bin/console doctrine:migrations:migrate` – jede Migration mit `isTransactional(): false` (Tabellenänderungen beenden in MySQL/MariaDB jede Transaktion, sonst Deprecation bei jedem Lauf, auch produktiv beim Pull).
 
 ## Betrieb
 
