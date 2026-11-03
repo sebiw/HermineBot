@@ -22,6 +22,13 @@ when@dev:
                 type: console
                 process_psr_3_messages: false
                 channels: ["!event", "!doctrine", "!console"]
+            # Wie produktiv: Deprecations in eine eigene Datei (var/log/deprecation-<Datum>.log), damit sie lokal genauso
+            # auffallen. Bis 2026-11-03 standen sie nur im großen dev.log, darum blieb curl_close() lokal unbemerkt
+            deprecation:
+                type: rotating_file
+                channels: [deprecation]
+                path: "%kernel.logs_dir%/deprecation.log"
+                max_files: 7
 
 when@test:
     monolog:

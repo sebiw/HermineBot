@@ -21,11 +21,11 @@ step(){
 
 # Sonst prüft lint:container einen veralteten Stand
 step "Cache leeren" $PHP bin/console cache:clear --quiet
-# Laufzeit-Deprecations: alles, was ab hier im Log landet (Tests, Konsole, Migrationen). Vorher fielen sie nur im 33 MB großen
-# dev.log an und wurden nie gelesen (curl_close bei jedem Hermine-Aufruf, Transaktion bei jeder Migration; 2026-11-03)
-LOG=var/log/dev.log
-mkdir -p var/log && touch "$LOG"
-log_start=$( stat -c %s "$LOG" )
+# Laufzeit-Deprecations: alles, was ab hier in den Deprecation-Logs landet (Tests, Konsole, Migrationen) – dieselben Dateien wie
+# produktiv (var/log/deprecation-<Datum>.log). Vorher fielen sie lokal nur im 33 MB großen dev.log an und wurden nie gelesen
+# (curl_close bei jedem Hermine-Aufruf, Transaktion bei jeder Migration; 2026-11-03)
+mkdir -p var/log
+marker="$( mktemp )"
 step "Tests" $PHP vendor/bin/phpunit
 step "PHPStan" $PHP vendor/bin/phpstan analyse --memory-limit=1G --no-progress
 step "Twig-Vorlagen" $PHP bin/console lint:twig templates
@@ -73,7 +73,8 @@ if [ -z "$skipped" ]; then
 fi
 
 echo; echo "=== Deprecations zur Laufzeit"
-new_deprecations="$( tail -c +$(( log_start + 1 )) "$LOG" | grep 'deprecation\.' | sed -E 's/^\[[^]]*\] //; s/\{.*//' | sort | uniq -c || true )"
+new_deprecations="$( find var/log -name 'deprecation*.log' -newer "$marker" -exec cat {} + 2>/dev/null | awk -v since="$( date -r "$marker" +%Y-%m-%dT%H:%M:%S )" 'substr($0,2,19) >= since' | sed -E 's/^\[[^]]*\] //; s/\{.*//' | sort | uniq -c || true )"
+rm -f "$marker"
 if [ -n "$new_deprecations" ]; then
     echo "$new_deprecations" | cut -c1-220
     failed+=( "Deprecations zur Laufzeit" )
