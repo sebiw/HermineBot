@@ -60,7 +60,7 @@ class EventsController extends AbstractController
             'events' => $events,
             'date_format' => $app->getAppConfig()->getDateFormat(),
             'time_format' => $app->getAppConfig()->getTimeFormat(),
-            'date_time_format' => $app->getAppConfig()->getDateFormat() . " - " . $app->getAppConfig()->getTimeFormat(),
+            'date_time_format' => $app->getAppConfig()->getDateFormat() . " " . $app->getAppConfig()->getTimeFormat(),
             'current_entry' => $entity,
             'allowed_intervals' => $app->getAppConfig()->getAllowedIntervals(),
             'allowed_channels' => $app->getAppConfig()->getAllowedChannelNames(),
@@ -85,7 +85,7 @@ class EventsController extends AbstractController
             'query' => $filter->toQuery(),
             'channels' => array_combine( $channels , array_map( [ LogChannels::class , 'label' ] , $channels ) ),
             'levels' => LogFilter::LEVEL_LABELS,
-            'date_time_format' => $app->getAppConfig()->getDateFormat() . " - " . $app->getAppConfig()->getTimeFormat()
+            'date_time_format' => $app->getAppConfig()->getDateFormat() . " " . $app->getAppConfig()->getTimeFormat()
         ]);
     }
 

@@ -63,7 +63,7 @@
                     </fieldset>
                     <div class="action-bar">
                         <span></span>
-                        <button type="submit" name="renewKey" value="1" class="button-secondary" onclick="return confirm('Neuen Schlüssel erzeugen? Der alte gilt sofort nicht mehr.');">Neuen Schlüssel erzeugen</button>
+                        <button type="submit" name="renewKey" value="1" class="button-secondary" data-confirm="Neuen Schlüssel erzeugen? Der alte gilt sofort nicht mehr.">Neuen Schlüssel erzeugen</button>
                     </div>
                 </form>
             {% endif %}
@@ -77,7 +77,7 @@
                     </fieldset>
                     <div class="action-bar">
                         <span></span>
-                        <button type="submit" name="delete" value="1" class="button-danger" onclick="return confirm('Nutzer „{{ user.getUserIdentifier()|e('js') }}“ löschen?');">Löschen</button>
+                        <button type="submit" name="delete" value="1" class="button-danger" data-confirm="Nutzer „{{ user.getUserIdentifier() }}“ löschen?">Löschen</button>
                     </div>
                 </form>
             {% endif %}

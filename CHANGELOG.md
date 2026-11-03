@@ -4,6 +4,12 @@ Alle wesentlichen Änderungen am Hermine-Bot werden in dieser Datei festgehalten
 
 ## [Unreleased]
 
+### Geändert
+- Die Oberfläche übernimmt Aussehen und Bedienung des StAN-Managers: Formulare mit Knöpfen im gemeinsamen grauen Rahmen, Navigation, Tabellen und Abzeichen.
+- Meldungen nach dem Speichern erscheinen oben rechts und verschwinden von selbst, Rückfragen wie „Löschen?“ öffnen ein eigenes Fenster statt der Abfrage des Browsers.
+- Die Hintergrundaufgaben zeigen den Plan in Worten und haben Speichern und Jetzt ausführen nebeneinander wie im StAN-Manager.
+- Zeiten stehen ohne Bindestrich zwischen Datum und Uhrzeit.
+
 ### Behoben
 - Fehlt der Schlüssel eines Channels oder einer Unterhaltung, steht im Log jetzt eine verständliche Fehlermeldung statt eines Absturzes.
 

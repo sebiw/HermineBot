@@ -34,6 +34,7 @@ class JobController extends AbstractController
                 'settingValue' => $scheduler->getSettingValue( $job ),
                 'state' => $scheduler->getState( $name ),
                 'nextRunAt' => $scheduler->getNextRunAt( $job ),
+                'plan' => JobScheduler::intervalText( $scheduler->getIntervalMinutes( $job ) ),
                 'running' => $scheduler->isRunning( $job ),
             ];
         }

@@ -25,10 +25,6 @@
         "doctrine/doctrine-bundle": "^2.15",
         "doctrine/doctrine-migrations-bundle": "^3.4",
         "doctrine/orm": "^3.5",
-        "npm-asset/jquery": "^3.7",
-        "npm-asset/jquery-ui": "^1.14",
-        "npm-asset/timepicker": "^1.13",
-        "oomphinc/composer-installers-extender": "*",
         "sabre/vobject": "^4.5",
         "symfony/apache-pack": "^1.0",
         "symfony/asset": "7.4.*",
@@ -55,19 +51,11 @@
         "twig/extra-bundle": "^3.21",
         "twig/twig": "^3.21"
     },
-    "repositories": [
-        {
-            "type": "composer",
-            "url": "https://asset-packagist.org"
-        }
-    ],
     "config": {
         "allow-plugins": {
             "composer/package-versions-deprecated": true,
             "symfony/flex": true,
-            "symfony/runtime": true,
-            "composer/installers": true,
-            "oomphinc/composer-installers-extender": true
+            "symfony/runtime": true
         },
         "optimize-autoloader": true,
         "preferred-install": {
@@ -118,16 +106,6 @@
             "allow-contrib": false,
             "require": "7.4.*",
             "docker": false
-        },
-        "installer-types": [
-            "bower-asset",
-            "npm-asset"
-        ],
-        "installer-paths": {
-            "public/assets/{$vendor}/{$name}/": [
-                "type:bower-asset",
-                "type:npm-asset"
-            ]
         }
     },
     "require-dev": {

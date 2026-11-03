@@ -1,14 +1,7 @@
 {% extends 'base.loggedin.html.twig' %}
 
-{% block stylesheets %}
-    {{ parent() }}
-    <link rel="stylesheet" href="/assets/npm-asset/timepicker/jquery.timepicker.min.css">
-{% endblock %}
-
 {%  block javascripts %}
     {{ parent() }}
-    <script type="application/javascript" src="/assets/npm-asset/jquery-ui/ui/i18n/datepicker-de.js"></script>
-    <script type="application/javascript" src="/assets/npm-asset/timepicker/jquery.timepicker.min.js"></script>
     <script type="text/javascript">
         $( function() {
 
@@ -17,15 +10,16 @@
             $( ".thw-datepicker" ).datepicker(
                 $.datepicker.regional[ "de" ]
             );
+            // Gleiche Zeitauswahl wie im StAN-Manager (jquery-timepicker aus stan.js), Format wie time_format (H:i)
             $('.thw-timepicker').timepicker({
-                timeFormat: '{{ time_format }}',
-                step: 30,
-                minTime: '00:00',
+                timeFormat: 'HH:mm',
+                interval: 30,
+                minTime: '0',
                 maxTime: '23:30',
-                // forceRoundTime: true,
                 startTime: '10:00',
-                orientation: 'l',
-                className: 'thw-timepicker-list'
+                dynamic: false,
+                dropdown: true,
+                scrollbar: true
             });
 
             $('#action .action-button').click(function( event ){
@@ -210,7 +204,7 @@
                     <th>Aktionen</th>
                     <th colspan="2">Startdatum</th>
                     <th colspan="2">Enddatum</th>
-                    <th>Interval</th>
+                    <th>Intervall</th>
                     <th>Ziel</th>
                     <th>Text</th>
                     <th>zuletzt Versendet</th>
@@ -274,7 +268,7 @@
                         <td>
                             <div>
                                 <button type="submit" class="action-button" name="action" value="edit" data-id="{{ event.getId() ?? '' }}">Editieren</button>
-                                <button type="submit" class="action-button button-danger" name="action" value="delete" data-id="{{ event.getId() ?? '' }}" onclick="return confirm('Event löschen?');">Löschen</button>
+                                <button type="submit" class="action-button button-danger" name="action" value="delete" data-id="{{ event.getId() ?? '' }}" data-confirm="Event löschen?">Löschen</button>
                             </div>
                             <div class="text-center" style="padding: 1rem;">
                                 <button type="submit" class="action-button" name="action" value="trigger" data-id="{{ event.getId() ?? '' }}">Manuell senden</button>

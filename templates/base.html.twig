@@ -5,15 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}{{ title }} - {{ ov }}{% endblock %}</title>
     <link rel="icon" href="/favicon.ico">
+    {# Aussehen und Verhalten wie im StAN-Manager: gebaut dort mit bin/hermine-bot-assets, main.css nur für Bot-Eigenes #}
     {% block stylesheets %}
-        <link rel="stylesheet" href="/assets/npm-asset/jquery-ui/dist/themes/base/jquery-ui.min.css">
-        <link rel="stylesheet" type="text/css" href="/assets/main.css">
+        <link rel="stylesheet" href="{{ asset('assets/stan/stan.css') }}?v={{ app_version }}">
+        <link rel="stylesheet" href="{{ asset('assets/main.css') }}?v={{ app_version }}">
     {% endblock %}
-
+    {# Meldungen nach Aktionen erscheinen oben rechts (appToast), wie im StAN-Manager #}
+    <script type="application/javascript">
+        var session = {{ {
+            errorMessage: app.flashes('error')|join(' ') ?: null,
+            warningMessage: app.flashes('warning')|join(' ') ?: null,
+            statusMessage: app.flashes('success')|join(' ') ?: null
+        }|json_encode(constant('JSON_HEX_TAG') b-or constant('JSON_HEX_AMP') b-or constant('JSON_HEX_APOS') b-or constant('JSON_HEX_QUOT'))|raw }};
+    </script>
     {% block javascripts %}
-        <script type="application/javascript" src="/assets/npm-asset/jquery/dist/jquery.min.js"></script>
-        <script type="application/javascript" src="/assets/npm-asset/jquery-ui/dist/jquery-ui.min.js"></script>
-        <script type="application/javascript" src="/assets/app.js"></script>
+        <script type="application/javascript" src="{{ asset('assets/stan/stan.js') }}?v={{ app_version }}"></script>
     {% endblock %}
 </head>
 <body>
@@ -44,11 +50,6 @@
         {% endif %}
 
         <main class="primary">
-            {% for type, messages in app.flashes([ 'success' , 'warning' , 'error' ]) %}
-                {% for message in messages %}
-                    <div class="flash flash-{{ type }}" role="{{ type == 'error' ? 'alert' : 'status' }}">{{ message }}</div>
-                {% endfor %}
-            {% endfor %}
             {% block body %}{% endblock %}
         </main>
 

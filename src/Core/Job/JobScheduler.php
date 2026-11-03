@@ -217,4 +217,20 @@ class JobScheduler
         $manager->getConnection()->executeStatement( 'INSERT IGNORE INTO job_state (name) VALUES (?)' , [ $name ] );
         return $manager->find( JobState::class , $name );
     }
+
+    /**
+     * Takt in Worten wie im StAN-Manager (JobTiming::intervalText)
+     */
+    public static function intervalText( int $minutes ): string
+    {
+        return match( true ){
+            $minutes === 1 => 'jede Minute',
+            $minutes === 60 => 'stündlich',
+            $minutes === 1440 => 'täglich',
+            $minutes === 7 * 1440 => 'wöchentlich',
+            $minutes % 1440 === 0 => sprintf( 'alle %d Tage' , intdiv( $minutes , 1440 ) ),
+            $minutes % 60 === 0 => sprintf( 'alle %d Stunden' , intdiv( $minutes , 60 ) ),
+            default => sprintf( 'alle %d Minuten' , $minutes ),
+        };
+    }
 }

@@ -6,7 +6,6 @@
 /config/secrets/prod/prod.decrypt.private.php
 /config/legacy/*
 /public/bundles/
-/public/assets/npm-asset/*
 /data/*
 /var/
 /vendor/
