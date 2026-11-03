@@ -7,7 +7,7 @@
         <div class="form-page">
             <div class="report-header">
                 <h2>{{ isNew ? 'Neues Event' : 'Event bearbeiten' }}</h2>
-                <span class="report-subtitle">{{ isNew ? 'Nachricht an einen Channel oder eine Unterhaltung planen' : event.getTransmissionsCount() ~ '× gesendet' ~ ( event.getDoneDateTime() ? ', zuletzt ' ~ event.getDoneDateTime()|date : '' ) }}</span>
+                <span class="report-subtitle">{% if isNew %}Nachricht an einen Channel oder eine Unterhaltung planen{% else %}{{ event.getTransmissionsCount() }}× gesendet{% if event.getDoneDateTime() %}, zuletzt <span class="text-no-wrap">{{ event.getDoneDateTime()|date }}</span>{% endif %}{% endif %}</span>
             </div>
 
             <form method="post" action="{{ isNew ? path('events_create') : path('events_save', { id: event.getId() }) }}" id="event-form" data-conversations-url="{{ path('events_conversations') }}">

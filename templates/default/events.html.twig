@@ -36,14 +36,14 @@
                         </td>
                         <td><div class="event-text">{{ event.getText()|event_text(labels) }}</div></td>
                         <td>
-                            {{ event.getDateInterval() ? ( allowed_intervals[ event.getDateInterval() ] ?? event.getDateInterval() ) : 'einmalig' }}{% if event.getUntilDateTime() %} bis {{ event.getUntilDateTime()|date('d.m.Y') }}{% endif %}
-                            <br><small>ab {{ event.getStartDateTime()|date }}</small>
+                            {{ event.getDateInterval() ? ( allowed_intervals[ event.getDateInterval() ] ?? event.getDateInterval() ) : 'einmalig' }}{% if event.getUntilDateTime() %} bis <span class="text-no-wrap">{{ event.getUntilDateTime()|date('d.m.Y') }}</span>{% endif %}
+                            <br><small class="text-no-wrap">ab {{ event.getStartDateTime()|date }}</small>
                         </td>
                         <td>
-                            {% if state == 'done' %}–{% elseif event.getDueDateTime() <= now %}sofort fällig{% else %}{{ event.getDueDateTime()|date }}{% endif %}
+                            {% if state == 'done' %}–{% elseif event.getDueDateTime() <= now %}sofort fällig{% else %}<span class="text-no-wrap">{{ event.getDueDateTime()|date }}</span>{% endif %}
                         </td>
                         <td>
-                            {{ event.getDoneDateTime() ? event.getDoneDateTime()|date : 'noch nie' }}
+                            <span class="text-no-wrap">{{ event.getDoneDateTime() ? event.getDoneDateTime()|date : 'noch nie' }}</span>
                             <br><small>{{ event.getTransmissionsCount() }}× gesendet</small>
                             {% if event.getFailedAttempts() > 0 %}<br><small class="event-failed-note">{{ event.getFailedAttempts() }} Fehlversuche{{ state == 'failed' ? ' – Speichern gibt es wieder frei' }}</small>{% endif %}
                         </td>

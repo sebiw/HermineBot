@@ -16,7 +16,7 @@
             </p>
             <p class="{{ tickLate ? 'form-hint job-tick-late' : 'form-hint job-tick' }}">
                 <strong>Takt zuletzt:</strong>
-                {{ lastTick ? lastTick|date('d.m.Y H:i:s') : 'noch nie' }}
+                <span class="text-no-wrap">{{ lastTick ? lastTick|date('d.m.Y H:i:s') : 'noch nie' }}</span>
                 {% if tickLate %} – der Cron scheint nicht zu laufen; ohne ihn läuft keine Aufgabe von selbst.{% endif %}
             </p>
 
@@ -32,12 +32,12 @@
                             {% if not row.enabled %}
                                 <strong>Aus</strong> – läuft nicht von selbst.<br>
                             {% elseif row.nextRunAt %}
-                                <strong>Nächster Lauf:</strong> ab {{ row.nextRunAt|date('d.m.Y H:i') }}<br>
+                                <strong>Nächster Lauf:</strong> <span class="text-no-wrap">ab {{ row.nextRunAt|date('d.m.Y H:i') }}</span><br>
                             {% endif %}
                             <strong>Plan:</strong> {{ row.plan }}<br>
                             <strong>Zuletzt:</strong>
                             {% if state and state.getLastStartedAt() %}
-                                {{ state.getLastStartedAt()|date('d.m.Y H:i:s') }}{% if state.getLastStatus() %} – {{ statusLabels[ state.getLastStatus() ] }}{% if state.getLastMessage() %}: {{ state.getLastMessage() }}{% endif %}{% if state.getLastDurationMs() is not null %} ({{ _self.duration( state.getLastDurationMs() ) }}){% endif %}{% elseif row.running %} – läuft{% else %} – abgebrochen{% endif %}
+                                <span class="text-no-wrap">{{ state.getLastStartedAt()|date('d.m.Y H:i:s') }}</span>{% if state.getLastStatus() %} – {{ statusLabels[ state.getLastStatus() ] }}{% if state.getLastMessage() %}: {{ state.getLastMessage() }}{% endif %}{% if state.getLastDurationMs() is not null %} ({{ _self.duration( state.getLastDurationMs() ) }}){% endif %}{% elseif row.running %} – läuft{% else %} – abgebrochen{% endif %}
                             {% else %}
                                 noch nie
                             {% endif %}
