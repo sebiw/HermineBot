@@ -4,6 +4,9 @@ namespace App\Stashcat\Entities;
 
 class Conversation extends DefaultEntity {
 
+    /**
+     * @return mixed Wert aus der Antwort von Hermine
+     */
     public function getId(){
         return $this->getResults('id');
     }
@@ -21,14 +24,23 @@ class Conversation extends DefaultEntity {
         return $result;
     }
 
+    /**
+     * @return mixed Wert aus der Antwort von Hermine
+     */
     public function getKey(){
         return $this->getResults('key');
     }
 
+    /**
+     * @return mixed Wert aus der Antwort von Hermine
+     */
     public function getKeySignature(){
         return $this->getResults('key_signature');
     }
 
+    /**
+     * @return mixed Wert aus der Antwort von Hermine
+     */
     public function getUserCount(){
         return $this->getResults('user_count');
     }

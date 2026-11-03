@@ -13,13 +13,15 @@ class CryptoBox {
     // Länge des Schlüssels einer Unterhaltung in Byte (Web-Client: CHAT_ACCESS_KEY_LENGTH_BY)
     const CHAT_ACCESS_KEY_LENGTH = 32;
 
-    private $privateKey = null;
+    private \OpenSSLAsymmetricKey|false|null $privateKey = null;
 
     private ?\OpenSSLAsymmetricKey $privateSigningKey = null;
 
-    private $channelKeys = [];
+    /** @var array<string, string|null> entschlüsselte Schlüssel je Channel-ID */
+    private array $channelKeys = [];
 
-    private $conversationKeys = [];
+    /** @var array<string, string|null> entschlüsselte Schlüssel je Unterhaltungs-ID */
+    private array $conversationKeys = [];
 
     private Config $config;
 
@@ -43,7 +45,7 @@ class CryptoBox {
      * @param PrivateKeyResponse $response
      * @throws \Exception
      */
-    public function setPrivateKeyFromResponse( PrivateKeyResponse $response ){
+    public function setPrivateKeyFromResponse( PrivateKeyResponse $response ): void {
         $this->privateKey = Crypt::decodePrivateKey( $response->getPrivateKey() , $this->getConfig()->getUserPassphrase() );
     }
 
@@ -52,7 +54,7 @@ class CryptoBox {
      * @param SigningKeyResponse $response
      * @throws \Exception
      */
-    public function setPrivateSigningKeyFromResponse( SigningKeyResponse $response ){
+    public function setPrivateSigningKeyFromResponse( SigningKeyResponse $response ): void {
         if( $this->privateKey === null ){
             throw new \Exception('Private key not available!');
         }
@@ -85,7 +87,7 @@ class CryptoBox {
      * @param string $channelId
      * @throws \Exception
      */
-    public function setChannelEncryptionChannel( string $encodedChannelKey , string $channelId ){
+    public function setChannelEncryptionChannel( string $encodedChannelKey , string $channelId ): void {
         $channelKeyBase64Decoded = base64_decode( $encodedChannelKey, true );
         $this->channelKeys[ $channelId ] = Crypt::decodeWithPrivateKey( $channelKeyBase64Decoded , $this->privateKey ,  $this->getConfig()->getRsaOaepPadding() );
     }
@@ -96,7 +98,7 @@ class CryptoBox {
      * @param string $conversationId
      * @throws \Exception
      */
-    public function setConversationEncryptionConversation( string $encodedConversationKey , string $conversationId ){
+    public function setConversationEncryptionConversation( string $encodedConversationKey , string $conversationId ): void {
         $conversationKeyBase64Decoded = base64_decode( $encodedConversationKey, true );
         $this->conversationKeys[ $conversationId ] = Crypt::decodeWithPrivateKey( $conversationKeyBase64Decoded , $this->privateKey ,  $this->getConfig()->getRsaOaepPadding() );
     }
@@ -106,7 +108,7 @@ class CryptoBox {
      * @param string $conversationKey
      * @param string $conversationId
      */
-    public function setConversationKey( string $conversationKey , string $conversationId ){
+    public function setConversationKey( string $conversationKey , string $conversationId ): void {
         $this->conversationKeys[ $conversationId ] = $conversationKey;
     }
 
@@ -124,7 +126,7 @@ class CryptoBox {
      * key $ unique_identifier [$ expiry] [$ Mitglieder-IDs eindeutig, numerisch aufsteigend]
      * @param string $encryptedKey base64
      * @param string|null $uniqueIdentifier
-     * @param array $memberIds
+     * @param array<int|string> $memberIds
      * @param int|null $expiry
      * @return string
      */
@@ -148,10 +150,10 @@ class CryptoBox {
      * @param string $userId
      * @param string $publicKeyPem öffentlicher Hauptschlüssel des Mitglieds
      * @param string $uniqueIdentifier
-     * @param array $memberIds alle Mitglieder inkl. sich selbst
+     * @param array<int|string> $memberIds alle Mitglieder inkl. sich selbst
      * @param int|null $expiry Unix-Zeit, bei sich selbst null
      * @param bool $userVerified
-     * @return array [ 'id' , 'key' , 'signature' , 'expiry' , 'userVerified' ]
+     * @return array{id: int, key: string, signature: string, expiry: int|null, userVerified: bool}
      * @throws \Exception
      */
     public function getConversationMemberKey( string $conversationKey , string $userId , string $publicKeyPem , string $uniqueIdentifier , array $memberIds , ?int $expiry , bool $userVerified ): array

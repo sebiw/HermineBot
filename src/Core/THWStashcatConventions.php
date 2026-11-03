@@ -7,7 +7,7 @@ class THWStashcatConventions {
     /**
      * Extracts "OrgaUnit" and "LastName" from the original stashcat "LastName"
      * @param string $lastName
-     * @return array|null
+     * @return array<string, string>|null
      */
     public static function extractNameParts( string $lastName ): ?array
     {

@@ -27,11 +27,15 @@ class AppExtension extends AbstractExtension {
         );
     }
 
-    public function dateFilter($date, $format = null , $timezone = null ): string
+    /**
+     * Wie der Filter date von Twig, Standardformat aus env.app.php (Datum und Uhrzeit wie im StAN-Manager ohne Bindestrich)
+     * @param \DateTimeInterface|string|int|null $date
+     */
+    public function dateFilter( mixed $date , ?string $format = null , \DateTimeZone|string|false|null $timezone = null ): string
     {
         if($date !== null) {
             if( $format === null ){
-                $format = $this->appService->getAppConfig()->getDateFormat() . ' - ' . $this->appService->getAppConfig()->getTimeFormat();
+                $format = $this->appService->getAppConfig()->getDateFormat() . ' ' . $this->appService->getAppConfig()->getTimeFormat();
             }
             return $this->twig->getExtension( CoreExtension::class )->formatDate( $date , $format , $timezone );
         }

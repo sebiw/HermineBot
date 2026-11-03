@@ -44,6 +44,7 @@ class Event implements \JsonSerializable
     #[ORM\Column(type : "string",  nullable : false)]
     private string $channelTarget = "";
 
+    /** @var array<string, mixed>|null z. B. conversationId bei Unterhaltungen */
     #[ORM\Column(type : "json",  nullable : true)]
     private ?array $channelTargetPayload = null;
 
@@ -116,7 +117,7 @@ class Event implements \JsonSerializable
     }
 
     /**
-     * @param array|null $payload
+     * @param array<string, mixed>|null $payload
      * @return void
      */
     public function setChannelTargetPayload( ?array $payload ): void
@@ -125,7 +126,7 @@ class Event implements \JsonSerializable
     }
 
     /**
-     * @return array|null
+     * @return array<string, mixed>|null
      */
     public function getChannelTargetPayload() : ?array {
         return $this->channelTargetPayload;

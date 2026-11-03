@@ -17,7 +17,7 @@ class SigningKeyResponse extends DefaultResponse {
 
     /**
      * Verschlüsselter JWK: [ 'ciphertext' , 'iv' , 'encryptedKEK' , 'encryption_func' ] (jeweils base64)
-     * @return array
+     * @return array<string, string>
      * @throws \Exception
      */
     public function getEncryptedPrivateKey() : array {

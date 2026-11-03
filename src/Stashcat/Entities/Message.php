@@ -15,18 +15,30 @@ class Message extends DefaultEntity {
         return intval( $this->getResults('id'));
     }
 
+    /**
+     * @return mixed Wert aus der Antwort von Hermine
+     */
     public function getText(){
         return $this->getResults('text');
     }
 
+    /**
+     * @return mixed Wert aus der Antwort von Hermine
+     */
     public function getIv(){
         return $this->getResults('iv');
     }
 
+    /**
+     * @return mixed Wert aus der Antwort von Hermine
+     */
     public function getHash(){
         return $this->getResults('hash');
     }
 
+    /**
+     * @return mixed Wert aus der Antwort von Hermine
+     */
     public function getTime(){
         return $this->getResults('time');
     }
@@ -42,14 +54,23 @@ class Message extends DefaultEntity {
         return null;
     }
 
-    public function getTimeAsDateTime(){
+    /**
+     * @return \DateTime
+     */
+    public function getTimeAsDateTime(): \DateTime {
         return (new \DateTime())->setTimestamp( $this->getTime() );
     }
 
+    /**
+     * @return mixed Wert aus der Antwort von Hermine
+     */
     public function getSenderFirstName(){
         return $this->getResults('sender' , 'first_name');
     }
 
+    /**
+     * @return mixed Wert aus der Antwort von Hermine
+     */
     public function getSenderLastName(){
         return $this->getResults('sender' , 'last_name');
     }
@@ -89,7 +110,7 @@ class Message extends DefaultEntity {
 
     /**
      * Emoji-Reaktionen, nur Anzahl je Emoji (wer reagiert hat, liefert Hermine nicht)
-     * @return array [ emoji => Anzahl ]
+     * @return array<string, int> Emoji => Anzahl
      */
     public function getReactions(): array
     {

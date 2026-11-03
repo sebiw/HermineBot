@@ -6,14 +6,23 @@ use App\Core\THWStashcatConventions;
 
 class User extends DefaultEntity {
 
+    /**
+     * @return mixed Wert aus der Antwort von Hermine
+     */
     public function getFirstName(){
         return $this->getResults('first_name');
     }
 
+    /**
+     * @return mixed Wert aus der Antwort von Hermine
+     */
     public function getLastName(){
         return $this->getResults('last_name');
     }
 
+    /**
+     * @return mixed Wert aus der Antwort von Hermine
+     */
     public function getId(){
         return $this->getResults('id');
     }
@@ -29,7 +38,7 @@ class User extends DefaultEntity {
 
     /**
      * Öffentlicher Signaturschlüssel als JWK
-     * @return array|null
+     * @return array<string, mixed>|null
      */
     public function getPublicSigningKey(): ?array
     {
@@ -59,18 +68,6 @@ class User extends DefaultEntity {
     public function getPublicKeyCaSignature(): ?string
     {
         return $this->resultKeyExist('public_key_ca_signature') ? $this->getResults('public_key_ca_signature') : null;
-    }
-
-    /**
-     * @return array [ 'first_name' => $firstName , 'last_name' => $lastName , 'department' => $department ]
-     */
-    public function getParsedName(): array
-    {
-        $nameParts = THWStashcatConventions::extractNameParts( $this->getLastName() );
-        $lastName = $nameParts['last_name'];
-        $firstName = $this->getFirstName();
-        $department = $nameParts['department'];
-        return [ 'first_name' => $firstName , 'last_name' => $lastName , 'department' => $department ];
     }
 
     /**

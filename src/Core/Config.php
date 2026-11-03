@@ -23,7 +23,7 @@ class Config extends ArrayDataCollection {
     }
 
     /**
-     * @return array
+     * @return list<string> freigegebene Channels samt Unterhaltungs-Platzhalter
      * @throws \Exception
      */
     public function getAllowedChannelNames() : array {
@@ -45,7 +45,7 @@ class Config extends ArrayDataCollection {
     }
 
     /**
-     * @return array
+     * @return array<string, string> ISO-Intervall → Bezeichnung
      * @throws \Exception
      */
     public function getAllowedIntervals() : array {

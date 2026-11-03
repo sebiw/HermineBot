@@ -241,7 +241,7 @@ class Daemon extends Command
      * @param Event $event
      * @param StashcatMediator $stashcatMediator
      * @param Company $THWCompany
-     * @return array [ 'text' => string, 'logMessage' => string, 'send' => callable ]
+     * @return array{text: string, logMessage: string, send: callable}
      * @throws \Exception
      */
     protected function prepareMessage( Event $event , StashcatMediator $stashcatMediator , Company $THWCompany ): array
@@ -322,7 +322,7 @@ class Daemon extends Command
      * @param Event $event
      * @param DateTime $now
      * @param string $reason
-     * @param array $context
+     * @param array<string, mixed> $context
      * @return void
      */
     protected function registerFailedAttempt( Event $event , DateTime $now , string $reason , array $context = [] ): void

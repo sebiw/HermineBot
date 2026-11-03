@@ -10,7 +10,6 @@ use Psr\Log\LoggerInterface;
 class RestClient {
 
     const METHOD_POST = 'POST';
-    const METHOD_PUT = 'PUT';
     const METHOD_GET = 'GET';
 
     const RESPONSE_FORMAT_JSON = 'json';
@@ -29,7 +28,7 @@ class RestClient {
      *                          Hermine selbst meldet Fehler im Inhalt, dort bleibt es aus.
      * @throws \Exception
      */
-    public function __construct( $defaultResponseFormat = self::RESPONSE_FORMAT_PLAIN , ?LoggerInterface $logger = null , private readonly bool $failOnError = false ){
+    public function __construct( string $defaultResponseFormat = self::RESPONSE_FORMAT_PLAIN , ?LoggerInterface $logger = null , private readonly bool $failOnError = false ){
         if( !in_array( $defaultResponseFormat , self::getValidFormats() ) ){
             throw new \Exception("Default response format not valid!");
         }
@@ -55,18 +54,18 @@ class RestClient {
      * @return string[]
      */
     public static function getValidMethods(){
-        return [ self::METHOD_POST , self::METHOD_GET , self::METHOD_PUT ];
+        return [ self::METHOD_POST , self::METHOD_GET ];
     }
 
     /**
-     * @param $url
+     * @param string $url
      * @param array<string, mixed>|string|null $data
      * @param string|null $responseFormat
-     * @param array $additionalHeader
-     * @return bool|string|array
+     * @param array<string, string> $additionalHeader
+     * @return mixed JSON: dekodierte Antwort, sonst Text (false bei Verbindungsfehler)
      * @throws \Exception
      */
-    public function post( $url , $data = null , ?string $responseFormat = null , array $additionalHeader = [] ){
+    public function post( string $url , $data = null , ?string $responseFormat = null , array $additionalHeader = [] ){
         $result = $this->doRequest( self::METHOD_POST , $url , $data , $additionalHeader );
 
         if( $responseFormat === null ){
@@ -81,14 +80,14 @@ class RestClient {
     }
 
     /**
-     * @param $url
-     * @param $data
+     * @param string $url
+     * @param array<string, mixed>|null $data als Query
      * @param string|null $responseFormat
-     * @param array $additionalHeader
-     * @return bool|mixed|string
+     * @param array<string, string> $additionalHeader
+     * @return mixed
      * @throws \Exception
      */
-    public function get( $url , $data = null , ?string $responseFormat = null , array $additionalHeader = [] ){
+    public function get( string $url , ?array $data = null , ?string $responseFormat = null , array $additionalHeader = [] ){
         $result = $this->doRequest( self::METHOD_GET , $url , $data , $additionalHeader );
 
         if( $responseFormat === null ){
@@ -118,13 +117,14 @@ class RestClient {
 
     /**
      * @param $method
-     * @param $url
+     * @param string $method
+     * @param string $url
      * @param array<string, mixed>|string|null $data
-     * @param array $additionalHeader
+     * @param array<string, string> $additionalHeader
      * @return bool|string
      * @throws \Exception
      */
-    protected function doRequest( $method , $url , $data = null , array $additionalHeader = [] ){
+    protected function doRequest( string $method , string $url , $data = null , array $additionalHeader = [] ){
 
         if( !in_array( $method , self::getValidMethods() ) ){
             throw new \Exception('Method not valid!');
@@ -140,10 +140,6 @@ class RestClient {
                 }
 
                 break;
-            case self::METHOD_PUT:
-                curl_setopt( $session , CURLOPT_PUT, true);
-                break;
-
             case self::METHOD_GET:
             default:
                 if ($data !== null ){

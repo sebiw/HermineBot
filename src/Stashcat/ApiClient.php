@@ -261,22 +261,6 @@ class ApiClient {
 
     /**
      * @param string $client_key
-     * @param string $message_id
-     * @return SuccessResponse
-     * @throws Exception
-     */
-    public function sendLikeToMessage( string $client_key , string $message_id ): SuccessResponse
-    {
-        $likeResult = $this->getRestClient()->post( $this->getConfig()->getMessageLikeURL() , [
-            "client_key" => $client_key,
-            "device_id" => $this->getConfig()->getDeviceId(),
-            "message_id" => $message_id
-        ]);
-        return new SuccessResponse( $likeResult );
-    }
-
-    /**
-     * @param string $client_key
      * @param string $channel_id
      * @return Responses\MessageContentResponse
      * @throws Exception
@@ -340,7 +324,7 @@ class ApiClient {
     /**
      * Aktuelle Daten einzelner Channels (ohne die komplette Liste zu laden)
      * @param string $client_key
-     * @param array $channel_ids
+     * @param array<int|string> $channel_ids
      * @return ChannelInfosResponse
      * @throws Exception
      */
@@ -357,8 +341,8 @@ class ApiClient {
      * Personen suchen bzw. nach Gruppen auflisten (seitenweise)
      * @param string $client_key
      * @param string $search
-     * @param array $group_ids
-     * @param array $exclude_user_ids
+     * @param array<int|string> $group_ids
+     * @param array<int|string> $exclude_user_ids
      * @param int $limit
      * @param int $offset
      * @return UsersListingResponse
@@ -455,7 +439,7 @@ class ApiClient {
     /**
      * Neue Unterhaltung anlegen
      * @param string $client_key
-     * @param array $members je Mitglied (inkl. sich selbst) [ 'id' , 'key' , 'signature' , 'expiry' , 'userVerified' ]
+     * @param array<array{id: int, key: string, signature: string, expiry: int|null, userVerified: bool}> $members je Mitglied (inkl. sich selbst)
      * @param string $unique_identifier 32 Zeichen, ist Teil der signierten Schlüssel
      * @return CreateConversationResponse
      * @throws Exception

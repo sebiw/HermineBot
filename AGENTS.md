@@ -85,7 +85,7 @@ Agenten committen, taggen und pushen in keinem der beiden Repos eigenständig �
 - `config/legacy/` – echte Konfiguration (gitignored), Vorlagen in `config_examples/`
 - `data/` – Laufzeitdaten (gitignored): `credentials/login-data.json`
 - `migrations/` – Tabellen `events`, `user`, `log` (DB `hermine_bot`)
-- `tests/` – PHPUnit-Tests (`php8.5 vendor/bin/phpunit`), bisher vor allem Hilfsklassen, Jobs und Log; Mediator, API und Platzhalter sind noch ungetestet. Statische Analyse: `php8.5 vendor/bin/phpstan analyse --memory-limit=1G` (Stufe 5, ohne Baseline, Stufe schrittweise anheben und alles beheben, auch alten Code). Alle Prüfungen auf einmal: `bin/pruefen` (mit Migrationen auf MySQL 8.4 im Wegwerf-Container, `--kurz` ohne), vor jedem Commit-Vorschlag und Release
+- `tests/` – PHPUnit-Tests (`php8.5 vendor/bin/phpunit`), bisher vor allem Hilfsklassen, Jobs und Log; Mediator, API und Platzhalter sind noch ungetestet. Statische Analyse: `php8.5 vendor/bin/phpstan analyse --memory-limit=1G` (Stufe 6, ohne Baseline, Stufe schrittweise anheben und alles beheben, auch alten Code). Alle Prüfungen auf einmal: `bin/pruefen` (mit Migrationen auf MySQL 8.4 im Wegwerf-Container, `--kurz` ohne), vor jedem Commit-Vorschlag und Release
 
 ## Konfiguration
 

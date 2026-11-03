@@ -10,7 +10,7 @@ class SendMessageResponse extends MessageContentResponse {
         return [ $this->getMessage() ];
     }
 
-    public function getMessage(){
+    public function getMessage(): Message {
         return new Message( $this->getResults('payload' , 'message' ) );
     }
 

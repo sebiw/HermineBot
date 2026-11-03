@@ -8,7 +8,7 @@ use App\Stashcat\Entities\Group;
 class CompanyGroupsResponse extends DefaultResponse {
 
     /**
-     * @return array
+     * @return list<mixed>
      * @throws \Exception
      */
     public function getGroupIds(): array
@@ -34,7 +34,7 @@ class CompanyGroupsResponse extends DefaultResponse {
     }
 
     /**
-     * @param $name
+     * @param string $name
      * @return Group|null
      * @throws \Exception
      */

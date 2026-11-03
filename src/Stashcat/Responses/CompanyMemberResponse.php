@@ -7,7 +7,7 @@ use App\Stashcat\Entities\Company;
 class CompanyMemberResponse extends DefaultResponse {
 
     /**
-     * @return array
+     * @return list<mixed>
      * @throws \Exception
      */
     public function getCompanyIds(): array
@@ -33,7 +33,7 @@ class CompanyMemberResponse extends DefaultResponse {
     }
 
     /**
-     * @param $name
+     * @param string $name
      * @return Company|null
      * @throws \Exception
      */

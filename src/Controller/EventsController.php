@@ -268,7 +268,7 @@ class EventsController extends AbstractController
     }
 
     #[Route('/events/execute', name: 'execute_events_run', methods: [ 'POST' ] )]
-    public function executeEvent( Request $request , KernelInterface $kernel, #[CurrentUser] ?User $user ){
+    public function executeEvent( Request $request , KernelInterface $kernel, #[CurrentUser] ?User $user ): Response {
         // Sendet echte Nachrichten -> nur per POST mit Token (Schutz vor CSRF über Links/Bilder)
         $this->denyAccessUnlessCsrfTokenValid( 'execute_events' , $request );
 

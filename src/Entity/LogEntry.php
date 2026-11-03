@@ -26,12 +26,16 @@ class LogEntry
     #[ORM\Column(type : Types::TEXT,  nullable : false)]
     private string $message;
 
+    /** @var array<mixed> */
     #[ORM\Column(type : Types::JSON,  nullable : true)]
     private array $context;
 
     #[ORM\Column(type : Types::DATETIME_IMMUTABLE , nullable: false )]
     private \DateTimeImmutable $createdDateTime;
 
+    /**
+     * @param array<mixed> $context
+     */
     public function __construct( string $channel , string $level , string $message , array $context )
     {
         $this->channel = $channel;
@@ -50,7 +54,7 @@ class LogEntry
     }
 
     /**
-     * @return array
+     * @return array<mixed>
      */
     public function getContext(): array
     {

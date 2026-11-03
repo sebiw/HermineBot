@@ -24,7 +24,7 @@ class DatabaseLogger extends AbstractLogger {
     /**
      * @param $level
      * @param \Stringable|string $message
-     * @param array $context
+     * @param array<mixed> $context
      */
     public function log($level, \Stringable|string $message, array $context = []): void
     {

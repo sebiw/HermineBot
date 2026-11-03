@@ -21,7 +21,8 @@ class LoginController extends AbstractController
     }
 
     #[Route('/logout', name: 'app_logout')]
-    public function logout(){
+    public function logout(): void {
+        // Symfony fängt die Route ab (Firewall), hier kommt nichts an
 
     }
 }

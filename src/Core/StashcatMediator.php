@@ -2,7 +2,6 @@
 
 namespace App\Core;
 
-
 use App\Stashcat\ApiClient;
 use App\Stashcat\CryptoBox;
 use App\Stashcat\Entities\Channel;
@@ -12,6 +11,7 @@ use App\Stashcat\Entities\Group;
 use App\Stashcat\Entities\Message;
 use App\Stashcat\Entities\MessageSeenUser;
 use App\Stashcat\Entities\User;
+use App\Stashcat\Responses\ChannelsSubscriptedResponse;
 use App\Stashcat\Responses\CompanyGroupsResponse;
 use App\Stashcat\Responses\CompanyMemberResponse;
 use App\Stashcat\Responses\LoginResponse;
@@ -22,7 +22,6 @@ class StashcatMediator
     /** Nach einer abgelehnten Anmeldung so lange keinen neuen Versuch */
     const LOGIN_RETRY_AFTER_SECONDS = 600;
 
-
     private Config $config;
     private ApiClient $stashcatApiClient;
     private CryptoBox $stashcatCryptoBox;
@@ -31,9 +30,12 @@ class StashcatMediator
     private bool $loginPaused = false;
 
     private ?CompanyMemberResponse $companyMembersResponse = null;
+    /** @var array<mixed, CompanyGroupsResponse> Gruppen je Firma */
     private array $companyGroups = [];
+    /** @var array<mixed, ChannelsSubscriptedResponse> abonnierte Channels je Firma */
     private array $channelsSubscripted = [];
 
+    /** @var array<mixed, Conversation> */
     private array $conversations = [];
 
     /**
@@ -275,10 +277,10 @@ class StashcatMediator
     }
 
     /**
-     * @param $id
+     * @param int|string $id streng verglichen mit der ID aus Hermine
      * @return Conversation|null
      */
-    public function getConversationById( $id ) : ?Conversation{
+    public function getConversationById( int|string $id ) : ?Conversation{
         /* @var $conversation Conversation */
         foreach( $this->conversations AS $conversation ){
             if( $conversation->getId() === $id ){
@@ -353,7 +355,7 @@ class StashcatMediator
      * Neue Unterhaltung mit den angegebenen Personen anlegen (eigener Account wird automatisch ergänzt).
      * Ablauf wie im Web-Client: zufälliger Schlüssel, für jedes Mitglied verschlüsselt und signiert.
      * Setzt login() und decryptPrivateKey() voraus; der Signaturschlüssel wird bei Bedarf nachgeladen.
-     * @param array $userIds
+     * @param list<int|string> $userIds
      * @param int $validity Gültigkeit der Schlüssel-Signaturen für die anderen Mitglieder in Sekunden (Web-Client: 30 Tage)
      * @param bool $allowUnverified auch an Personen, deren Schlüssel sich nicht prüfen lassen (Web-Client fragt „Trotzdem fortfahren?“)
      * @return Conversation
@@ -527,7 +529,7 @@ class StashcatMediator
 
     /**
      * Aktuelle Daten einzelner Channels laden (z. B. Mitgliederzahl, letzte Aktivität)
-     * @param array $channelIds
+     * @param list<int|string> $channelIds
      * @return array|Channel[]
      * @throws \Exception
      */
@@ -539,7 +541,7 @@ class StashcatMediator
     /**
      * Personen suchen bzw. nach Gruppen auflisten (eine Seite)
      * @param string $search
-     * @param array $groupIds
+     * @param list<int|string> $groupIds
      * @param int $limit
      * @param int $offset
      * @return array|User[]
@@ -592,20 +594,5 @@ class StashcatMediator
     {
         return $this->getStashcatApiClient()->messageSeenUsersCount( $this->getLoginResponse()->getClientKey() , (string) $message->getId() )->getCount();
     }
-
-    /**
-     * @param Message $message
-     * @return \App\Stashcat\Responses\SuccessResponse|null
-     * @throws \Exception
-     */
-    public function likeMessage( Message $message ): ?\App\Stashcat\Responses\SuccessResponse
-    {
-        if( !$message->isLiked() ){
-            return $this->getStashcatApiClient()->sendLikeToMessage( $this->getLoginResponse()->getClientKey() , (string) $message->getId() );
-        }
-        return null;
-    }
-
-
 
 }

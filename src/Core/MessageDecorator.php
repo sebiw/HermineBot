@@ -19,13 +19,15 @@ class MessageDecorator {
 
     private ContainerInterface $container;
 
+    /** @var array<string, callable> Platzhalter-Syntax => liefert den Ersatz */
     private array $replaceCallbacks = [];
 
+    /** @var array<class-string, object> */
     private array $serviceInstances = [];
 
     /**
      * @param ContainerInterface $container
-     * @param array $serviceInstances
+     * @param list<mixed> $serviceInstances Objekte für die Platzhalter (Firma, Channel, AppService, Event)
      * @throws \Exception
      */
     public function __construct( ContainerInterface $container, array $serviceInstances = [] )
@@ -42,36 +44,36 @@ class MessageDecorator {
     }
 
     /**
-     * @param $key
+     * @param string $key
      * @return string
      */
-    protected function getPlaceholderSyntax( $key ): string
+    protected function getPlaceholderSyntax( string $key ): string
     {
         return sprintf('{{%s}}' , $key );
     }
 
     /**
-     * @param $key
+     * @param string $key
      * @return string
      */
-    protected function getCommandSyntax( $key ): string
+    protected function getCommandSyntax( string $key ): string
     {
         return sprintf('{%%%s%%}' , $key );
     }
 
     /**
-     * @param $className
+     * @param class-string $className
      * @return mixed
      */
-    protected function getServiceInstance( $className ) : mixed {
+    protected function getServiceInstance( string $className ) : mixed {
         return $this->serviceInstances[ $className ] ?? null;
     }
 
     /**
      * @param string $eventText
-     * @return array|string
+     * @return string
      */
-    public function replace( string $eventText ): array|string
+    public function replace( string $eventText ): string
     {
         // Erst alle Ersetzungen für den Originaltext ermitteln, dann in einem Durchgang ersetzen:
         // Platzhalter, die erst durch ein eingesetztes Ergebnis in den Text kommen (z. B. aus externen Quellen), werden nicht ausgewertet
@@ -85,7 +87,7 @@ class MessageDecorator {
     }
 
     /**
-     * @return array
+     * @return list<string>
      */
     public function getAvailableReplacements(): array
     {

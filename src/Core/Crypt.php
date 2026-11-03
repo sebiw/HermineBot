@@ -57,9 +57,9 @@ class Crypt {
 
 
     /**
-     * @param $private_key
-     * @param $passphrase
-     * @return false|resource
+     * @param string $private_key PEM
+     * @param string $passphrase
+     * @return false|\OpenSSLAsymmetricKey
      * @throws \Exception
      */
     public static function decodePrivateKey($private_key , $passphrase){
@@ -69,10 +69,10 @@ class Crypt {
     }
 
     /**
-     * @param $data
-     * @param $private_key
-     * @param $padding
-     * @return mixed
+     * @param string|false $data
+     * @param \OpenSSLAsymmetricKey|false|null $private_key
+     * @param int $padding OPENSSL_*_PADDING
+     * @return string|null
      * @throws \Exception
      */
     public static function decodeWithPrivateKey( $data , $private_key , $padding ){
@@ -85,8 +85,8 @@ class Crypt {
      * @param string $messageText
      * @param string $algo
      * @param string $passphrase
-     * @param $padding
-     * @param $messageIv
+     * @param int $padding
+     * @param string $messageIv
      * @return false|string
      * @throws \Exception
      */
@@ -100,8 +100,8 @@ class Crypt {
      * @param string $messageText
      * @param string $algo
      * @param string $passphrase
-     * @param $padding
-     * @param $messageIv
+     * @param int $padding
+     * @param string $messageIv
      * @return false|string
      * @throws \Exception
      */
@@ -115,8 +115,8 @@ class Crypt {
      * @param string $messageText
      * @param string $algo
      * @param string $passphrase
-     * @param $padding
-     * @param $messageIv
+     * @param int $padding
+     * @param string $messageIv
      * @return false|string
      * @throws \Exception
      */
@@ -237,7 +237,7 @@ class Crypt {
 
     /**
      * Privaten RSA-Schlüssel aus einem JWK (WebCrypto) laden
-     * @param array $jwk
+     * @param array<string, mixed> $jwk
      * @return \OpenSSLAsymmetricKey
      * @throws \Exception
      */
@@ -266,7 +266,7 @@ class Crypt {
 
     /**
      * Öffentlichen RSA-Schlüssel aus einem JWK (WebCrypto) laden
-     * @param array $jwk
+     * @param array<string, mixed> $jwk
      * @return \OpenSSLAsymmetricKey
      * @throws \Exception
      */
@@ -356,7 +356,7 @@ class Crypt {
     }
 
     /**
-     * @return array
+     * @return list<string>
      */
     public static function getErrors(): array
     {
@@ -370,7 +370,7 @@ class Crypt {
     /**
      * @throws \Exception
      */
-    protected static function throwOnError(){
+    protected static function throwOnError(): void {
         $errors = self::getErrors();
         if( !empty( $errors ) ){
             throw new \Exception( implode(", " , $errors ) );

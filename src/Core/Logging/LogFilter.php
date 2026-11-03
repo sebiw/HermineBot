@@ -45,6 +45,10 @@ final readonly class LogFilter
     {
     }
 
+    /**
+     * @template T of bool|float|int|string|null
+     * @param InputBag<T> $query Query der Log-Seite (im Test auch selbst gebaut)
+     */
     public static function fromQuery( InputBag $query ): self
     {
         $levels = $query->all()['level'] ?? [];

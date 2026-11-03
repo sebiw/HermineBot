@@ -4,19 +4,23 @@ namespace App\Core;
 
 class ArrayDataCollection {
 
+    /** @var array<mixed> Antwort bzw. Konfiguration als verschachteltes Array */
     protected array $results;
 
+    /**
+     * @param array<mixed> $results
+     */
     public function __construct( array $results )
     {
         $this->results = $results;
     }
 
     /**
-     * @param ...$keys
-     * @return array|mixed
+     * @param string|int ...$keys Pfad im Array
+     * @return mixed
      * @throws \Exception
      */
-    protected function getResults( ...$keys )
+    protected function getResults( string|int ...$keys ): mixed
     {
         $current = &$this->results;
         foreach( $keys AS $key ){
@@ -31,12 +35,12 @@ class ArrayDataCollection {
     }
 
     /**
-     * @param $data
-     * @param ...$keys
+     * @param mixed $data
+     * @param string|int ...$keys
      * @return void
      * @throws \Exception
      */
-    protected function setResult( $data , ...$keys ){
+    protected function setResult( mixed $data , string|int ...$keys ): void {
         $current = &$this->results;
         foreach( $keys AS $key ){
             if( isset( $current[ $key ] ) ){
@@ -49,10 +53,10 @@ class ArrayDataCollection {
     }
 
     /**
-     * @param ...$keys
+     * @param string|int ...$keys
      * @return bool
      */
-    protected function resultKeyExist( ...$keys ): bool
+    protected function resultKeyExist( string|int ...$keys ): bool
     {
         $current = &$this->results;
         foreach( $keys AS $key ){
@@ -63,10 +67,6 @@ class ArrayDataCollection {
             }
         }
         return true;
-    }
-
-    public function dumpResults(){
-        var_dump( $this->results );
     }
 
 }

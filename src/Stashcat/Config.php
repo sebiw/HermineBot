@@ -48,7 +48,7 @@ class Config {
 
 
     /**
-     * @param array $config
+     * @param array<string, mixed> $config Inhalt von config/legacy/env.api.php
      * @throws \Exception
      */
     public function __construct( array $config )
@@ -72,10 +72,10 @@ class Config {
     }
 
     /**
-     * @param $append
+     * @param string $append
      * @return string
      */
-    protected function addToBaseURL( $append ) : string {
+    protected function addToBaseURL( string $append ) : string {
         $addSlash = substr( $this->getBaseUrl() , -1) != '/';
         return $this->getBaseUrl() . ($addSlash ? '/' : '') . $append;
     }
