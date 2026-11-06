@@ -4,6 +4,10 @@ Alle wesentlichen Änderungen am Hermine-Bot werden in dieser Datei festgehalten
 
 ## [Unreleased]
 
+## [4.0.3] - 2026-11-06
+
+Keine für Anwender sichtbaren Änderungen.
+
 ## [4.0.2] - 2026-11-03
 
 Keine für Anwender sichtbaren Änderungen.
