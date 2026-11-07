@@ -4,6 +4,9 @@ Alle wesentlichen Änderungen am Hermine-Bot werden in dieser Datei festgehalten
 
 ## [Unreleased]
 
+### Geändert
+- Datum und Uhrzeit gibt man wie im StAN-Manager ein: frei tippen oder über den Knopf daneben einen Kalender öffnen, die Uhrzeit mit großen Pfeilen stellen oder eine übliche Uhrzeit antippen; am Handy öffnet sich die Auswahl von unten.
+
 ### Sicherheit
 - Mehrere Sicherheitslücken in den verwendeten Programmbausteinen sind geschlossen.
 
