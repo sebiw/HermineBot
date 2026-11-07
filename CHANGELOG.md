@@ -4,6 +4,9 @@ Alle wesentlichen Änderungen am Hermine-Bot werden in dieser Datei festgehalten
 
 ## [Unreleased]
 
+### Sicherheit
+- Mehrere Sicherheitslücken in den verwendeten Programmbausteinen sind geschlossen.
+
 ## [4.0.3] - 2026-11-06
 
 Keine für Anwender sichtbaren Änderungen.
