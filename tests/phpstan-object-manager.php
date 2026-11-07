@@ -13,4 +13,6 @@ require __DIR__ . '/../vendor/autoload.php';
 $kernel = new Kernel( 'test' , false );
 $kernel->boot();
 
-return $kernel->getContainer()->get( 'doctrine' )->getManager();
+/** @var \Doctrine\Persistence\ManagerRegistry $doctrine */
+$doctrine = $kernel->getContainer()->get( 'doctrine' );
+return $doctrine->getManager();

@@ -76,7 +76,7 @@ class ApiController extends AbstractController
         // Stacktrace nur ins Log, nicht an den Aufrufer
         return new JsonResponse([
             'status' => 'ERROR',
-            'content' => trim( preg_replace( '/\n\s*Exception trace:.*$/s' , '' , $commandOutput ) )
+            'content' => trim( preg_replace( '/\n\s*Exception trace:.*$/s' , '' , $commandOutput ) ?? $commandOutput )
         ], Response::HTTP_INTERNAL_SERVER_ERROR );
     }
 
@@ -121,7 +121,7 @@ class ApiController extends AbstractController
                 throw new \Exception('Login failed!');
             }
             $mediator->loadCompanies();
-            $company = $mediator->getCompanyMembers()->getCompanyByName( $config->getStashcatEventCompany() );
+            $company = $mediator->requireCompany( $config->getStashcatEventCompany() );
             $mediator->loadChannelSubscripted( $company );
             if( ( $channel = $mediator->getChannelOfCompany( $channelName , $company ) ) === null ){
                 return $this->errorResponse('Channel not found!' , Response::HTTP_NOT_FOUND );
@@ -175,7 +175,7 @@ class ApiController extends AbstractController
             }
             $mediator->decryptPrivateKey();
             $mediator->loadCompanies();
-            $company = $mediator->getCompanyMembers()->getCompanyByName( $config->getStashcatEventCompany() );
+            $company = $mediator->requireCompany( $config->getStashcatEventCompany() );
             $mediator->loadChannelSubscripted( $company );
             if( ( $channel = $mediator->getChannelOfCompany( $channelName , $company ) ) === null ){
                 return $this->errorResponse('Channel not found!' , Response::HTTP_NOT_FOUND );

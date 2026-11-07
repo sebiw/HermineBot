@@ -296,9 +296,9 @@ class Config {
     }
 
     /**
-     * @return int|string
+     * @return int OPENSSL_*-Flags
      */
-    public function getAesPadding()
+    public function getAesPadding(): int
     {
         return $this->aesPadding;
     }

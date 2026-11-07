@@ -277,9 +277,9 @@ class Event implements \JsonSerializable
     }
 
     /**
-     * @param \DateTime|null $startDateTime
+     * @param \DateTime $startDateTime
      */
-    public function setStartDateTime(?\DateTime $startDateTime): void
+    public function setStartDateTime(\DateTime $startDateTime): void
     {
         $this->startDateTime = $startDateTime;
     }

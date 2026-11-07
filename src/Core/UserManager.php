@@ -133,7 +133,7 @@ class UserManager
     }
 
     /**
-     * @return string[]
+     * @return list<string>
      */
     public static function rolesOf( string $kind ): array
     {

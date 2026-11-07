@@ -140,13 +140,14 @@ class SendMessage extends Command
         $stashcatMediator->decryptPrivateKey();
         $stashcatMediator->loadCompanies();
 
-        $THWCompany = $stashcatMediator->getCompanyMembers()->getCompanyByName( $this->getAppService()->getAppConfig()->getStashcatEventCompany() );
+        $THWCompany = $stashcatMediator->requireCompany( $this->getAppService()->getAppConfig()->getStashcatEventCompany() );
 
         if( $channelTarget !== null ){
 
             $stashcatMediator->loadChannelSubscripted( $THWCompany );
 
-            $THWChannel = $stashcatMediator->getChannelOfCompany( $channelTarget , $THWCompany );
+            $THWChannel = $stashcatMediator->getChannelOfCompany( $channelTarget , $THWCompany )
+                ?? throw new \RuntimeException( sprintf( 'Channel %s not found in Hermine' , $channelTarget ) );
             $stashcatMediator->decryptChannelPrivateKey( $THWChannel );
 
             // Prepare Message...
@@ -219,7 +220,7 @@ class SendMessage extends Command
             ]
         ];
 
-        $output->writeln( json_encode( $jsonResult , JSON_PRETTY_PRINT ) );
+        $output->writeln( json_encode( $jsonResult , JSON_PRETTY_PRINT | JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR ) );
         return Command::SUCCESS;
     }
 

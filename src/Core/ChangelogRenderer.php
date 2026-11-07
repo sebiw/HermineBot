@@ -17,7 +17,7 @@ class ChangelogRenderer
     {
         $html = [];
         $listOpen = false;
-        $sections = $this->removeEmptySections( preg_split('/\R/' , $markdown ) );
+        $sections = $this->removeEmptySections( preg_split('/\R/' , $markdown ) ?: [] );
 
         foreach( $sections AS $line ){
             $line = rtrim( $line );
@@ -95,11 +95,11 @@ class ChangelogRenderer
         $text = htmlspecialchars( $text , ENT_QUOTES , 'UTF-8' );
 
         // Versionsangaben "[1.0.0]" ohne Link-Ziel
-        $text = preg_replace('/\[([^\]]+)\](?!\()/' , '$1' , $text );
+        $text = preg_replace('/\[([^\]]+)\](?!\()/' , '$1' , $text ) ?? $text;
         // Links [Text](https://...)
-        $text = preg_replace('/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/' , '<a href="$2" target="_blank" rel="noopener">$1</a>' , $text );
+        $text = preg_replace('/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/' , '<a href="$2" target="_blank" rel="noopener">$1</a>' , $text ) ?? $text;
         // Fettschrift **Text**
-        return preg_replace('/\*\*(.+?)\*\*/' , '<strong>$1</strong>' , $text );
+        return preg_replace('/\*\*(.+?)\*\*/' , '<strong>$1</strong>' , $text ) ?? $text;
     }
 
 }

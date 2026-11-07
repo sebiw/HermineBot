@@ -135,6 +135,25 @@ class StashcatMediator
     }
 
     /**
+     * Anmeldung für Aufrufe, die sie voraussetzen
+     * @throws \LogicException wenn login() noch nicht erfolgreich war
+     */
+    private function requireLogin(): LoginResponse
+    {
+        return $this->loginResponse ?? throw new \LogicException('Not logged in to Hermine: call login() first');
+    }
+
+    /**
+     * Firma aus den geladenen Firmen (setzt loadCompanies() voraus)
+     * @throws \RuntimeException wenn es die Firma nicht gibt
+     */
+    public function requireCompany( string $companyName ): Company
+    {
+        $company = $this->getCompanyMembers()?->getCompanyByName( $companyName );
+        return $company ?? throw new \RuntimeException( sprintf( 'Company %s not found in Hermine' , $companyName ) );
+    }
+
+    /**
      * ID of the own (bot) account, after login
      */
     public function getOwnUserId(): ?string
@@ -210,7 +229,7 @@ class StashcatMediator
      * @throws \Exception
      */
     public function decryptPrivateKey(){
-        $securityResponse = $this->getStashcatApiClient()->securityGetKey( $this->getLoginResponse()->getClientKey() );
+        $securityResponse = $this->getStashcatApiClient()->securityGetKey( $this->requireLogin()->getClientKey() );
         $this->getStashcatCryptoBox()->setPrivateKeyFromResponse( $securityResponse );
     }
 
@@ -220,7 +239,7 @@ class StashcatMediator
      * @throws \Exception
      */
     public function decryptPrivateSigningKey(){
-        $signingKeyResponse = $this->getStashcatApiClient()->securityGetSigningKey( $this->getLoginResponse()->getClientKey() );
+        $signingKeyResponse = $this->getStashcatApiClient()->securityGetSigningKey( $this->requireLogin()->getClientKey() );
         $this->getStashcatCryptoBox()->setPrivateSigningKeyFromResponse( $signingKeyResponse );
     }
 
@@ -247,7 +266,7 @@ class StashcatMediator
      * @throws \Exception
      */
     public function loadCompanies(){
-        $this->companyMembersResponse = $this->getStashcatApiClient()->companyMembers( $this->getLoginResponse()->getClientKey() );
+        $this->companyMembersResponse = $this->getStashcatApiClient()->companyMembers( $this->requireLogin()->getClientKey() );
     }
 
     /**
@@ -256,7 +275,7 @@ class StashcatMediator
      * @throws \Exception
      */
     public function loadGroups( Company $company ){
-        $this->companyGroups[ $company->getId() ] = $this->getStashcatApiClient()->companyGroups( $this->getLoginResponse()->getClientKey() , $company->getId() );
+        $this->companyGroups[ $company->getId() ] = $this->getStashcatApiClient()->companyGroups( $this->requireLogin()->getClientKey() , $company->getId() );
     }
 
     /**
@@ -265,7 +284,7 @@ class StashcatMediator
      * @throws \Exception
      */
     public function loadChannelSubscripted( Company $company ){
-        $this->channelsSubscripted[ $company->getId() ] = $this->getStashcatApiClient()->channelsSubscripted( $this->getLoginResponse()->getClientKey() , $company->getId() );
+        $this->channelsSubscripted[ $company->getId() ] = $this->getStashcatApiClient()->channelsSubscripted( $this->requireLogin()->getClientKey() , $company->getId() );
     }
 
     /**
@@ -274,7 +293,7 @@ class StashcatMediator
      */
     public function loadConversations(): void
     {
-        $this->conversations = $this->getStashcatApiClient()->messageConversations( $this->getLoginResponse()->getClientKey() )->getConversations();
+        $this->conversations = $this->getStashcatApiClient()->messageConversations( $this->requireLogin()->getClientKey() )->getConversations();
     }
 
     /**
@@ -311,7 +330,7 @@ class StashcatMediator
     {
         $ownUserId = $this->getOwnUserId();
         foreach( [ false , true ] AS $archived ){
-            foreach( $this->getStashcatApiClient()->messageConversations( $this->getLoginResponse()->getClientKey() , $archived )->getConversations() AS $conversation ){
+            foreach( $this->getStashcatApiClient()->messageConversations( $this->requireLogin()->getClientKey() , $archived )->getConversations() AS $conversation ){
                 if( self::isDirectConversation( $conversation , $ownUserId , $userId ) ){
                     return $archived ? $this->loadConversation( strval( $conversation->getId() ) ) : $conversation;
                 }
@@ -369,8 +388,8 @@ class StashcatMediator
             $this->decryptPrivateSigningKey();
         }
 
-        $ownUserId = (string) $this->getLoginResponse()->getUserId();
-        $ownPublicKey = $this->getLoginResponse()->getUserPublicKey();
+        $ownUserId = (string) $this->requireLogin()->getUserId();
+        $ownPublicKey = $this->requireLogin()->getUserPublicKey();
 
         $userIds = array_values( array_unique( array_filter( array_map( 'strval' , $userIds ) , fn( $userId ) => $userId !== '' && $userId !== $ownUserId ) ) );
         if( empty( $userIds ) ){
@@ -407,7 +426,7 @@ class StashcatMediator
         // Eigener Schlüssel ohne Ablaufdatum
         $members[] = $this->getStashcatCryptoBox()->getConversationMemberKey( $conversationKey , $ownUserId , $ownPublicKey , $uniqueIdentifier , $memberIds , null , true );
 
-        $response = $this->getStashcatApiClient()->createEncryptedConversation( $this->getLoginResponse()->getClientKey() , $members , $uniqueIdentifier );
+        $response = $this->getStashcatApiClient()->createEncryptedConversation( $this->requireLogin()->getClientKey() , $members , $uniqueIdentifier );
         if( !$response->isValid() ){
             throw new \Exception( sprintf( 'Conversation could not be created: %s' , $response->getErrorMessage() ) );
         }
@@ -439,11 +458,11 @@ class StashcatMediator
         // simple markdown check... maybe changing in the future!
         $markdown = preg_match_all("#[*].*[*]#" , $plainMessage ) || preg_match_all("#_.*_#" , $plainMessage );
         if( $markdown ){
-            $metainfo = json_encode([ "v" => 1 , "style" => "md" ]);
+            $metainfo = json_encode( [ "v" => 1 , "style" => "md" ] , JSON_THROW_ON_ERROR );
         }
 
         $encryptedMessage = $this->getStashcatCryptoBox()->getChannelMessageEncrypted( $plainMessage , $channel->getId() , $ivMessage );
-        return $this->getStashcatApiClient()->sendMessageToChannel( $this->getLoginResponse()->getClientKey() , $channel->getCompanyId() , $channel->getId() , $encryptedMessage , $ivMessage , $verification , $metainfo );
+        return $this->getStashcatApiClient()->sendMessageToChannel( $this->requireLogin()->getClientKey() , $channel->getCompanyId() , $channel->getId() , $encryptedMessage , $ivMessage , $verification , $metainfo );
     }
 
     /**
@@ -462,12 +481,12 @@ class StashcatMediator
         // @TODO: Check markdown support for conversations?
         $markdown = preg_match_all("#[*].*[*]#" , $plainMessage ) || preg_match_all("#_.*_#" , $plainMessage );
         if( $markdown ){
-            $metainfo = json_encode([ "v" => 1 , "style" => "md" ]);
+            $metainfo = json_encode( [ "v" => 1 , "style" => "md" ] , JSON_THROW_ON_ERROR );
         }
 
         $encryptedMessage = $this->getStashcatCryptoBox()->getConversationMessageEncrypted( $plainMessage , $conversation->getId() , $ivMessage );
 
-        return $this->getStashcatApiClient()->sendMessageToConversation( $this->getLoginResponse()->getClientKey() , $conversation->getId() , $encryptedMessage , $ivMessage , $verification , $metainfo );
+        return $this->getStashcatApiClient()->sendMessageToConversation( $this->requireLogin()->getClientKey() , $conversation->getId() , $encryptedMessage , $ivMessage , $verification , $metainfo );
     }
 
     /**
@@ -481,7 +500,7 @@ class StashcatMediator
     {
         // get Messages...
         $messages = [];
-        $messageContentResult = $this->getStashcatApiClient()->getMessagesFromChannel( $this->getLoginResponse()->getClientKey() , $channel->getId() , $limit , $offset );
+        $messageContentResult = $this->getStashcatApiClient()->getMessagesFromChannel( $this->requireLogin()->getClientKey() , $channel->getId() , $limit , $offset );
         // Encrypt messages...
         foreach( $messageContentResult->getMessages() AS $message ){
             $messageDecryptResult = $this->getStashcatCryptoBox()->getChannelMessageDecrypted( $message , $channel->getId() );
@@ -501,7 +520,7 @@ class StashcatMediator
     {
         // get Messages...
         $messages = [];
-        $messageContentResult = $this->getStashcatApiClient()->getMessagesFromConversation( $this->getLoginResponse()->getClientKey() , $conversation->getId() , $limit , $offset );
+        $messageContentResult = $this->getStashcatApiClient()->getMessagesFromConversation( $this->requireLogin()->getClientKey() , $conversation->getId() , $limit , $offset );
         // Encrypt messages...
         foreach( $messageContentResult->getMessages() AS $message ){
             $messageDecryptResult = $this->getStashcatCryptoBox()->getConversationMessageDecrypted( $message , $conversation->getId() );
@@ -522,7 +541,7 @@ class StashcatMediator
         $members = [];
         $offset = 0;
         do {
-            $page = $this->getStashcatApiClient()->channelMembers( $this->getLoginResponse()->getClientKey() , $channel->getId() , $pageSize , $offset )->getMembers();
+            $page = $this->getStashcatApiClient()->channelMembers( $this->requireLogin()->getClientKey() , $channel->getId() , $pageSize , $offset )->getMembers();
             $members += $page;
             $offset += $pageSize;
         } while( count( $page ) === $pageSize );
@@ -537,7 +556,7 @@ class StashcatMediator
      */
     public function getChannelInfos( array $channelIds ): array
     {
-        return $this->getStashcatApiClient()->channelInfos( $this->getLoginResponse()->getClientKey() , $channelIds )->getChannels();
+        return $this->getStashcatApiClient()->channelInfos( $this->requireLogin()->getClientKey() , $channelIds )->getChannels();
     }
 
     /**
@@ -551,7 +570,7 @@ class StashcatMediator
      */
     public function searchUsers( string $search = '' , array $groupIds = [] , int $limit = 50 , int $offset = 0 ): array
     {
-        return $this->getStashcatApiClient()->usersListing( $this->getLoginResponse()->getClientKey() , $search , $groupIds , [] , $limit , $offset )->getUsers();
+        return $this->getStashcatApiClient()->usersListing( $this->requireLogin()->getClientKey() , $search , $groupIds , [] , $limit , $offset )->getUsers();
     }
 
     /**
@@ -562,7 +581,7 @@ class StashcatMediator
      */
     public function getUserInfo( string $userId , bool $withKey = false ): User
     {
-        return $this->getStashcatApiClient()->userInfo( $this->getLoginResponse()->getClientKey() , $userId , $withKey )->getUser();
+        return $this->getStashcatApiClient()->userInfo( $this->requireLogin()->getClientKey() , $userId , $withKey )->getUser();
     }
 
     /**
@@ -573,7 +592,7 @@ class StashcatMediator
      */
     public function loadConversation( string $conversationId ): Conversation
     {
-        return $this->getStashcatApiClient()->conversation( $this->getLoginResponse()->getClientKey() , $conversationId )->getConversation();
+        return $this->getStashcatApiClient()->conversation( $this->requireLogin()->getClientKey() , $conversationId )->getConversation();
     }
 
     /**
@@ -584,7 +603,7 @@ class StashcatMediator
      */
     public function getMessageSeenUsers( Message $message ): array
     {
-        return $this->getStashcatApiClient()->messageSeenUsers( $this->getLoginResponse()->getClientKey() , (string) $message->getId() )->getSeenUsers();
+        return $this->getStashcatApiClient()->messageSeenUsers( $this->requireLogin()->getClientKey() , (string) $message->getId() )->getSeenUsers();
     }
 
     /**
@@ -594,7 +613,7 @@ class StashcatMediator
      */
     public function getMessageSeenCount( Message $message ): int
     {
-        return $this->getStashcatApiClient()->messageSeenUsersCount( $this->getLoginResponse()->getClientKey() , (string) $message->getId() )->getCount();
+        return $this->getStashcatApiClient()->messageSeenUsersCount( $this->requireLogin()->getClientKey() , (string) $message->getId() )->getCount();
     }
 
 }

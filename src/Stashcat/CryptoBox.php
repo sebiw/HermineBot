@@ -13,14 +13,14 @@ class CryptoBox {
     // Länge des Schlüssels einer Unterhaltung in Byte (Web-Client: CHAT_ACCESS_KEY_LENGTH_BY)
     const CHAT_ACCESS_KEY_LENGTH = 32;
 
-    private \OpenSSLAsymmetricKey|false|null $privateKey = null;
+    private ?\OpenSSLAsymmetricKey $privateKey = null;
 
     private ?\OpenSSLAsymmetricKey $privateSigningKey = null;
 
-    /** @var array<string, string|null> entschlüsselte Schlüssel je Channel-ID */
+    /** @var array<string, string> entschlüsselte Schlüssel je Channel-ID */
     private array $channelKeys = [];
 
-    /** @var array<string, string|null> entschlüsselte Schlüssel je Unterhaltungs-ID */
+    /** @var array<string, string> entschlüsselte Schlüssel je Unterhaltungs-ID */
     private array $conversationKeys = [];
 
     private Config $config;
@@ -62,8 +62,8 @@ class CryptoBox {
         if( strtolower( $encryptedKey['encryption_func'] ) !== 'aes-256-cbc' ){
             throw new \Exception( sprintf( 'Unsupported encryption function %s for signing key!' , $encryptedKey['encryption_func'] ) );
         }
-        $kek = Crypt::decodeWithPrivateKey( base64_decode( $encryptedKey['encryptedKEK'] , true ) , $this->privateKey , $this->getConfig()->getRsaOaepPadding() );
-        $jwk = openssl_decrypt( base64_decode( $encryptedKey['ciphertext'] , true ) , 'aes-256-cbc' , $kek , OPENSSL_RAW_DATA , base64_decode( $encryptedKey['iv'] , true ) );
+        $kek = Crypt::decodeWithPrivateKey( self::base64( $encryptedKey['encryptedKEK'] , 'KEK of the signing key' ) , $this->privateKey , $this->getConfig()->getRsaOaepPadding() );
+        $jwk = openssl_decrypt( self::base64( $encryptedKey['ciphertext'] , 'signing key' ) , 'aes-256-cbc' , $kek , OPENSSL_RAW_DATA , self::base64( $encryptedKey['iv'] , 'IV of the signing key' ) );
         if( $jwk === false ){
             throw new \Exception( sprintf( 'Signing key decryption failed: %s' , implode( ', ' , Crypt::getErrors() ) ) );
         }
@@ -88,8 +88,8 @@ class CryptoBox {
      * @throws \Exception
      */
     public function setChannelEncryptionChannel( string $encodedChannelKey , string $channelId ): void {
-        $channelKeyBase64Decoded = base64_decode( $encodedChannelKey, true );
-        $this->channelKeys[ $channelId ] = Crypt::decodeWithPrivateKey( $channelKeyBase64Decoded , $this->privateKey ,  $this->getConfig()->getRsaOaepPadding() );
+        $channelKeyBase64Decoded = self::base64( $encodedChannelKey , 'channel key' );
+        $this->channelKeys[ $channelId ] = Crypt::decodeWithPrivateKey( $channelKeyBase64Decoded , $this->requirePrivateKey() ,  $this->getConfig()->getRsaOaepPadding() );
     }
 
 
@@ -99,8 +99,8 @@ class CryptoBox {
      * @throws \Exception
      */
     public function setConversationEncryptionConversation( string $encodedConversationKey , string $conversationId ): void {
-        $conversationKeyBase64Decoded = base64_decode( $encodedConversationKey, true );
-        $this->conversationKeys[ $conversationId ] = Crypt::decodeWithPrivateKey( $conversationKeyBase64Decoded , $this->privateKey ,  $this->getConfig()->getRsaOaepPadding() );
+        $conversationKeyBase64Decoded = self::base64( $encodedConversationKey , 'conversation key' );
+        $this->conversationKeys[ $conversationId ] = Crypt::decodeWithPrivateKey( $conversationKeyBase64Decoded , $this->requirePrivateKey() ,  $this->getConfig()->getRsaOaepPadding() );
     }
 
     /**
@@ -228,10 +228,10 @@ class CryptoBox {
      * @param string $messageToSend
      * @param string $channelId
      * @param string $iv
-     * @return string|null
+     * @return string
      * @throws \Exception
      */
-    public function getChannelMessageEncrypted( string $messageToSend , string $channelId , string &$iv ) : ?string {
+    public function getChannelMessageEncrypted( string $messageToSend , string $channelId , string &$iv ) : string {
         $iv = $this->getRandomIv();
         $result = Crypt::textEncoder( $messageToSend );
         // Pad own content...
@@ -253,10 +253,10 @@ class CryptoBox {
      * @param string $messageToSend
      * @param string $conversationId
      * @param string $iv
-     * @return string|null
+     * @return string
      * @throws \Exception
      */
-    public function getConversationMessageEncrypted( string $messageToSend , string $conversationId , string &$iv ) : ?string {
+    public function getConversationMessageEncrypted( string $messageToSend , string $conversationId , string &$iv ) : string {
         $iv = $this->getRandomIv();
         $result = Crypt::textEncoder( $messageToSend );
         // Pad own content...
@@ -277,10 +277,13 @@ class CryptoBox {
     /**
      * @param Message $message
      * @param string $channelId
-     * @return false|string
+     * @return string
      * @throws \Exception
      */
-    public function getChannelMessageDecrypted( Message $message , string $channelId ){
+    public function getChannelMessageDecrypted( Message $message , string $channelId ): string {
+        if( !isset( $this->channelKeys[ $channelId ] ) ){
+            throw new \RuntimeException(sprintf('Channel-Key %s not available!' , $channelId ));
+        }
         $messageText = Crypt::binaryStringToString( Crypt::hexToBytes( $message->getText() ) );
         $messageIv = Crypt::binaryStringToString( Crypt::hexToBytes( $message->getIv() ) );
         $decrypted = Crypt::decodeWithPassphrase( $messageText , $this->getConfig()->getCipherAlgo() , $this->channelKeys[ $channelId ] , $this->getConfig()->getAesPadding() , $messageIv );
@@ -290,15 +293,37 @@ class CryptoBox {
     /**
      * @param Message $message
      * @param string $conversationId
-     * @return false|string
+     * @return string
      * @throws \Exception
      */
-    public function getConversationMessageDecrypted( Message $message , string $conversationId ){
+    public function getConversationMessageDecrypted( Message $message , string $conversationId ): string {
+        if( !isset( $this->conversationKeys[ $conversationId ] ) ){
+            throw new \RuntimeException(sprintf('Conversation-Key %s not available!' , $conversationId ));
+        }
         $messageText = Crypt::binaryStringToString( Crypt::hexToBytes( $message->getText() ) );
         $messageIv = Crypt::binaryStringToString( Crypt::hexToBytes( $message->getIv() ) );
         $decrypted = Crypt::decodeWithPassphrase( $messageText , $this->getConfig()->getCipherAlgo() , $this->conversationKeys[ $conversationId ] , $this->getConfig()->getAesPadding() , $messageIv );
         return Crypt::unPadString( $decrypted );
     }
 
+    /**
+     * @throws \Exception
+     */
+    private function requirePrivateKey(): \OpenSSLAsymmetricKey
+    {
+        return $this->privateKey ?? throw new \Exception('Private key not available!');
+    }
+
+    /**
+     * @throws \Exception
+     */
+    private static function base64( string $data , string $what ): string
+    {
+        $decoded = base64_decode( $data , true );
+        if( $decoded === false ){
+            throw new \Exception( sprintf( 'Invalid base64 in %s!' , $what ) );
+        }
+        return $decoded;
+    }
 
 }

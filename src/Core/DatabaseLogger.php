@@ -29,7 +29,7 @@ class DatabaseLogger extends AbstractLogger {
     public function log($level, \Stringable|string $message, array $context = []): void
     {
         $logEntry = new LogEntry( $this->channel , $level , $message , $context );
-        $objectManager = $this->managerRegistry->getManagerForClass( LogEntry::class );
+        $objectManager = $this->managerRegistry->getManagerForClass( LogEntry::class ) ?? throw new \LogicException( 'Kein Doctrine-Manager für LogEntry konfiguriert' );
         $objectManager->persist( $logEntry );
         $objectManager->flush();
     }

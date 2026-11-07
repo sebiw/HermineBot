@@ -215,7 +215,7 @@ class JobScheduler
     {
         $manager = $this->manager();
         $manager->getConnection()->executeStatement( 'INSERT IGNORE INTO job_state (name) VALUES (?)' , [ $name ] );
-        return $manager->find( JobState::class , $name );
+        return $manager->find( JobState::class , $name ) ?? throw new \LogicException( sprintf( 'Job state %s missing after insert' , $name ) );
     }
 
     /**

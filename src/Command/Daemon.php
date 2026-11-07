@@ -14,6 +14,7 @@ use App\Service\AppService;
 use App\Stashcat\Entities\Company;
 use DateTime;
 use Doctrine\Persistence\ManagerRegistry;
+use Doctrine\Persistence\ObjectManager;
 use Psr\Log\LogLevel;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -77,6 +78,21 @@ class Daemon extends Command
         return $this->doctrine;
     }
 
+    private function entityManager(): ObjectManager
+    {
+        return $this->getDoctrine()->getManagerForClass( Event::class ) ?? throw new \LogicException( 'Kein Doctrine-Manager für Event konfiguriert' );
+    }
+
+    /**
+     * Ausgabe für Cron und manuellen Start; ungültiges UTF-8 (z. B. aus Hermine) wird ersetzt statt die Ausgabe zu verlieren.
+     *
+     * @param array<mixed> $data
+     */
+    private static function json( array $data ): string
+    {
+        return json_encode( $data , JSON_PRETTY_PRINT | JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR );
+    }
+
     /**
      * @return DatabaseLogger
      */
@@ -111,7 +127,7 @@ class Daemon extends Command
         $lock = FileLock::acquire( $this->getKernel()->getProjectDir() . '/var/daemon-tick.lock' );
         if( $lock === null ){
             $this->getLogger()->log(LogLevel::WARNING , sprintf('%s: Event handler already running, skipped' , $context ) );
-            $output->writeln( json_encode( [ 'status' => 'LOCKED' ] , JSON_PRETTY_PRINT ) );
+            $output->writeln( self::json( [ 'status' => 'LOCKED' ] ) );
             $this->runJobs( $input );
             return Command::SUCCESS;
         }
@@ -150,7 +166,7 @@ class Daemon extends Command
 
         $jsonResult = [];
         $now = new DateTime();
-        $entityManager = $this->getDoctrine()->getManagerForClass( Event::class );
+        $entityManager = $this->entityManager();
 
         // Die Datenbank liefert nur die Kandidaten, ob ein Event wirklich fällig ist, entscheidet Event::isDue() (eine Regel, testbar)
         /* @var $candidates Event[] */
@@ -183,7 +199,7 @@ class Daemon extends Command
                 // In der Pause nach einer Ablehnung nur ein Hinweis, sonst käme jede Minute eine Fehlermeldung (und eine Cron-Mail)
                 $paused = $stashcatMediator->isLoginPaused();
                 $this->getLogger()->log( $paused ? LogLevel::WARNING : LogLevel::ERROR , sprintf('%s: Hermine not available, %d due events wait' , $context , count( $events ) ) , [ 'error' => $e->getMessage() ] );
-                $output->writeln( json_encode( [ 'status' => 'HERMINE_UNAVAILABLE' , 'error' => $e->getMessage() ] , JSON_PRETTY_PRINT ) );
+                $output->writeln( self::json( [ 'status' => 'HERMINE_UNAVAILABLE' , 'error' => $e->getMessage() ] ) );
                 return $paused ? Command::SUCCESS : Command::FAILURE;
             }
 
@@ -232,7 +248,7 @@ class Daemon extends Command
             'details' => $events
         ];
 
-        $output->writeln( json_encode( $jsonResult , JSON_PRETTY_PRINT ) );
+        $output->writeln( self::json( $jsonResult ) );
         return Command::SUCCESS;
     }
 
@@ -348,7 +364,7 @@ class Daemon extends Command
             }
         }
 
-        $entityManager = $this->getDoctrine()->getManagerForClass( Event::class );
+        $entityManager = $this->entityManager();
         $entityManager->persist( $event );
         $entityManager->flush();
     }

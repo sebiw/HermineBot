@@ -74,7 +74,7 @@ class RestClient {
 
         switch ( $responseFormat ){
             case self::RESPONSE_FORMAT_JSON :
-                return json_decode( $result , true );
+                return $result === false ? null : json_decode( $result , true );
         }
         return $result;
     }
@@ -96,16 +96,16 @@ class RestClient {
 
         switch ( $responseFormat ){
             case self::RESPONSE_FORMAT_JSON :
-                return json_decode( $result , true );
+                return $result === false ? null : json_decode( $result , true );
         }
         return $result;
     }
 
     /**
-     * @return false|\CurlHandle
+     * @return \CurlHandle
      * @throws \Exception
      */
-    protected function initCURLSession(){
+    protected function initCURLSession(): \CurlHandle {
         if( ( $curlInstance = curl_init() ) === false ){
             throw new \Exception('Could not init curl');
         }
@@ -116,15 +116,22 @@ class RestClient {
 
 
     /**
-     * @param $method
      * @param string $method
      * @param string $url
      * @param array<string, mixed>|string|null $data
      * @param array<string, string> $additionalHeader
-     * @return bool|string
+     * @return string|false Antwort, false bei Verbindungsfehler (nur ohne failOnError)
      * @throws \Exception
      */
-    protected function doRequest( string $method , string $url , $data = null , array $additionalHeader = [] ){
+    protected function doRequest( string $method , string $url , $data = null , array $additionalHeader = [] ): string|false {
+        if( $url === '' ){
+            // wie ein Verbindungsfehler: nur mit failOnError eine Exception
+            $this->getLogger()?->error( sprintf( '%s without URL' , $method ) );
+            if( $this->failOnError ){
+                throw new \RuntimeException( sprintf( '%s without URL' , $method ) );
+            }
+            return false;
+        }
 
         if( !in_array( $method , self::getValidMethods() ) ){
             throw new \Exception('Method not valid!');
@@ -143,7 +150,7 @@ class RestClient {
             case self::METHOD_GET:
             default:
                 if ($data !== null ){
-                    $url = sprintf("%s?%s", $url, http_build_query($data));
+                    $url = sprintf("%s?%s", $url, is_array( $data ) ? http_build_query( $data ) : $data );
                 }
         }
 
@@ -158,7 +165,9 @@ class RestClient {
         curl_setopt( $session , CURLOPT_URL, $url);
         curl_setopt( $session , CURLOPT_RETURNTRANSFER, true);
 
+        // mit CURLOPT_RETURNTRANSFER liefert curl_exec() den Text oder false
         $result = curl_exec( $session );
+        $result = is_string( $result ) ? $result : false;
         $httpStatus = curl_getinfo( $session , CURLINFO_HTTP_CODE );
         $curlError = curl_error( $session );
         // Die Verbindung schließt PHP selbst (curl_close() ist seit 8.5 abgekündigt)

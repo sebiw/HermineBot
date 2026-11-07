@@ -22,7 +22,10 @@ class MessageDecoratorCommandTest extends TestCase
             define( 'BASE_PATH' , dirname( __DIR__ , 2 ) );
         }
         $socket = stream_socket_server( 'tcp://127.0.0.1:0' );
-        self::$port = (int) substr( strrchr( stream_socket_get_name( $socket , false ) , ':' ) , 1 );
+        self::assertNotFalse( $socket );
+        $address = stream_socket_get_name( $socket , false );
+        self::assertNotFalse( $address );
+        self::$port = (int) substr( (string) strrchr( $address , ':' ) , 1 );
         fclose( $socket );
         self::$server = proc_open( [ PHP_BINARY , '-S' , '127.0.0.1:' . self::$port , __DIR__ . '/../fixtures/command-endpoint-router.php' ] , [ [ 'pipe' , 'r' ] , [ 'file' , '/dev/null' , 'w' ] , [ 'file' , '/dev/null' , 'w' ] ] , $pipes );
         for( $i = 0 ; $i < 50 && @fsockopen( '127.0.0.1' , self::$port ) === false ; $i++ ){

@@ -61,7 +61,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      */
     public function getUserIdentifier(): string
     {
-        return (string) $this->username;
+        if( $this->username === null || $this->username === '' ){
+            throw new \LogicException( 'User without username' );
+        }
+        return $this->username;
     }
 
     /**
@@ -89,7 +92,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     /**
      * @see PasswordAuthenticatedUserInterface
      */
-    public function getPassword(): string
+    public function getPassword(): ?string
     {
         return $this->password;
     }

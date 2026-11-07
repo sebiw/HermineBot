@@ -13,6 +13,7 @@ use App\Entity\User;
 use App\Kernel;
 use App\Service\AppService;
 use Doctrine\Persistence\ManagerRegistry;
+use Doctrine\Persistence\ObjectManager;
 use Psr\Log\LogLevel;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -36,7 +37,7 @@ class EventsController extends AbstractController
     public function main( AppService $app , Kernel $kernel , ManagerRegistry $doctrine ): Response
     {
         /** @var Event[] $events */
-        $events = $doctrine->getManagerForClass( Event::class )->getRepository( Event::class )->findAll();
+        $events = self::manager( $doctrine )->getRepository( Event::class )->findAll();
         // Offene nach nächster Übermittlung, Erledigte danach (zuletzt gesendete zuerst)
         usort( $events , function( Event $a , Event $b ){
             $doneA = $a->getState() === Event::STATE_DONE;
@@ -90,7 +91,7 @@ class EventsController extends AbstractController
     {
         $this->denyAccessUnlessCsrfTokenValid( 'events' , $request );
         $event = $this->findEvent( $id , $doctrine );
-        $manager = $doctrine->getManagerForClass( Event::class );
+        $manager = self::manager( $doctrine );
         $logger->log( LogLevel::NOTICE , sprintf( 'DELETE Event #%d' , $id ) , [ 'channel' => $event->getChannelTarget() , 'text' => $event->getText() ] );
         $manager->remove( $event );
         $manager->flush();
@@ -121,7 +122,7 @@ class EventsController extends AbstractController
         $output = new BufferedOutput();
         if( $application->run( new ArrayInput( $arguments ) , $output ) === Command::SUCCESS ){
             $event->increaseTransmissionsCount();
-            $doctrine->getManagerForClass( Event::class )->flush();
+            self::manager( $doctrine )->flush();
             $logger->info( sprintf( 'Message Event #%d triggered & processed' , $id ) );
             $this->addFlash( 'success' , 'Nachricht gesendet.' );
         } else {
@@ -133,7 +134,7 @@ class EventsController extends AbstractController
 
     private function findEvent( int $id , ManagerRegistry $doctrine ): Event
     {
-        $event = $doctrine->getManagerForClass( Event::class )->getRepository( Event::class )->find( $id );
+        $event = self::manager( $doctrine )->getRepository( Event::class )->find( $id );
         if( !$event instanceof Event ){
             throw $this->createNotFoundException( 'Event nicht gefunden.' );
         }
@@ -149,7 +150,7 @@ class EventsController extends AbstractController
             // Eingaben bleiben stehen, nichts gespeichert
             return $this->renderForm( $event , $form , $errors , $app , $kernel , Response::HTTP_UNPROCESSABLE_ENTITY );
         }
-        $manager = $doctrine->getManagerForClass( Event::class );
+        $manager = self::manager( $doctrine );
         $manager->persist( $event );
         $manager->flush();
         $logger->log( LogLevel::NOTICE , sprintf( '%s Event #%d' , $isNew ? 'ADD' : 'SAVE' , $event->getId() ) , [
@@ -283,6 +284,11 @@ class EventsController extends AbstractController
         return $this->render('default/events.execute.html.twig' , [
             'response' => $output->fetch(),
         ]);
+    }
+
+    private static function manager( ManagerRegistry $doctrine ): ObjectManager
+    {
+        return $doctrine->getManagerForClass( Event::class ) ?? throw new \LogicException( 'Kein Doctrine-Manager für Event konfiguriert' );
     }
 
 }

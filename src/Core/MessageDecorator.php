@@ -185,9 +185,10 @@ class MessageDecorator {
         $allowedIntervals = $appService?->getAppConfig()?->getAllowedIntervals();
 
         // Commands...
-        $commandContentFile = Path::normalize( BASE_PATH . trim( $this->container->getParameter('app.message_command_api_endpoints') ) );
+        $commandEndpoints = $this->container->getParameter('app.message_command_api_endpoints');
+        $commandContentFile = Path::normalize( BASE_PATH . trim( is_string( $commandEndpoints ) ? $commandEndpoints : '' ) );
         if( $filesystem->exists( $commandContentFile ) ){
-            $commandContentData = json_decode( file_get_contents( $commandContentFile ) , true );
+            $commandContentData = json_decode( (string) file_get_contents( $commandContentFile ) , true );
             if( is_array( $commandContentData ) ){
                 foreach( $commandContentData AS $key => $data ){
                     // Data => URL DATA

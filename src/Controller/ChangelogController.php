@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Core\ChangelogRenderer;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
@@ -15,19 +16,20 @@ class ChangelogController extends AbstractController
 {
 
     #[Route('/changelog', name: 'changelog', methods: [ 'GET' ])]
-    public function changelog( ChangelogRenderer $renderer ): Response
+    public function changelog( ChangelogRenderer $renderer , #[Autowire('%kernel.project_dir%')] string $projectDir ): Response
     {
         if( !$this->isGranted('ROLE_USER') ){
             return new Response('<p>Bitte erneut einloggen.</p>' , Response::HTTP_FORBIDDEN );
         }
 
-        $changelogPath = $this->getParameter('kernel.project_dir') . '/CHANGELOG.md';
+        $changelogPath = $projectDir . '/CHANGELOG.md';
 
-        if( !is_readable( $changelogPath ) ){
+        $markdown = is_readable( $changelogPath ) ? file_get_contents( $changelogPath ) : false;
+        if( $markdown === false ){
             return new Response('<p>Kein Changelog vorhanden.</p>' , Response::HTTP_NOT_FOUND );
         }
 
-        return new Response( $renderer->render( file_get_contents( $changelogPath ) ) );
+        return new Response( $renderer->render( $markdown ) );
     }
 
 }

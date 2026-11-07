@@ -11,25 +11,25 @@ class Crypt {
      * @param string $decodedConversationKey
      * @return string
      */
-    public static function binaryStringToString( string $decodedConversationKey ){
-        $data = array_map('mb_ord' , mb_str_split( $decodedConversationKey ) );
-        return implode("" , array_map( 'chr' , $data ) );
+    public static function binaryStringToString( string $decodedConversationKey ): string {
+        // je Zeichen das niedrigste Byte des Codepoints (wie chr(), das selbst modulo 256 rechnet)
+        return implode( "" , array_map( static fn( string $char ): string => chr( (int) mb_ord( $char ) & 0xFF ) , mb_str_split( $decodedConversationKey ) ) );
     }
 
     /**
      * @param string $u
-     * @return false|string
+     * @return string
      */
-    public static function hexToBytes( string  $u ){
+    public static function hexToBytes( string  $u ): string {
         $k = "";
         $U = 0;
         // Ungerade Länge: das erste Zeichen allein (wie im Web-Client)
         if( strlen( $u ) % 2 === 1 ){
             $U = 1;
-            $k .= mb_chr( hexdec( $u[0] ) );
+            $k .= mb_chr( (int) hexdec( $u[0] ) );
         }
         for ( ; $U < strlen($u); $U += 2 ){
-            $k .= mb_chr(hexdec( substr($u, $U , 2)));
+            $k .= mb_chr( (int) hexdec( substr( $u , $U , 2 ) ) );
         }
         return $k;
     }
@@ -59,25 +59,31 @@ class Crypt {
     /**
      * @param string $private_key PEM
      * @param string $passphrase
-     * @return false|\OpenSSLAsymmetricKey
+     * @return \OpenSSLAsymmetricKey
      * @throws \Exception
      */
-    public static function decodePrivateKey($private_key , $passphrase){
+    public static function decodePrivateKey( string $private_key , string $passphrase ): \OpenSSLAsymmetricKey {
         $result = openssl_pkey_get_private( $private_key , $passphrase );
         self::throwOnError();
+        if( $result === false ){
+            throw new \Exception('Private key could not be read!');
+        }
         return $result;
     }
 
     /**
-     * @param string|false $data
-     * @param \OpenSSLAsymmetricKey|false|null $private_key
+     * @param string $data
+     * @param \OpenSSLAsymmetricKey $private_key
      * @param int $padding OPENSSL_*_PADDING
-     * @return string|null
+     * @return string
      * @throws \Exception
      */
-    public static function decodeWithPrivateKey( $data , $private_key , $padding ){
-        openssl_private_decrypt( $data , $result  , $private_key , $padding );
+    public static function decodeWithPrivateKey( string $data , \OpenSSLAsymmetricKey $private_key , int $padding ): string {
+        $ok = openssl_private_decrypt( $data , $result  , $private_key , $padding );
         self::throwOnError();
+        if( !$ok || !is_string( $result ) ){
+            throw new \Exception('RSA decryption failed!');
+        }
         return $result;
     }
 
@@ -87,12 +93,15 @@ class Crypt {
      * @param string $passphrase
      * @param int $padding
      * @param string $messageIv
-     * @return false|string
+     * @return string
      * @throws \Exception
      */
-    public static function decodeWithPassphrase( string $messageText , string $algo , string $passphrase , $padding , $messageIv ){
+    public static function decodeWithPassphrase( string $messageText , string $algo , string $passphrase , int $padding , string $messageIv ): string {
         $result = openssl_decrypt( $messageText, $algo, $passphrase, $padding, $messageIv );
         self::throwOnError();
+        if( $result === false ){
+            throw new \Exception('Decryption failed!');
+        }
         return $result;
     }
 
@@ -102,12 +111,15 @@ class Crypt {
      * @param string $passphrase
      * @param int $padding
      * @param string $messageIv
-     * @return false|string
+     * @return string
      * @throws \Exception
      */
-    public static function encodeWithChannelKey( string $messageText , string $algo , string $passphrase , $padding , $messageIv ){
+    public static function encodeWithChannelKey( string $messageText , string $algo , string $passphrase , int $padding , string $messageIv ): string {
         $result = openssl_encrypt( $messageText , $algo , $passphrase ,  $padding , $messageIv );
         self::throwOnError();
+        if( $result === false ){
+            throw new \Exception('Encryption failed!');
+        }
         return $result;
     }
 
@@ -117,10 +129,10 @@ class Crypt {
      * @param string $passphrase
      * @param int $padding
      * @param string $messageIv
-     * @return false|string
+     * @return string
      * @throws \Exception
      */
-    public static function encodeWithConversationKey( string $messageText , string $algo , string $passphrase , $padding , $messageIv ){
+    public static function encodeWithConversationKey( string $messageText , string $algo , string $passphrase , int $padding , string $messageIv ): string {
         // Alias-Function maybe required in the future
         return self::encodeWithChannelKey( $messageText , $algo , $passphrase , $padding , $messageIv );
     }
@@ -194,10 +206,10 @@ class Crypt {
     protected static function derLength( int $length ): string
     {
         if( $length < 0x80 ){
-            return chr( $length );
+            return chr( $length & 0xFF );
         }
         $bytes = ltrim( pack( 'N' , $length ) , "\x00" );
-        return chr( 0x80 | strlen( $bytes ) ) . $bytes;
+        return chr( ( 0x80 | strlen( $bytes ) ) & 0xFF ) . $bytes;
     }
 
     /**
@@ -208,7 +220,7 @@ class Crypt {
      */
     protected static function derElement( int $tag , string $content ): string
     {
-        return chr( $tag ) . self::derLength( strlen( $content ) ) . $content;
+        return chr( $tag & 0xFF ) . self::derLength( strlen( $content ) ) . $content;
     }
 
     /**
