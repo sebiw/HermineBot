@@ -4,6 +4,9 @@ Alle wesentlichen Änderungen am Hermine-Bot werden in dieser Datei festgehalten
 
 ## [Unreleased]
 
+### Hinzugefügt
+- Geplante Nachrichten lassen sich pausieren und später fortsetzen: Pausiert wird nichts gesendet, wiederkehrende Nachrichten machen beim nächsten regulären Termin weiter, ohne Verpasstes nachzuholen.
+
 ## [4.1.0] - 2026-11-08
 
 ### Geändert

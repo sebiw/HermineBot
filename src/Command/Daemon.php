@@ -175,6 +175,7 @@ class Daemon extends Command
             ->select('entries')
             ->where('entries.dueDateTime <= :now')
             ->andWhere('entries.failedAttempts < :maxFailedAttempts')
+            ->andWhere('entries.paused = false')
             ->setParameter('now' , $now )
             ->setParameter('maxFailedAttempts' , Event::MAX_FAILED_ATTEMPTS )
             ->getQuery()->getResult();

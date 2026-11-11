@@ -41,6 +41,10 @@ class Event implements \JsonSerializable
     #[ORM\Column(type : "integer",  nullable : false, options: [ 'default' => 0 ])]
     private int $failedAttempts = 0;
 
+    /** Pausiert: wird nicht gesendet, Text und Zeitplan bleiben erhalten */
+    #[ORM\Column(type : "boolean",  nullable : false, options: [ 'default' => false ])]
+    private bool $paused = false;
+
     #[ORM\Column(type : "string",  nullable : false)]
     private string $channelTarget = "";
 
@@ -303,6 +307,7 @@ class Event implements \JsonSerializable
     public function isDue( \DateTimeInterface $now ): bool
     {
         return $this->getDueDateTime() <= $now
+            && !$this->isPaused()
             && !$this->eventDone()
             && !$this->eventFailed();
     }
@@ -312,6 +317,7 @@ class Event implements \JsonSerializable
     const STATE_RUNNING = 'running';
     const STATE_DONE = 'done';
     const STATE_FAILED = 'failed';
+    const STATE_PAUSED = 'paused';
 
     /** Stand für die Übersicht (Abzeichen, Farben wie „Stand der Abfrage“ im StAN-Manager) */
     const STATE_LABELS = [
@@ -319,19 +325,82 @@ class Event implements \JsonSerializable
         self::STATE_RUNNING => '🔁 läuft',
         self::STATE_DONE => '✔️ erledigt',
         self::STATE_FAILED => '⛔ gesperrt',
+        self::STATE_PAUSED => '⏸️ pausiert',
     ];
 
     /**
-     * Gesperrt nach Fehlversuchen, erledigt, wiederkehrend aktiv oder einmalig noch offen
+     * Pausiert, gesperrt nach Fehlversuchen, erledigt, wiederkehrend aktiv oder einmalig noch offen
      */
     public function getState(): string
     {
         return match( true ){
-            $this->eventFailed() => self::STATE_FAILED,
             $this->eventDone() => self::STATE_DONE,
+            $this->eventFailed() => self::STATE_FAILED,
+            $this->isPaused() => self::STATE_PAUSED,
             $this->getDateInterval() !== null => self::STATE_RUNNING,
             default => self::STATE_PLANNED,
         };
+    }
+
+    public function isPaused(): bool
+    {
+        return $this->paused;
+    }
+
+    /**
+     * Anhalten: Der Daemon sendet nichts mehr, Text und Zeitplan bleiben, wie sie sind
+     */
+    public function pause(): void
+    {
+        $this->paused = true;
+    }
+
+    /**
+     * Fortsetzen: Ein wiederkehrendes Event macht beim nächsten regulären Termin weiter, verpasste Termine
+     * werden nicht nachgeholt. Ein einmaliges Event, dessen Termin schon vorbei ist, wird beim nächsten Takt gesendet.
+     * @throws \Exception bei einem Intervall ohne Dauer
+     */
+    public function resume( \DateTime $now ): void
+    {
+        $due = $this->dueAfterResume( $now );
+        if( $due === null ){
+            throw new \Exception( sprintf( 'Interval "%s" does not advance the due date!' , $this->getDateInterval() ) );
+        }
+        $this->setDueDateTime( $due );
+        $this->paused = false;
+    }
+
+    /**
+     * Fälligkeit nach dem Fortsetzen: wiederkehrend der nächste reguläre Termin nach jetzt, sonst die gespeicherte.
+     * null bei einem Intervall ohne Dauer.
+     */
+    public function dueAfterResume( \DateTime $now ): ?\DateTime
+    {
+        if( $this->getDateInterval() === null || $this->getDueDateTime() > $now ){
+            return clone $this->getDueDateTime();
+        }
+        try {
+            return $this->calculateNextDueDateTime( $now );
+        } catch ( \Exception ){
+            return null;
+        }
+    }
+
+    /**
+     * Würde Fortsetzen jetzt sofort senden? (einmaliges, nie gesendetes, nicht gesperrtes Event mit vergangenem Termin)
+     */
+    public function sendsOnResume( \DateTimeInterface $now ): bool
+    {
+        return $this->getDateInterval() === null && $this->getDoneDateTime() === null && $this->getDueDateTime() <= $now && !$this->eventFailed();
+    }
+
+    /**
+     * Liegt der nächste Termin nach dem Fortsetzen hinter dem Enddatum? Dann ist das Event erledigt und sendet nicht mehr.
+     */
+    public function endsOnResume( \DateTime $now ): bool
+    {
+        $due = $this->dueAfterResume( $now );
+        return $this->getDateInterval() !== null && $this->getUntilDateTime() !== null && $due !== null && $due > $this->getUntilDateTime();
     }
 
     public function jsonSerialize(): mixed

@@ -18,6 +18,7 @@
 .event-state-running { color: #fff; background-color: #1f7a3a; }
 .event-state-done { color: #4a4744; background-color: #e6e1db; }
 .event-state-failed { color: #fff; background-color: #b3261e; }
+.event-state-paused { color: #fff; background-color: #5c6670; }
 
 /* Ganzer Text in der Übersicht, leicht eingerückt wie ein Zitat; Platzhalter als graues Kästchen */
 .event-text {

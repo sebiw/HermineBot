@@ -40,7 +40,7 @@
                             <br><small>ab&nbsp;{{ event.getStartDateTime()|date|no_break }}</small>
                         </td>
                         <td>
-                            {% if state == 'done' %}–{% elseif event.getDueDateTime() <= now %}sofort fällig{% else %}{{ event.getDueDateTime()|date|no_break }}{% endif %}
+                            {% if state == 'done' %}–{% elseif state == 'paused' %}{% set resumeDue = event.dueAfterResume(now) %}pausiert<br><small>{% if event.sendsOnResume(now) %}beim Fortsetzen sofort{% elseif event.endsOnResume(now) %}Enddatum erreicht{% elseif resumeDue %}weiter {{ resumeDue|date|no_break }}{% endif %}</small>{% elseif event.getDueDateTime() <= now %}sofort fällig{% else %}{{ event.getDueDateTime()|date|no_break }}{% endif %}
                         </td>
                         <td>
                             {{ event.getDoneDateTime() ? event.getDoneDateTime()|date|no_break : 'noch nie' }}
@@ -54,6 +54,17 @@
                                     <input type="hidden" name="_token" value="{{ csrf_token('events') }}">
                                     <button type="submit" class="button-secondary icon-button" data-confirm="Jetzt an {{ isConversation ? 'die Unterhaltung' : event.getChannelTarget() }} senden? Der Plan bleibt, wie er ist." data-tooltip="Jetzt senden: einmal sofort, ändert den Plan nicht" aria-label="Jetzt senden"><span aria-hidden="true">📤</span><span class="icon-button-label">Jetzt senden</span></button>
                                 </form>
+                                {% if state == 'paused' %}
+                                    <form method="post" action="{{ path('events_resume', { id: event.getId() }) }}">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('events') }}">
+                                        <button type="submit" class="button-secondary icon-button" data-confirm="{% if event.sendsOnResume(now) %}Fortsetzen? Der Termin ist schon vorbei, die Nachricht geht in der nächsten Minute raus.{% elseif event.endsOnResume(now) %}Fortsetzen? Das Enddatum ist schon erreicht, es wird nichts mehr gesendet.{% else %}Fortsetzen? Verpasste Termine werden nicht nachgeholt, es geht beim nächsten regulären Termin weiter.{% endif %}" data-tooltip="Fortsetzen: ab dem nächsten regulären Termin wieder senden" aria-label="Fortsetzen"><span aria-hidden="true">▶️</span><span class="icon-button-label">Fortsetzen</span></button>
+                                    </form>
+                                {% elseif state not in [ 'done' , 'failed' ] %}
+                                    <form method="post" action="{{ path('events_pause', { id: event.getId() }) }}">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('events') }}">
+                                        <button type="submit" class="button-secondary icon-button" data-tooltip="Pausieren: nichts mehr senden, bis es fortgesetzt wird; Text und Zeitplan bleiben" aria-label="Pausieren"><span aria-hidden="true">⏸️</span><span class="icon-button-label">Pausieren</span></button>
+                                    </form>
+                                {% endif %}
                                 <form method="post" action="{{ path('events_delete', { id: event.getId() }) }}">
                                     <input type="hidden" name="_token" value="{{ csrf_token('events') }}">
                                     <button type="submit" class="button-danger icon-button" data-confirm="Event löschen?" data-tooltip="Löschen" aria-label="Löschen"><span aria-hidden="true">🗑️</span><span class="icon-button-label">Löschen</span></button>

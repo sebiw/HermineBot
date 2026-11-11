@@ -38,13 +38,13 @@ class EventsController extends AbstractController
     {
         /** @var Event[] $events */
         $events = self::manager( $doctrine )->getRepository( Event::class )->findAll();
-        // Offene nach nächster Übermittlung, Erledigte danach (zuletzt gesendete zuerst)
-        usort( $events , function( Event $a , Event $b ){
-            $doneA = $a->getState() === Event::STATE_DONE;
-            $doneB = $b->getState() === Event::STATE_DONE;
-            if( $doneA !== $doneB ){
-                return $doneA <=> $doneB;
+        // Offene nach nächster Übermittlung, dann pausierte, Erledigte zuletzt (zuletzt gesendete zuerst)
+        $rank = fn( Event $event ): int => match( $event->getState() ){ Event::STATE_DONE => 2 , Event::STATE_PAUSED => 1 , default => 0 };
+        usort( $events , function( Event $a , Event $b ) use ( $rank ){
+            if( $rank( $a ) !== $rank( $b ) ){
+                return $rank( $a ) <=> $rank( $b );
             }
+            $doneA = $rank( $a ) === 2;
             return $doneA ? ( $b->getDoneDateTime() <=> $a->getDoneDateTime() ) : ( $a->getDueDateTime() <=> $b->getDueDateTime() );
         } );
         return $this->render('default/events.html.twig' , [
@@ -96,6 +96,48 @@ class EventsController extends AbstractController
         $manager->remove( $event );
         $manager->flush();
         $this->addFlash( 'success' , 'Event gelöscht.' );
+        return $this->redirectToRoute('events');
+    }
+
+    /**
+     * Anhalten: wird nicht mehr gesendet, bis es fortgesetzt wird
+     */
+    #[Route('/events/{id}/pause', name: 'events_pause', requirements: [ 'id' => '\d+' ], methods: [ 'POST' ])]
+    public function pauseEvent( int $id , Request $request , ManagerRegistry $doctrine , DatabaseLogger $logger ): Response
+    {
+        $this->denyAccessUnlessCsrfTokenValid( 'events' , $request );
+        $event = $this->findEvent( $id , $doctrine );
+        $event->pause();
+        self::manager( $doctrine )->flush();
+        $logger->log( LogLevel::NOTICE , sprintf( 'PAUSE Event #%d' , $id ) , [ 'channel' => $event->getChannelTarget() ] );
+        $this->addFlash( 'success' , 'Event pausiert, es wird nichts gesendet, bis du es fortsetzt.' );
+        return $this->redirectToRoute('events');
+    }
+
+    /**
+     * Fortsetzen: wiederkehrend ab dem nächsten regulären Termin, ohne verpasste nachzuholen
+     */
+    #[Route('/events/{id}/resume', name: 'events_resume', requirements: [ 'id' => '\d+' ], methods: [ 'POST' ])]
+    public function resumeEvent( int $id , Request $request , ManagerRegistry $doctrine , DatabaseLogger $logger ): Response
+    {
+        $this->denyAccessUnlessCsrfTokenValid( 'events' , $request );
+        $event = $this->findEvent( $id , $doctrine );
+        $now = new \DateTime();
+        $sendsNow = $event->sendsOnResume( $now );
+        $ends = $event->endsOnResume( $now );
+        try {
+            $event->resume( $now );
+        } catch ( \Exception $e ){
+            $this->addFlash( 'error' , 'Fortsetzen nicht möglich: Die Wiederholung ist ungültig. Bitte das Event bearbeiten.' );
+            return $this->redirectToRoute('events');
+        }
+        self::manager( $doctrine )->flush();
+        $logger->log( LogLevel::NOTICE , sprintf( 'RESUME Event #%d' , $id ) , [ 'channel' => $event->getChannelTarget() , 'dueDate' => $event->getDueDateTime() ] );
+        $this->addFlash( 'success' , match( true ){
+            $sendsNow => 'Event fortgesetzt, die Nachricht geht in der nächsten Minute raus.',
+            $ends => 'Event fortgesetzt, das Enddatum ist aber schon erreicht: Es wird nichts mehr gesendet.',
+            default => sprintf( 'Event fortgesetzt, nächstes Senden am %s Uhr.' , $event->getDueDateTime()->format( 'd.m.Y H:i' ) ),
+        } );
         return $this->redirectToRoute('events');
     }
 

@@ -10,6 +10,9 @@
                 <h2>{{ isNew ? 'Neues Event' : 'Event bearbeiten' }}</h2>
                 <span class="report-subtitle">{% if isNew %}Nachricht an einen Channel oder eine Unterhaltung planen{% else %}{{ event.getTransmissionsCount() }}× gesendet{% if event.getDoneDateTime() %}, zuletzt {{ event.getDoneDateTime()|date|no_break }}{% endif %}{% endif %}</span>
             </div>
+            {% if event.isPaused() %}
+                <p class="form-hint">⏸️ Dieses Event ist pausiert. Speichern ändert daran nichts, fortsetzen über „Fortsetzen“ in der Übersicht.</p>
+            {% endif %}
 
             <form method="post" action="{{ isNew ? path('events_create') : path('events_save', { id: event.getId() }) }}" id="event-form" data-conversations-url="{{ path('events_conversations') }}">
                 <input type="hidden" name="_token" value="{{ csrf_token('events') }}">
