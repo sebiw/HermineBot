@@ -4,6 +4,11 @@ Alle wesentlichen Änderungen am Hermine-Bot werden in dieser Datei festgehalten
 
 ## [Unreleased]
 
+## [4.2.1] - 2026-11-17
+
+### Geändert
+- Darstellung und gemeinsame Bedienelemente auf dem Stand des StAN-Managers, ohne sichtbare Änderung im Bot.
+
 ## [4.2.0] - 2026-11-11
 
 ### Hinzugefügt
