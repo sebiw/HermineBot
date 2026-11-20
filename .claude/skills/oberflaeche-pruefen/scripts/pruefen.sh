@@ -8,7 +8,7 @@ out="${1:?Ausgabeordner fehlt}"
 here="$(cd "$(dirname "$0")" && pwd)"
 cd "$here/../../../.."
 stan="${STAN_MANAGER_DIR:-../StAN-Manager}"
-runner="$stan/.claude/skills/oberflaeche-pruefen/scripts/run.mjs"
+runner="$stan/.claude/skills/ci-check/scripts/run.mjs"
 if [ ! -f "$runner" ]; then
     echo "Prüfskript des StAN-Managers fehlt: $runner (STAN_MANAGER_DIR setzen)" >&2
     exit 2
