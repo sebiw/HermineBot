@@ -1,0 +1,26 @@
+# vHost des HermineBots (compose.yaml, Dienst web). Platzhalter füllt das nginx-Image beim Start aus der Umgebung.
+server {
+    listen 127.0.0.1:${NGINX_PORT};
+    server_name _;
+    root ${APP_DIR}/public;
+    client_max_body_size 64m;
+
+    location / {
+        try_files $uri /index.php$is_args$args;
+    }
+
+    location ~ ^/index\.php(/|$) {
+        fastcgi_pass 127.0.0.1:${FPM_PORT};
+        fastcgi_split_path_info ^(.+\.php)(/.*)$;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        fastcgi_param DOCUMENT_ROOT $realpath_root;
+        fastcgi_read_timeout 300;
+        internal;
+    }
+
+    # Andere PHP-Dateien unter public/ nie ausführen
+    location ~ \.php$ {
+        return 404;
+    }
+}

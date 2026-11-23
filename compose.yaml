@@ -1,0 +1,71 @@
+# Lokale Entwicklungsumgebung (docs/SETUP.md) – nur für die Entwicklung, das Deployment bleibt unberührt.
+#
+#   docker compose up -d          alles starten (php-fpm, nginx, MySQL 8.4)
+#   docker compose down           beenden (Daten bleiben im Volume)
+#   php8.5 …                      läuft über tools/docker/php8.5 im Container php (Verknüpfung nach ~/.local/bin)
+#
+# Der Container php teilt das Netz mit WSL und sieht $HOME und /tmp unter denselben Pfaden: bin/pruefen und Befehle mit
+# „php8.5 …“ laufen unverändert, 127.0.0.1 und Pfade sind drinnen wie draußen dieselben.
+# Ports sind so gewählt, dass der StAN-Manager (8080, 9085, 3316) gleichzeitig laufen kann; änderbar über Umgebungsvariablen.
+name: hermine-bot
+
+x-app-dir: &app-dir ${HERMINE_BOT_DIR:-${HOME}/projects/HermineBot}
+
+services:
+  php:
+    build:
+      context: docker/php
+      args:
+        UID: ${HOST_UID:-1000}
+        GID: ${HOST_GID:-1000}
+    image: hermine-bot-php:8.5
+    container_name: hermine-bot-php
+    network_mode: host
+    init: true
+    restart: unless-stopped
+    environment:
+      HOME: ${HOME}
+      FPM_PORT: ${HERMINE_BOT_FPM_PORT:-9086}
+    working_dir: *app-dir
+    volumes:
+      - ${HOME}:${HOME}
+      - /tmp:/tmp
+
+  web:
+    image: nginx:stable-alpine
+    container_name: hermine-bot-web
+    network_mode: host
+    restart: unless-stopped
+    depends_on:
+      - php
+    environment:
+      APP_DIR: *app-dir
+      NGINX_PORT: ${HERMINE_BOT_WEB_PORT:-8081}
+      FPM_PORT: ${HERMINE_BOT_FPM_PORT:-9086}
+    volumes:
+      - ./docker/nginx:/etc/nginx/templates:ro
+      - ./public:${HERMINE_BOT_DIR:-${HOME}/projects/HermineBot}/public:ro
+
+  # Version wie produktiv (bin/pruefen prüft die Migrationen ebenfalls gegen MySQL 8.4)
+  mysql:
+    image: mysql:8.4
+    container_name: hermine-bot-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: hermine_bot
+      MYSQL_USER: bot
+      MYSQL_PASSWORD: bot
+    ports:
+      - 127.0.0.1:${HERMINE_BOT_DB_PORT:-3317}:3306
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker/mysql:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot", "--silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  mysql-data:
