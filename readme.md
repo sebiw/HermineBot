@@ -1,33 +1,45 @@
 # Hermine Bot
 
-* Automatisches verschicken von Nachrichten mittels API von Stashcat
-* Die Credentials für Hermine/Stashcat sowie die Passphrase muss auf dem Server hinterlegt werden! (Siehe config files)
-* Entwickelt um auch auf kleineren, eingeschränkteren Webspaces lauffähig zu sein, zudem ist der Stashcat-Api part losgelöst von Frameworks entwickelt um ggf. einfacher in anderer Software integriert werden zu können.
+Verschickt automatisiert Nachrichten in Channels und Unterhaltungen von Stashcat/Hermine – über einen normalen Benutzer-Account.
 
-## Installation
-Nebst dem üblichen `composer install`
-* Start `composer dump-env prod`
-* `DATABASE_URL` an die eigene Datenbank anpassen
+* **Geplante Nachrichten** (`/events`): einmalig oder wiederkehrend (täglich bis alle 3 Jahre), pausierbar, mit Platzhaltern wie `{{CompanyActiveUser}}` und Abrufen externer Quellen (REST, CalDAV-Aufgaben)
+* **REST-API** für andere Anwendungen (z. B. den StAN-Manager): Nachricht senden, Channels und Mitglieder abfragen, Direktnachricht
+* **Konsole**: `hermine:send-message`, `daemon:tick` (Takt für geplante Nachrichten und Hintergrundaufgaben)
+* **Log und Hintergrundaufgaben** in der Oberfläche
+* Läuft auch auf kleineren, eingeschränkten Webspaces; der Stashcat-Teil (`src/Stashcat`) ist bewusst frameworkfrei, um ihn in andere Software übernehmen zu können
+* Zugangsdaten für Hermine/Stashcat samt Passphrase liegen nur auf dem Server (`config/legacy/`, siehe unten)
+
+Technik: Symfony 7.4 LTS, PHP 8.5 (mindestens 8.2), MySQL/MariaDB.
+
+## Lokale Entwicklung
+Mit Docker (WSL oder Linux): PHP 8.5, nginx und MySQL 8.4 laufen in Containern, Befehle mit `php8.5 …` werden in den Container geleitet. Einrichtung, Ports und anonymisierte Produktionsdaten (`bin/prod-daten-lokal`): [docs/SETUP.md](docs/SETUP.md). Vor jedem Commit `bin/pruefen`.
+
+> Lokal ohne echte Zugangsdaten in `config/legacy/env.api.php` arbeiten – sonst gehen Nachrichten wirklich raus.
+
+## Installation auf einem Server
+Kurzfassung:
+* `composer install --no-dev`
+* `DATABASE_URL` in `.env.local` an die eigene Datenbank anpassen, dann `composer dump-env prod`
 * Kopiere Konfigurationsdateien aus `/config_examples` in `/config/legacy` kopieren und den eigenen Bedürfnissen anpassen.
 * Führe `doctrine:migrations:migrate` aus
 * Cron-Job einrichten (jede Minute): `php bin/console daemon:tick` (siehe unten).
 
 ## Installation für Einsteiger
-Die Installation wird in diesem Beispiel auf einem Debian 12 und eigener MySQL-DB durchgeführt.
+Die Installation wird in diesem Beispiel auf Debian 12 oder 13 mit eigener MySQL/MariaDB durchgeführt.
 ### Installation von PHP und Apache
 #### Pakete für die Installation des Repo-Keys von PHP installieren
 * `sudo apt update`
 * `sudo apt install -y lsb-release ca-certificates apt-transport-https software-properties-common gnupg2`
 
-#### PHP Repo hinzufügen
-* `echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/sury-php.list`
-
-#### PHP Repo-Key hinzufügen
-* `curl -fsSL  https://packages.sury.org/php/apt.gpg| sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/sury-keyring.gpg`
+#### PHP Repo-Key und Repo hinzufügen
+* `curl -fsSLo /tmp/debsuryorg-archive-keyring.deb https://packages.sury.org/debsuryorg-archive-keyring.deb`
+* `sudo dpkg -i /tmp/debsuryorg-archive-keyring.deb`
+* `echo "deb [signed-by=/usr/share/keyrings/debsuryorg-archive-keyring.gpg] https://packages.sury.org/php/ $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/sury-php.list`
 
 #### PHP und Apache installieren
 * `sudo apt update`
-* `sudo apt install apache2 php8.1 php8.1-curl php8.1-xml php8.1-mysql php8.1-cli php8.1-mbstring`
+* `sudo apt install apache2 php8.5 php8.5-curl php8.5-xml php8.5-mysql php8.5-cli php8.5-mbstring`
+> PHP 8.5 wie produktiv; mindestens PHP 8.2 ist nötig.
 
 ### Installation der MySQL-DB
 * `sudo apt install mariadb-server mariadb-client`
@@ -64,7 +76,6 @@ Die Installation wird in diesem Beispiel auf einem Debian 12 und eigener MySQL-D
 * `nano /opt/HermineBot/config/legacy/env.app.php`
 * `"stashcat_event_company" => "THW OV <Ortschaft>"`
 * `"allowed_channel" => [ "<T_OV_Testchannel>","<T_OV_Testchannel2>" ]` #Channels eintragen, in die der Bot Nachrichten senden darf
-* `"base_url" => "http://localhost:80/"` #DNS-Name oder IP bei Bedarf an den Server anpassen
 
 ### Apache Modul aktivieren
 * `sudo a2enmod rewrite`
@@ -105,7 +116,7 @@ Die Installation wird in diesem Beispiel auf einem Debian 12 und eigener MySQL-D
 `DATABASE_URL="mysql://<DB-Benutzernamen>:<Passwort>@127.0.0.1:3306/hermine_bot?charset=utf8mb4"` #DB-Benutzername und Passwort eintragen und die server_Version rausnehmen\
 
 ### Composer erforderliche Pakete installieren lassen
-`composer install`
+`composer install --no-dev`
 
 ### Config-Änderungen (.env.local) in den Produktivbetrieb übernehmen
 `composer dump-env prod`
