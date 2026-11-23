@@ -1,0 +1,192 @@
+#!/usr/bin/env bash
+# Lokale Entwicklungsdatenbank aus der Produktion, anonymisiert (Nutzer 2026-11-23, wie im StAN-Manager; eigener Account mit echtem
+# Passwort zum Anmelden). Die Produktion wird nur gelesen, über EINE SSH-Verbindung (fail2ban).
+#
+#   bin/prod-daten-lokal                      Produktion holen, anonymisieren, in die Datenbank aus .env.local (DATABASE_URL) einspielen
+#   bin/prod-daten-lokal --konto=<benutzer>   dazu diese Konten unverändert übernehmen (Benutzername, Passwort-Hash, Rollen),
+#                                             damit man sich wie produktiv anmelden kann; mehrere mit Komma
+#   bin/prod-daten-lokal --dump=<datei.gz>    vorhandenen Dump (mysqldump | gzip) statt der SSH-Verbindung
+#
+# Ablauf: Dump in einen Wegwerf-MySQL 8.4 (nur im Speicher), dort anonymisieren (tools/prod-daten-lokal/anonymisieren.sql: Benutzer,
+# Empfänger und Texte von Unterhaltungen – dort können PINs stehen –, Log, Meldungen der Aufgaben) und prüfen. Erst wenn kein echter
+# Benutzername, Empfänger und keine Kennung einer Unterhaltung mehr vorkommt, ersetzt die Kopie die lokale Datenbank; die bisherige wird
+# vorher nach data/backup/ gesichert. Danach laufen die Migrationen bis HEAD. Dump und Container mit den echten Daten werden immer
+# gelöscht, auch bei Abbruch. Nachrichten an Channels bleiben, wie sie sind (Text, Channel, Zeitplan).
+# Gesendet wird lokal nichts, solange config/legacy/env.api.php keine echten Zugangsdaten hat (docs/SETUP.md).
+# Während des Einspielens ist die lokale App nicht nutzbar (Anmeldung endet mit 500), danach wieder.
+#
+# Braucht PROD_SSH, PROD_APP_DIR und PROD_PHP (Umgebung oder .env.local, Werte in der privaten Betriebsdoku, nie im Repo) und Docker.
+# Die lokale Datenbank muss auf 127.0.0.1 laufen (Docker aus compose.yaml oder MariaDB nativ); den Client stellt das MySQL-Image.
+set -uo pipefail
+root=$(cd "$(dirname "$0")/.." && pwd)
+cd "$root" || exit 2
+PHP=php8.5
+MYSQL_IMAGE=mysql:8.4
+CONTAINER=bot-prod-daten-lokal
+# Der Wegwerf-Container teilt das Netz mit WSL (eigener Port), damit er die lokale Datenbank auf 127.0.0.1 direkt erreicht: Daten
+# fließen nur als Datei im Container, nie per Pipe in einen Container (2026-11-23 ging dabei einmal ein Stück verloren, Syntaxfehler)
+PORT=33088
+konten=''; dump=''
+for arg in "$@"; do
+    case "$arg" in
+        --konto=*) konten="${konten:+$konten,}${arg#*=}" ;;
+        --dump=*) dump="${arg#*=}" ;;
+        -h|--help) sed -n '2,/^set /p' "$0" | sed '$d'; exit 0 ;;
+        *) echo "Unbekannte Angabe: $arg" >&2; exit 2 ;;
+    esac
+done
+
+setting(){ # Wert aus der Umgebung, sonst aus .env.local
+    local name=$1 value="${!1:-}"
+    if [ -z "$value" ] && [ -f .env.local ]; then
+        value=$(grep -E "^$name=" .env.local | tail -1 | cut -d= -f2- | sed -E "s/^['\"]//; s/['\"]$//")
+    fi
+    printf '%s' "$value"
+}
+step(){ echo; echo "=== $*"; }
+
+docker ps >/dev/null 2>&1 || { echo "Kein Zugriff auf Docker." >&2; exit 2; }
+
+# Lokale Datenbank aus .env.local
+eval "$($PHP -r '
+    foreach( file( ".env.local" ) AS $line ){ if( preg_match( "/^DATABASE_URL=\"?([^\"\n]+)/" , $line , $m ) ){ $u = parse_url( $m[1] ); } }
+    if( empty( $u ) ){ fwrite( STDERR , "DATABASE_URL fehlt in .env.local\n" ); exit( 2 ); }
+    printf( "LH=%s;LP=%s;LU=%s;LW=%s;LDB=%s;LV=%s\n" , escapeshellarg( $u["host"] ) , escapeshellarg( (string) ( $u["port"] ?? 3306 ) ) , escapeshellarg( urldecode( $u["user"] ) ) , escapeshellarg( urldecode( $u["pass"] ?? "" ) ) , escapeshellarg( ltrim( $u["path"] , "/" ) ) , escapeshellarg( preg_match( "/serverVersion=([^&]+)/" , $u["query"] ?? "" , $v ) ? $v[1] : "" ) );
+')" || exit 2
+case "$LH" in 127.0.0.1|localhost) ;; *) echo "Die Datenbank aus .env.local liegt nicht auf diesem Rechner ($LH) – Abbruch." >&2; exit 2 ;; esac
+export LP LU LDB
+# Client im Wegwerf-Container; das Passwort nur in der Umgebung (docker exec -e NAME liest den Wert aus der eigenen), nie auf der Kommandozeile
+lsql(){ MYSQL_PWD="$LW" docker exec -i -e MYSQL_PWD "$CONTAINER" mysql -h 127.0.0.1 -P "$LP" -u "$LU" "$@"; }
+ldump(){ MYSQL_PWD="$LW" docker exec -e MYSQL_PWD "$CONTAINER" mysqldump -h 127.0.0.1 -P "$LP" -u "$LU" "$@"; }
+dsql(){ docker exec -i -e MYSQL_PWD=pruefen "$CONTAINER" mysql -uroot "$@"; }
+
+work=$(mktemp -d "${TMPDIR:-/tmp}/prod-daten-lokal.XXXXXX") || exit 2
+chmod 700 "$work"
+cleanup(){
+    rm -rf "$work"
+    docker rm -f "$CONTAINER" >/dev/null 2>&1
+}
+trap cleanup EXIT
+# auch bei Strg+C, kill, geschlossenem Terminal: über exit, damit der EXIT-Trap aufräumt (Dump mit Personendaten, Container)
+trap 'exit 130' INT TERM HUP
+
+# Container zuerst: MySQL braucht rund 10 s, bis es bereit ist, und fährt hoch, während der Dump kommt
+docker rm -f "$CONTAINER" >/dev/null 2>&1
+docker run -d --rm --name "$CONTAINER" --network host -e MYSQL_ROOT_PASSWORD=pruefen -e MYSQL_DATABASE=bot_prod --tmpfs /var/lib/mysql \
+    "$MYSQL_IMAGE" --port="$PORT" --bind-address=127.0.0.1 --mysqlx=OFF >/dev/null \
+    || { echo "MySQL-Container startet nicht" >&2; exit 2; }
+
+step "Datenbank der Produktion"
+if [ -n "$dump" ]; then
+    cp "$dump" "$work/dump.sql.gz" || exit 2
+    echo "Dump aus Datei: $dump"
+else
+    ssh_target=$(setting PROD_SSH); app_dir=$(setting PROD_APP_DIR); prod_php=$(setting PROD_PHP)
+    if [ -z "$ssh_target" ] || [ -z "$app_dir" ]; then
+        echo "PROD_SSH und PROD_APP_DIR fehlen (Umgebung oder .env.local, Werte in der privaten Betriebsdoku)." >&2; exit 2
+    fi
+    # eine Verbindung, nur lesend; das Passwort der Datenbank bleibt auf dem Server (MYSQL_PWD)
+    ssh -o BatchMode=yes -o ConnectTimeout=15 "$ssh_target" "APP_DIR=$(printf '%q' "$app_dir") PHPBIN=$(printf '%q' "${prod_php:-php}") bash -s" > "$work/dump.sql.gz" 2> "$work/ssh.err" <<'REMOTE'
+cd "$APP_DIR" || { echo "Ordner der App fehlt" >&2; exit 3; }
+grep -m1 -E '^\s*app\.version' config/services.yaml | sed 's/^ */Version auf dem Server: /' >&2
+eval "$("$PHPBIN" -r '$e = require ".env.local.php"; $u = parse_url( $e["DATABASE_URL"] ); printf( "H=%s;P=%s;U=%s;W=%s;DB=%s\n" , escapeshellarg( $u["host"] ) , escapeshellarg( (string) ( $u["port"] ?? 3306 ) ) , escapeshellarg( urldecode( $u["user"] ) ) , escapeshellarg( urldecode( $u["pass"] ?? "" ) ) , escapeshellarg( ltrim( $u["path"] , "/" ) ) );')"
+MYSQL_PWD="$W" mysqldump --single-transaction --no-tablespaces -h "$H" -P "$P" -u "$U" "$DB" | gzip -c
+echo "mysqldump=${PIPESTATUS[0]}" >&2
+REMOTE
+    ssh_rc=$?
+    grep -v '^mysqldump=' "$work/ssh.err"
+    if [ $ssh_rc -ne 0 ] || ! grep -q '^mysqldump=0' "$work/ssh.err"; then
+        echo "Dump fehlgeschlagen (SSH $ssh_rc, $(grep '^mysqldump=' "$work/ssh.err"))" >&2; exit 2
+    fi
+fi
+echo "Dump: $(du -h "$work/dump.sql.gz" | cut -f1) (gz)"
+
+ready=""
+for _ in $( seq 1 60 ); do
+    # Über TCP: Beim ersten Start läuft kurz ein Startserver nur auf dem Socket, er wird danach neu gestartet
+    if docker exec -e MYSQL_PWD=pruefen "$CONTAINER" mysql -uroot -h 127.0.0.1 -P "$PORT" --protocol=tcp -e "SELECT 1" bot_prod >/dev/null 2>&1; then ready=1; break; fi
+    sleep 2
+done
+[ -n "$ready" ] || { echo "MySQL im Container wird nicht bereit" >&2; exit 2; }
+lsql -e 'SELECT 1' >/dev/null 2>&1 || { echo "Lokale Datenbank auf 127.0.0.1:$LP nicht erreichbar (docker compose up -d?)." >&2; exit 2; }
+docker cp -q "$work/dump.sql.gz" "$CONTAINER:/tmp/dump.sql.gz" || exit 2
+rm -f "$work/dump.sql.gz"
+docker exec -e MYSQL_PWD=pruefen "$CONTAINER" sh -c 'gunzip -c /tmp/dump.sql.gz | mysql -uroot bot_prod; rc=$?; rm -f /tmp/dump.sql.gz; exit $rc' 2>&1 | grep -v Warning
+[ "${PIPESTATUS[0]}" = 0 ] || { echo "Dump lässt sich im Container nicht einspielen." >&2; exit 2; }
+echo "Produktion steht auf $(dsql -N bot_prod -e 'SELECT MAX(version) FROM doctrine_migration_versions' 2>/dev/null | grep -oE 'Version[0-9]+')"
+
+# Übernommene Konten vor dem Anonymisieren merken (aus bot_prod, hexadezimal: keine Sonderzeichen in SQL oder Shell)
+konto_sql=''
+if [ -n "$konten" ]; then
+    IFS=, read -ra namen <<< "$konten"
+    for name in "${namen[@]}"; do
+        row=$(dsql -N -B bot_prod -e "SELECT id, HEX(username), HEX(password), HEX(roles) FROM user WHERE username = UNHEX('$(printf '%s' "$name" | od -An -tx1 | tr -d ' \n')')" 2>/dev/null)
+        if [ -z "$row" ]; then
+            echo "Konto „$name“ gibt es in der Produktion nicht – wird übersprungen." >&2; continue
+        fi
+        IFS=$'\t' read -r id un pw ro <<< "$row"
+        konto_sql+="UPDATE user SET username = UNHEX('$un'), password = UNHEX('$pw'), roles = CAST(UNHEX('$ro') AS CHAR) WHERE id = $id;"$'\n'
+    done
+fi
+
+step "Anonymisieren (im Container, auf einer Kopie)"
+dsql -e 'DROP DATABASE IF EXISTS bot_anon; CREATE DATABASE bot_anon' 2>/dev/null || exit 2
+docker exec -e MYSQL_PWD=pruefen "$CONTAINER" sh -c 'mysqldump -uroot --single-transaction bot_prod 2>/dev/null | mysql -uroot bot_anon' || { echo "Kopie im Container fehlgeschlagen" >&2; exit 2; }
+# bricht beim ersten Fehler ab (z. B. neue oder umbenannte Tabelle) – dann geht nichts weiter
+if ! dsql bot_anon < tools/prod-daten-lokal/anonymisieren.sql 2> "$work/anon.err"; then
+    grep -v Warning "$work/anon.err"
+    echo "Abbruch: Anonymisieren fehlgeschlagen. Nichts hat dieses System erreicht." >&2; exit 1
+fi
+# Kontrolle im Container: kommt noch ein Benutzername, Empfänger oder eine Kennung einer Unterhaltung vor? Nur Zahlen nach außen.
+# Die Liste darf nicht leer sein (sonst hieße „0 Treffer“ nur „nichts gesucht“). Nur in Datenzeilen, als ganzes Wort.
+docker exec -e MYSQL_PWD=pruefen "$CONTAINER" sh -c 'mysqldump -uroot --skip-extended-insert bot_anon 2>/dev/null > /tmp/anon.sql'
+# Reine API-Konten sind technische Zugänge, keine Personen: Ihr Name kann als Wort in Nachrichtentexten stehen (2026-11-23, Fehlalarm)
+dsql -N bot_prod -e "SELECT username FROM user WHERE CHAR_LENGTH(username) > 3 AND NOT ( JSON_CONTAINS( roles , '\\"ROLE_API\\"' ) AND NOT JSON_CONTAINS( roles , '\\"ROLE_ADMIN\\"' ) ) UNION SELECT channel_target FROM events WHERE JSON_TYPE(JSON_EXTRACT(channel_target_payload, '\\$.conversationId')) NOT IN ('NULL') AND CHAR_LENGTH(channel_target) > 3 UNION SELECT JSON_UNQUOTE(JSON_EXTRACT(channel_target_payload, '\\$.conversationId')) FROM events WHERE JSON_TYPE(JSON_EXTRACT(channel_target_payload, '\\$.conversationId')) NOT IN ('NULL')" 2>/dev/null | grep -av '^NULL$' | docker exec -i "$CONTAINER" sh -c 'cat > /tmp/names.txt'
+checked=$(docker exec "$CONTAINER" sh -c 'grep -c . /tmp/names.txt')
+leaks=$(docker exec "$CONTAINER" sh -c 'grep "^INSERT INTO" /tmp/anon.sql > /tmp/anon-pruef.sql; n=0; while IFS= read -r name; do [ -n "$name" ] && grep -qiwF -- "$name" /tmp/anon-pruef.sql && n=$((n+1)); done < /tmp/names.txt; rm -f /tmp/anon-pruef.sql; echo $n')
+echo "Geprüft: $checked Benutzernamen, Empfänger und Kennungen – davon in der anonymisierten Kopie gefunden: $leaks"
+if [ "$leaks" != 0 ] 2>/dev/null; then
+    docker exec "$CONTAINER" sh -c 'grep "^INSERT INTO" /tmp/anon.sql > /tmp/p.sql; while IFS= read -r name; do [ -n "$name" ] && grep -iwF -- "$name" /tmp/p.sql | sed -nE "s/^INSERT INTO \`([^\`]+)\`.*/\1/p"; done < /tmp/names.txt | sort | uniq -c | sed "s/^ */Treffer in Tabelle: /"; rm -f /tmp/p.sql'
+fi
+if [ "${checked:-0}" -lt 1 ] || [ "$leaks" != 0 ]; then
+    docker exec "$CONTAINER" rm -f /tmp/anon.sql
+    echo "Abbruch: Es steht noch Personenbezogenes drin – tools/prod-daten-lokal/anonymisieren.sql ergänzen. Nichts hat dieses System erreicht." >&2
+    exit 1
+fi
+
+step "Lokale Datenbank $LDB ersetzen"
+if [ "$(lsql -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '$LDB'" 2>/dev/null)" -gt 0 ] 2>/dev/null; then
+    mkdir -p data/backup && chmod 700 data/backup
+    backup="data/backup/$LDB-$(date +%Y-%m-%d-%H%M%S).sql.gz"
+    old_umask=$(umask); umask 077
+    ldump --single-transaction --no-tablespaces --column-statistics=0 "$LDB" 2>/dev/null | gzip -c > "$backup"
+    rc=${PIPESTATUS[0]}; umask "$old_umask"
+    [ "$rc" = 0 ] || { rm -f "$backup"; echo "Sicherung fehlgeschlagen – Abbruch, lokale Datenbank unverändert." >&2; exit 2; }
+    echo "Bisherige Datenbank gesichert: $backup (zurück: zcat $backup | mysql …)"
+fi
+lsql -e "DROP DATABASE IF EXISTS \`$LDB\`; CREATE DATABASE \`$LDB\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci" 2>&1 | grep -v Warning
+# MariaDB (Desktop nativ) kennt die Kollation 0900 von MySQL 8 nicht
+collation_fix=''
+[[ "$LV" == *mariadb* ]] && collation_fix='s/utf8mb4_0900_ai_ci/utf8mb4_unicode_ci/g'
+MYSQL_PWD="$LW" FIX="$collation_fix" docker exec -e MYSQL_PWD -e FIX -e LP -e LU -e LDB "$CONTAINER" \
+    sh -c 'sed -e "$FIX" /tmp/anon.sql | mysql -h 127.0.0.1 -P "$LP" -u "$LU" "$LDB"' 2>&1 | grep -v Warning
+if [ "${PIPESTATUS[0]}" != 0 ]; then
+    # Zum Nachsehen: nur die anonymisierte, geprüfte Kopie verlässt den Container
+    failed_dump="data/backup/einspielen-fehlgeschlagen-$(date +%Y-%m-%d-%H%M%S).sql"
+    ( umask 077; docker exec "$CONTAINER" cat /tmp/anon.sql > "$failed_dump" )
+    echo "Einspielen fehlgeschlagen. Anonymisierte Kopie zum Nachsehen: $failed_dump; bisheriger Stand: ${backup:-keine Sicherung}" >&2
+    exit 2
+fi
+docker exec "$CONTAINER" rm -f /tmp/anon.sql
+
+if [ -n "$konto_sql" ]; then
+    step "Konten übernehmen"
+    printf '%s' "$konto_sql" | lsql "$LDB" 2>&1 | grep -v Warning
+    lsql -N "$LDB" -e "SELECT CONCAT( username , ' (' , JSON_LENGTH( roles ) , ' Rollen)' ) FROM user WHERE username IN ( $(printf '%s' "$konten" | sed -E "s/[^,]+/'&'/g") )" 2>/dev/null | sed 's/^/übernommen: /'
+fi
+
+step "Migrationen bis HEAD"
+$PHP bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration 2>&1 | grep -E '\[(OK|ERROR)\]|Migrating' | head -5
+
+echo
+echo "Fertig: Nachrichten $(lsql -N "$LDB" -e 'SELECT COUNT(*) FROM events' 2>/dev/null) (davon an Unterhaltungen, anonymisiert: $(lsql -N "$LDB" -e "SELECT COUNT(*) FROM events WHERE channel_target LIKE 'Unterhaltung %'" 2>/dev/null)) · Benutzer $(lsql -N "$LDB" -e 'SELECT COUNT(*) FROM user' 2>/dev/null)"
