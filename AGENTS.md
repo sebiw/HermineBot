@@ -105,7 +105,7 @@ Agenten committen, taggen und pushen in keinem der beiden Repos eigenständig �
 
 ## Lokale Entwicklung
 
-- Benötigt PHP 8.5 (mindestens 8.2) mit Webserver (Document-Root `public/`) und MySQL/MariaDB mit der Datenbank `hermine_bot`. Einrichtung siehe `readme.md`.
+- Benötigt PHP 8.5 (mindestens 8.2) mit Webserver (Document-Root `public/`) und MySQL/MariaDB mit der Datenbank `hermine_bot`. Lokal mit Docker: `docs/SETUP.md` (`php8.5 …` läuft dann im Container); Einrichtung auf einem Server: `readme.md`.
 - Seiten: `/` Login, `/events` geplante Nachrichten, `/events/log` Log.
 - Konsole:
   ```
@@ -117,7 +117,7 @@ Agenten committen, taggen und pushen in keinem der beiden Repos eigenständig �
   - Lokal `allowed_channel` auf diesen Test-Channel einschränken und vor jedem Lauf prüfen, dass keine fälligen Events für andere Ziele anstehen (`daemon:tick` verarbeitet *alles*, was fällig ist). Achtung: Unterhaltungen sind über den Platzhalter immer erlaubt.
   - Agenten führen sendende Befehle nur nach ausdrücklicher Freigabe aus.
   - Gefahrlos ohne Hermine-Zugriff: `bin/pruefen`, `php8.5 bin/console lint:twig templates`, `lint:container`, `debug:router`, `doctrine:schema:validate`, `debug:container --deprecations`, `php8.5 -l`.
-  - Lokal sind PHP 8.1 und 8.5 installiert; `php` kann noch auf 8.1 zeigen – deshalb `php8.5` ausdrücklich aufrufen.
+  - Immer `php8.5` ausdrücklich aufrufen: nativ kann `php` noch auf 8.1 zeigen, mit Docker gibt es nur `php8.5`.
 - Dateien sind im Repo mit LF gespeichert.
 - Migrationen: `php8.5 bin/console doctrine:migrations:migrate` – jede Migration mit `isTransactional(): false` (Tabellenänderungen beenden in MySQL/MariaDB jede Transaktion, sonst Deprecation bei jedem Lauf, auch produktiv beim Pull).
 

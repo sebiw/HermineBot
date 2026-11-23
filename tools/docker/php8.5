@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# „php8.5“ aus dem Docker-Container des Projekts (compose.yaml, Dienst php), docs/SETUP.md. Liegt gleich in StAN-Manager und HermineBot.
+# Einrichten: ln -s ~/projects/StAN-Manager/tools/docker/php8.5 ~/.local/bin/php8.5 – eine Verknüpfung reicht für alle Projekte, das
+# Skript nimmt den Container des Git-Repos, in dem man gerade arbeitet. Danach laufen alle Befehle, Skripte und Skills mit
+# „php8.5 …“ unverändert im Container. Zurück zu nativem PHP: die Verknüpfung löschen.
+#
+# Der Container teilt das Netz mit WSL und sieht $HOME und /tmp unter denselben Pfaden. Weitergegeben werden Arbeitsverzeichnis,
+# Ein-/Ausgabe, Rückgabewert und die exportierten Umgebungsvariablen (nur die Namen auf der Kommandozeile, die Werte liest
+# docker aus der eigenen Umgebung – Passwörter wie MYSQL_PWD tauchen so nicht in der Prozessliste auf).
+set -euo pipefail
+
+case "$PWD" in
+    "$HOME"|"$HOME"/*|/tmp|/tmp/*) ;;
+    *) echo "php8.5 (Docker): Der Container sieht nur $HOME und /tmp, nicht $PWD." >&2; exit 1 ;;
+esac
+
+# Projekt mit compose.yaml: das Haupt-Checkout des aktuellen Git-Repos (auch aus Worktrees unter .claude/worktrees),
+# sonst das Repo, in dem dieses Skript liegt
+root=""
+if common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null); then
+    candidate=$(dirname "$common")
+    [ -f "$candidate/compose.yaml" ] && grep -q '^name:' "$candidate/compose.yaml" && root=$candidate
+fi
+[ -n "$root" ] || root=$(cd "$(dirname "$(readlink -f "$0")")/../.." && pwd)
+name=$(sed -n 's/^name: *//p' "$root/compose.yaml")
+container="$name-php"
+
+if [ "$(docker inspect -f '{{.State.Running}}' "$container" 2>/dev/null)" != true ]; then
+    echo "php8.5 (Docker): starte $container …" >&2
+    docker compose --project-directory "$root" up -d --wait php >&2
+fi
+
+args=( -i -w "$PWD" )
+if [ -t 0 ] && [ -t 1 ]; then args+=( -t ); fi
+while IFS= read -r var; do
+    case "$var" in
+        PATH|HOME|HOSTNAME|HOSTTYPE|PWD|OLDPWD|SHLVL|_|USER|LOGNAME|SHELL|MAIL|NAME|LANG|LANGUAGE|LC_*|LS_COLORS|WSL*|WT_*|XDG_*|DBUS_*|DISPLAY|WAYLAND_DISPLAY|PULSE_SERVER|MOTD_SHOWN|NVM_*) continue ;;
+    esac
+    args+=( -e "$var" )
+done < <(compgen -e)
+
+exec docker exec "${args[@]}" "$container" php8.5 "$@"
