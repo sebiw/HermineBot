@@ -45,6 +45,15 @@ services:
     volumes:
       - ./docker/nginx:/etc/nginx/templates:ro
       - ./public:${HERMINE_BOT_DIR:-${HOME}/projects/HermineBot}/public:ro
+    # Anmeldung beim Verteiler und in der Übersicht unter http://localhost (Repo dev-umgebung): http://hermine-bot.localhost ohne Port
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.hermine-bot.rule: Host(`hermine-bot.localhost`)
+      traefik.http.services.hermine-bot.loadbalancer.server.port: ${HERMINE_BOT_WEB_PORT:-8081}
+      uebersicht.titel: HermineBot
+      uebersicht.beschreibung: Geplante Nachrichten an Hermine – lokal ohne Verbindung zu Hermine
+      uebersicht.links: Nachrichten=/events, Log=/events/log
+      uebersicht.reihenfolge: "20"
 
   # Version wie produktiv (bin/pruefen prüft die Migrationen ebenfalls gegen MySQL 8.4)
   mysql:
